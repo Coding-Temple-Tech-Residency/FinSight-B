@@ -1,1 +1,54 @@
 @import "tailwindcss";
+
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #1a1f2e;
+  --bg-secondary: #2a3550;
+  --text-primary: #f0f4f1;
+  --accent-primary: #00c48c;
+  --accent-secondary: #f5c542;
+
+  --button: #00c48da8;
+}
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  list-style-type: none;
+  text-decoration: none;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  max-width: 100svw;
+  max-height: 100svh;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.logo-text {
+  background: linear-gradient(
+    to right,
+    var(--accent-secondary),
+    var(--accent-primary)
+  );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+h1 {
+  font-size: 2rem;
+}
