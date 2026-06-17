@@ -49,3 +49,9 @@ Your repository should be organized, understandable, and demo-ready.
 ## Intellectual Property Notice
 
 This project was created as part of a Coding Temple Tech Residency. All work produced during the residency is considered the intellectual property of Coding Temple or the sponsoring employer, unless otherwise stated in a signed agreement. By contributing to this project, you acknowledge and agree to these terms.
+
+## Setup
+
+1. Copy `.env.example` to `.env`
+2. Fill in your Supabase database URL and JWT secret
+3. Never commit `.env` to GitHub
