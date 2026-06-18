@@ -1,12 +1,9 @@
-@import "tailwindcss";
-
 #root {
   flex: 1;
   height: 100%;
   width: 100%;
   display: flex;
   flex-direction: column;
-  color: #fff;
 }
 
 .main {
@@ -14,16 +11,122 @@
   height: 100%;
   margin: auto;
   display: flex;
-  justify-content: center;
-  align-items: center;
+  grid-area: main;
+  background-color: var(--bg-secondary);
 }
 
-.welcome-screen {
-  background-color: var(--bg-secondary);
+.dashboard {
   height: 100%;
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  display: grid;
+  grid-template-areas:
+    "header"
+    "main"
+    "sidebar";
+  grid-template-columns: 1fr;
+  grid-template-rows: 100px auto auto;
+}
+
+.home {
+  height: 100%;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: 200px 200px auto auto;
+}
+.header {
+  grid-area: header;
+}
+
+.side-bar {
+  grid-area: sidebar;
+}
+
+.metric-card {
+  background-color: var(--bg-primary);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+@media screen and (min-width: 1024px) {
+  .dashboard {
+    grid-template-areas:
+      "sidebar header header"
+      "sidebar main main"
+      "sidebar main main";
+    grid-template-columns: 300px repeat(2, 1fr);
+    grid-template-rows: 100px repeat(2, 1fr);
+  }
+
+  .side-bar {
+    width: 100%;
+    max-width: 300px;
+    height: 100%;
+  }
+
+  .home {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: 180px auto 300px;
+    gap: 1.5rem;
+    height: 100%;
+    padding: 1em;
+  }
+
+  /* Metrics */
+  .metric-card:nth-child(1) {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .metric-card:nth-child(2) {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .metric-card:nth-child(3) {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .metric-card:nth-child(4) {
+    grid-column: 4;
+    grid-row: 1;
+  }
+
+  /* Holdings */
+  .hold-card {
+    grid-column: 1 / 3;
+    grid-row: 2;
+    background-color: var(--bg-primary);
+    border-radius: 8px;
+    padding: 10px;
+  }
+
+  /* Watchlist */
+  .list-card {
+    grid-column: 3 / 5;
+    grid-row: 2;
+    background-color: var(--bg-primary);
+    border-radius: 8px;
+    padding: 10px;
+  }
+
+  /* AI Insights */
+  .insight-card {
+    grid-column: 1 / 3;
+    grid-row: 3;
+    background-color: var(--bg-primary);
+    border-radius: 8px;
+    padding: 10px;
+  }
+
+  /* Chat */
+  .message-card {
+    grid-column: 3 / 5;
+    grid-row: 3;
+    background-color: var(--bg-primary);
+    border-radius: 8px;
+    padding: 10px;
+  }
 }
