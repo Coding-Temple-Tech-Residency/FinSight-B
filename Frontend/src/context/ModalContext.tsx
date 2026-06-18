@@ -1,4 +1,5 @@
 import { createContext } from "react";
+import type { ModalName } from "../types/modals";
 
 export type ModalContextType = {
   activeModal: ModalName;
