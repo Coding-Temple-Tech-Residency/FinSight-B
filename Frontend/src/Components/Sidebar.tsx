@@ -2,13 +2,15 @@ import { Link } from "react-router-dom";
 import { navigation } from "../data/navigation";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRightToBracket, faX } from "@fortawesome/free-solid-svg-icons";
 import Logo from "./Logo";
 import { useBreakpoint } from "../hooks/useBreakingPoint";
+import { useModal } from "../hooks/useModal";
+import { faArrowRightToBracket, faX } from "@fortawesome/free-solid-svg-icons";
 
 const Sidebar = () => {
   const isLoggedIn = false;
   const { isDesktop } = useBreakpoint();
+  const { openModal } = useModal();
   const nav = !isLoggedIn ? navigation.slice(0, 1) : navigation;
   return (
     <aside className="side-bar py-2 max-lg:h-svh max-lg:w-svw lg:flex flex-col max-lg:fixed max-lg:top-0 max-lg:left-0  hidden">
@@ -31,7 +33,7 @@ const Sidebar = () => {
             </li>
           ))}
         </ul>
-        <button className="login-btn">
+        <button className="login-btn" onClick={() => openModal("login")}>
           <span className="pr-1"> Log In</span>
           <FontAwesomeIcon icon={faArrowRightToBracket} />
         </button>
