@@ -11,7 +11,7 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Create the connection to the database
-engine = engine = create_engine(
+engine =  create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
     pool_recycle=300
