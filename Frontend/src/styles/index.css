@@ -59,7 +59,7 @@ body {
 }
 
 .logo-text {
-  background: linear-gradient(
+  /* background: linear-gradient(
     to right,
     var(--accent-primary),
     var(--accent-secondary)
@@ -68,7 +68,8 @@ body {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  color: transparent;
+  color: transparent; */
+  color: var(--accent-primary);
   font-family: "Crete Round", serif;
 }
 
