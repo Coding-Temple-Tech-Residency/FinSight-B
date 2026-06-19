@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { ModalName } from "../types/modals";
-import { ModalContext } from "./ModalContext";
+import { ModalContext } from "../context/ModalContext";
 
 type ModalProviderProps = {
   children: ReactNode;
