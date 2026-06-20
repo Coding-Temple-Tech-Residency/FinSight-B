@@ -1,8 +1,19 @@
+import { useAuth } from "../features/auth/hooks/useAuth";
+
 const UserBanner = () => {
+  const { user, isAuthenticated } = useAuth();
+
   return (
-    <article className="header-intro flex-4">
-      <p>Welcome, Guest</p>
-      <p>Here's what's happening with your investments today.</p>
+    <article className="header-intro">
+      <p className="font-semibold">
+        Welcome, {isAuthenticated ? user?.email : "Guest"}
+      </p>
+
+      <p className="text-sm opacity-75">
+        {isAuthenticated
+          ? "Here's what's happening with your investments today."
+          : "Log in to access your portfolio, watchlist, and AI insights."}
+      </p>
     </article>
   );
 };

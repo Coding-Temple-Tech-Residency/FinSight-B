@@ -21,37 +21,37 @@ export const navigation: NavigationItem[] = [
   {
     id: 1,
     name: "Dashboard",
-    path: "/",
+    path: "",
     icon: faHouse,
   },
   {
     id: 2,
     name: "Portfolio",
-    path: "/portfolio",
+    path: "portfolio",
     icon: faCircleUser,
   },
   {
     id: 3,
     name: "Watchlist",
-    path: "/watchlist",
+    path: "watchlist",
     icon: faCode,
   },
   {
     id: 4,
     name: "Insights",
-    path: "/insights",
+    path: "insights",
     icon: faChartLine,
   },
   {
     id: 5,
     name: "Chat",
-    path: "/chat",
+    path: "chat",
     icon: faComments,
   },
   {
     id: 6,
     name: "Settings",
-    path: "/settings",
+    path: "settings",
     icon: faGear,
   },
 ];
