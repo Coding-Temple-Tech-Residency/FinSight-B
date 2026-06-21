@@ -38,37 +38,44 @@ const LoginForm = () => {
   };
 
   return (
-    <form onSubmit={handleLogin} className="w-full space-y-4">
-      <h1 className="text-2xl font-bold">Login</h1>
+    <div className="login-form-container">
+      <form onSubmit={handleLogin} className="w-full space-y-4">
+        <h2 className="text-xl font-bold text-center mb-3 -mt-4">Login</h2>
 
-      <input
-        type="email"
-        placeholder="Email"
-        className="w-full border p-3 rounded"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
+        <input
+          type="email"
+          placeholder="Email"
+          className="w-full max-w-xl p-3 border border-gray-300 rounded-xl px-4 py-4 mb-5"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
 
-      <input
-        type="password"
-        placeholder="Password"
-        className="w-full border p-3 rounded"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
+        <input
+          type="password"
+          placeholder="Password"
+          className="w-full p-3 border border-gray-300 rounded-xl px-4 py-4 mb-5"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <p className="text-right font-semibold text-emerald-500 cursor-pointer">
+          Forget Password?
+        </p>
 
-      <button
-        type="submit"
-        disabled={loginMutation.isPending}
-        className="w-full bg-black text-white p-3 rounded"
-      >
-        {loginMutation.isPending ? "Logging in..." : "Login"}
-      </button>
+        <button
+          type="submit"
+          disabled={loginMutation.isPending}
+          className="w-full bg-emerald-500 text-white p-3 rounded-xl hover:bg-emerald-600 cursor-pointer"
+        >
+          {loginMutation.isPending ? "Logging in..." : "Login"}
+        </button>
 
-      {loginMutation.isError && (
-        <p className="text-red-500 text-sm">Login failed. Please try again.</p>
-      )}
-    </form>
+        {loginMutation.isError && (
+          <p className="text-red-500 text-sm">
+            Login failed. Please try again.
+          </p>
+        )}
+      </form>
+    </div>
   );
 };
 
