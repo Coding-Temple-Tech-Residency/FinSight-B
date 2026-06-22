@@ -4,6 +4,8 @@ from database import get_db
 from models.user import User
 from schemas.user import RegisterRequest, LoginRequest, TokenResponse
 from auth import hash_password, verify_password, create_token
+from middleware.auth_middleware import get_current_user
+
 
 # Group all auth routes under /api/auth
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
@@ -44,3 +46,14 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
 def logout():
     # JWT is stateless — client deletes the token on their side
     return {"message": "Logged out successfully"}
+
+# Test protected route — proves middleware works — Issue #9
+@router.get("/me")
+def get_current_user_info(current_user: User = Depends(get_current_user)):
+    # Only reaches here if JWT token is valid
+    return {
+        "id": current_user.id,
+        "full_name": current_user.full_name,
+        "email": current_user.email,
+        "is_active": current_user.is_active
+    }
