@@ -1,10 +1,18 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, model_validator
 
 # Shape of data expected when a user registers
 class RegisterRequest(BaseModel):
     full_name: str
     email: EmailStr
     password: str
+    confirm_password: str
+
+    # Validate that both passwords match before registering
+    @model_validator(mode='after')
+    def passwords_match(self):
+        if self.password != self.confirm_password:
+            raise ValueError('Passwords do not match')
+        return self
 
 # Shape of data expected when a user logs in
 class LoginRequest(BaseModel):
