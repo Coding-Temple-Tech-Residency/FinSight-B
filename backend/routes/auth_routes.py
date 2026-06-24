@@ -45,7 +45,7 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
 @router.post("/logout")
 def logout():
     # JWT is stateless — client deletes the token on their side
-    return {"message": "Logged out successfully"}
+    return {"message": "Logged out successfully", "is_active": False}
 
 # Test protected route — proves middleware works — Issue #9
 @router.get("/me")
