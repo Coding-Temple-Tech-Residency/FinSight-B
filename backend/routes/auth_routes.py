@@ -5,7 +5,10 @@ from models.user import User
 from schemas.user import RegisterRequest, LoginRequest, TokenResponse
 from auth import hash_password, verify_password, create_token
 from middleware.auth_middleware import get_current_user
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from models.token_blacklist import TokenBlacklist
 
+security = HTTPBearer()
 # Group all auth routes under /api/auth
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -45,16 +48,23 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
     token = create_token({"sub": str(user.id), "email": user.email})
     return {"access_token": token, "token_type": "bearer"}
 
-# Issue #9 — Logout — protected route requires valid JWT token
+# Issue #17 — Logout — adds token to blacklist for immediate invalidation
 @router.post("/logout")
 def logout(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Set is_active to False — user is now logged out in the database
+    # Add token to blacklist — immediately invalidates it
+    token = credentials.credentials
+    blacklisted_token = TokenBlacklist(token=token)
+    db.add(blacklisted_token)
+
+    # Set is_active to False in database
     current_user.is_active = False
     db.commit()
     db.refresh(current_user)
+
     return {
         "message": "Logged out successfully",
         "is_active": current_user.is_active
