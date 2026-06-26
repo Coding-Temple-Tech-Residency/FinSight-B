@@ -4,6 +4,7 @@ from jose import JWTError, ExpiredSignatureError
 from sqlalchemy.orm import Session
 from database import get_db
 from models.user import User
+from models.token_blacklist import TokenBlacklist
 from auth import decode_token
 
 # This tells FastAPI to look for a Bearer token in the Authorization header
@@ -16,6 +17,17 @@ def get_current_user(
 ):
     # Extract the token from the Authorization header
     token = credentials.credentials
+
+    # Check if token has been blacklisted — invalidated on logout
+    blacklisted = db.query(TokenBlacklist).filter(
+        TokenBlacklist.token == token
+    ).first()
+
+    if blacklisted:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been invalidated — please log in again"
+        )
 
     try:
         # Decode and verify the token using our secret key
