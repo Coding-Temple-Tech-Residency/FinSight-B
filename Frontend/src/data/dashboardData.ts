@@ -55,39 +55,39 @@ export const holdings: Holding[] = [
     gainLoss: 228.4,
     gainLossPercent: 13.02,
   },
-  {
-    id: 2,
-    symbol: "NVDA",
-    company: "NVIDIA Corp.",
-    shares: 5,
-    avgBuyPrice: 875,
-    currentPrice: 1042.5,
-    marketValue: 5212.5,
-    gainLoss: 837.5,
-    gainLossPercent: 19.14,
-  },
-  {
-    id: 3,
-    symbol: "MSFT",
-    company: "Microsoft",
-    shares: 8,
-    avgBuyPrice: 310,
-    currentPrice: 420.8,
-    marketValue: 3366.4,
-    gainLoss: 886.4,
-    gainLossPercent: 35.74,
-  },
-  {
-    id: 4,
-    symbol: "TSLA",
-    company: "Tesla",
-    shares: 6,
-    avgBuyPrice: 230,
-    currentPrice: 205.15,
-    marketValue: 1230.9,
-    gainLoss: -149.1,
-    gainLossPercent: -10.8,
-  },
+  // {
+  //   id: 2,
+  //   symbol: "NVDA",
+  //   company: "NVIDIA Corp.",
+  //   shares: 5,
+  //   avgBuyPrice: 875,
+  //   currentPrice: 1042.5,
+  //   marketValue: 5212.5,
+  //   gainLoss: 837.5,
+  //   gainLossPercent: 19.14,
+  // },
+  // {
+  //   id: 3,
+  //   symbol: "MSFT",
+  //   company: "Microsoft",
+  //   shares: 8,
+  //   avgBuyPrice: 310,
+  //   currentPrice: 420.8,
+  //   marketValue: 3366.4,
+  //   gainLoss: 886.4,
+  //   gainLossPercent: 35.74,
+  // },
+  // {
+  //   id: 4,
+  //   symbol: "TSLA",
+  //   company: "Tesla",
+  //   shares: 6,
+  //   avgBuyPrice: 230,
+  //   currentPrice: 205.15,
+  //   marketValue: 1230.9,
+  //   gainLoss: -149.1,
+  //   gainLossPercent: -10.8,
+  // },
 ];
 
 export const watchlist: WatchlistItem[] = [
@@ -98,27 +98,27 @@ export const watchlist: WatchlistItem[] = [
     currentPrice: 184.62,
     changePercent: 2.15,
   },
-  {
-    id: 2,
-    symbol: "META",
-    company: "Meta",
-    currentPrice: 542.33,
-    changePercent: 4.37,
-  },
-  {
-    id: 3,
-    symbol: "NFLX",
-    company: "Netflix",
-    currentPrice: 695.2,
-    changePercent: -1.83,
-  },
-  {
-    id: 4,
-    symbol: "AMD",
-    company: "AMD",
-    currentPrice: 172.45,
-    changePercent: 3.19,
-  },
+  // {
+  //   id: 2,
+  //   symbol: "META",
+  //   company: "Meta",
+  //   currentPrice: 542.33,
+  //   changePercent: 4.37,
+  // },
+  // {
+  //   id: 3,
+  //   symbol: "NFLX",
+  //   company: "Netflix",
+  //   currentPrice: 695.2,
+  //   changePercent: -1.83,
+  // },
+  // {
+  //   id: 4,
+  //   symbol: "AMD",
+  //   company: "AMD",
+  //   currentPrice: 172.45,
+  //   changePercent: 3.19,
+  // },
 ];
 
 export const aiInsights: AiInsight[] = [
@@ -129,19 +129,19 @@ export const aiInsights: AiInsight[] = [
       "NVIDIA continues showing strength from AI infrastructure demand.",
     sentiment: "bullish",
   },
-  {
-    id: 2,
-    title: "Apple Watch",
-    description:
-      "Apple may see short-term volatility around upcoming product updates.",
-    sentiment: "neutral",
-  },
-  {
-    id: 3,
-    title: "Tesla Pressure",
-    description: "Tesla is under pressure after weaker delivery expectations.",
-    sentiment: "bearish",
-  },
+  // {
+  //   id: 2,
+  //   title: "Apple Watch",
+  //   description:
+  //     "Apple may see short-term volatility around upcoming product updates.",
+  //   sentiment: "neutral",
+  // },
+  // {
+  //   id: 3,
+  //   title: "Tesla Pressure",
+  //   description: "Tesla is under pressure after weaker delivery expectations.",
+  //   sentiment: "bearish",
+  // },
 ];
 
 export const askFinSightMessages: ChatMessage[] = [
@@ -152,19 +152,19 @@ export const askFinSightMessages: ChatMessage[] = [
       "Hello Alex, I’m FinSight AI. Ask me anything about your portfolio, stocks, or market trends.",
     timestamp: "09:00 AM",
   },
-  {
-    id: 2,
-    role: "user",
-    content: "What is my strongest holding right now?",
-    timestamp: "09:01 AM",
-  },
-  {
-    id: 3,
-    role: "assistant",
-    content:
-      "Based on your current holdings, Microsoft has the highest percentage gain at 35.74%.",
-    timestamp: "09:01 AM",
-  },
+  // {
+  //   id: 2,
+  //   role: "user",
+  //   content: "What is my strongest holding right now?",
+  //   timestamp: "09:01 AM",
+  // },
+  // {
+  //   id: 3,
+  //   role: "assistant",
+  //   content:
+  //     "Based on your current holdings, Microsoft has the highest percentage gain at 35.74%.",
+  //   timestamp: "09:01 AM",
+  // },
 ];
 
 export const dashboardData = {
