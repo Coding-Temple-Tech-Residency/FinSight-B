@@ -11,7 +11,7 @@ const AuthForm = () => {
   const { closeModal } = useModal();
 
   return (
-    <aside className="login-form min-h-svh w-svw fixed top-0 left-0 z-50">
+    <aside className="login-form min-h-svh w-svw fixed top-0 left-0 z-90">
       <button
         type="button"
         className="absolute top-3 right-3 cursor-pointer text-2xl"

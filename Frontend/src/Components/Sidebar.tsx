@@ -12,10 +12,21 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../features/auth/hooks/useAuth";
 
-const Sidebar = () => {
+interface SidebarProps {
+  isOpen: boolean;
+  closeMenu: () => void;
+}
+
+const Sidebar = ({ isOpen, closeMenu }: SidebarProps) => {
   const { isAuthenticated, user, logout } = useAuth();
   const { isDesktop } = useBreakpoint();
   const { openModal } = useModal();
+
+  const navStatus = isOpen
+    ? "translate-x-0 opacity-100 max-h-svh h-full"
+    : "-translate-x-full opacity-0";
+
+  const navOption = !isDesktop ? navStatus : null;
 
   const nav = isAuthenticated ? navigation : navigation.slice(0, 1);
 
@@ -25,13 +36,23 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className="side-bar py-2 max-lg:h-svh max-lg:w-svw lg:flex flex-col max-lg:fixed max-lg:top-0 max-lg:left-0 hidden">
+    <aside
+      className={`side-bar flex flex-col py-2 h-svh max-lg:w-svw lg:flex flex-col max-lg:fixed max-lg:top-0 max-lg:left-0 max-lg:z-90 ${navOption} `}
+    >
       <div className="flex justify-between items-center pr-3">
         <Logo />
-        {!isDesktop && <FontAwesomeIcon icon={faX} className="text-2xl" />}
+        {!isDesktop && (
+          <FontAwesomeIcon
+            icon={faX}
+            className="text-2xl cursor-pointer"
+            onClick={closeMenu}
+          />
+        )}
       </div>
 
-      <nav className="nav flex flex-col justify-between h-full">
+      <nav
+        className={`nav flex flex-col justify-between flex-1 ${isOpen ? "items-center" : ""}`}
+      >
         <ul className="nav-ul">
           {nav.map((item) => (
             <li className="nav-li" key={item.id}>
@@ -47,7 +68,7 @@ const Sidebar = () => {
         </ul>
 
         {isAuthenticated ? (
-          <div className="px-3 pb-4 space-y-3">
+          <div className="px-3 pb-4 space-y-3 text-center">
             <p className="text-sm truncate">{user?.email}</p>
 
             <button className="login-btn" onClick={handleLogout}>

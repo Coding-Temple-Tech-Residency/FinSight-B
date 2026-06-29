@@ -7,7 +7,11 @@ import UserBanner from "./UserBanner";
 
 import { faBars, faMoon, faSun } from "@fortawesome/free-solid-svg-icons";
 
-const Header = () => {
+interface HeaderProps {
+  openMenu: () => void;
+}
+
+const Header = ({ openMenu }: HeaderProps) => {
   const { toggleTheme, darkTheme } = useTheme();
   const { isDesktop } = useBreakpoint();
 
@@ -16,15 +20,18 @@ const Header = () => {
   return (
     <header className="header shadow-(--bg-secondary)">
       <div className="header-container p-3 flex justify-between items-center w-full">
-        <div className="header-left flex items-center gap-4">
+        <div className="header-left flex justify-between items-center gap-4 w-1/2">
           {!isDesktop && (
-            <button className="menu-btn">
-              <FontAwesomeIcon icon={faBars} className="text-2xl" />
+            <button className="menu-btn" onClick={openMenu}>
+              <FontAwesomeIcon
+                icon={faBars}
+                className="text-2xl cursor-pointer"
+              />
             </button>
           )}
 
           {!isDesktop && <Logo />}
-          <UserBanner />
+          {isDesktop && <UserBanner />}
         </div>
 
         <div className="header-right flex items-center gap-4">
