@@ -58,6 +58,11 @@ const Sidebar = ({ isOpen, closeMenu }: SidebarProps) => {
             <li className="nav-li" key={item.id}>
               <Link
                 to={item.path === "/" ? "/" : `/${item.path}`}
+                onClick={() => {
+                  if (!isDesktop) {
+                    closeMenu();
+                  }
+                }}
                 className="nav-li-a block py-5 px-3 w-full"
               >
                 <FontAwesomeIcon icon={item.icon} className="pr-3" />

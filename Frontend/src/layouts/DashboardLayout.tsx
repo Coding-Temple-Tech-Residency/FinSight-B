@@ -9,6 +9,7 @@ import Sidebar from "../components/Sidebar";
 import UserBanner from "../components/UserBanner";
 import { useBreakpoint } from "../hooks/useBreakingPoint";
 import { useState } from "react";
+import SearchForm from "../components/SearchForm";
 
 const DashboardLayout = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -26,7 +27,8 @@ const DashboardLayout = () => {
     <div className="dashboard max-h-screen h-full max-w-svw overflow-x-auto">
       <Sidebar isOpen={isOpen} closeMenu={closeMenu} />
       <Header openMenu={openMenu} />
-      <main className="main">
+      {!isDesktop && <SearchForm />}
+      <main className="main max-lg:flex max-lg:flex-col gap-5">
         {!isDesktop && <UserBanner />}
         <Outlet />
       </main>
