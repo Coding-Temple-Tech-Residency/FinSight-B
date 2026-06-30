@@ -10,9 +10,10 @@
   display: grid;
   grid-template-areas:
     "header"
+    "search"
     "main";
   grid-template-columns: 1fr;
-  grid-template-rows: 72px 1fr;
+  grid-template-rows: 72px 40px 1fr;
   background-color: var(--bg-secondary);
 }
 
@@ -21,6 +22,10 @@
   height: 72px;
   background-color: var(--bg-secondary);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.search-bar {
+  grid-area: search;
 }
 
 .side-bar {

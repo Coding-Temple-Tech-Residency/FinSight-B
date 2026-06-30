@@ -34,9 +34,9 @@ const Header = ({ openMenu }: HeaderProps) => {
           {isDesktop && <UserBanner />}
         </div>
 
-        <div className="header-right flex items-center gap-4">
-          {isDesktop && <SearchForm />}{" "}
-          <button className="theme-btn">
+        <div className="header-right flex items-center justify-end gap-4 lg:w-96">
+          {isDesktop && <SearchForm />}
+          <button className="theme-btn shrink-0">
             <FontAwesomeIcon
               icon={theme}
               className="cursor-pointer"
