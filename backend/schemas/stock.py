@@ -26,9 +26,6 @@ class TokenResponse(BaseModel):
 
 # Shape of user data returned to the frontend
 class UserResponse(BaseModel):
-    id: int
+    id: str
     full_name: str
-    email: EmailStr
-
-    class Config:
-        from_attributes = True
+    email: str

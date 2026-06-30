@@ -1,9 +1,7 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
-from routes.auth_routes import router as auth_router
-import models.user
-import models.token_blacklist
+from routers.auth.routes import router as auth_router
+from fastapi.middleware.cors import CORSMiddleware
 
 # Create all database tables if they don't exist
 Base.metadata.create_all(bind=engine)

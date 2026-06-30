@@ -1,29 +1,27 @@
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
-import os
+from sqlalchemy.orm import declarative_base, sessionmaker
 
-# Load environment variables from .env file
-load_dotenv()
+from config import config
 
-# Get the database URL from .env
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-# Create the connection to the database
-engine =  create_engine(
-    DATABASE_URL,
+# Create SQLAlchemy engine
+engine = create_engine(
+    config.DATABASE_URL,
     pool_pre_ping=True,
-    pool_recycle=300
+    pool_recycle=300,
 )
 
-# Create a session factory — each request gets its own session
-SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+# Session factory
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine,
+)
 
-# Base class that all models will inherit from
+# Base class for all models
 Base = declarative_base()
 
-# Dependency — opens a database session and closes it after each request
+
+# Dependency used in FastAPI routes
 def get_db():
     db = SessionLocal()
     try:

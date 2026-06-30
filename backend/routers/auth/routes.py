@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models.user import User
 from schemas.user import RegisterRequest, LoginRequest, TokenResponse
-from auth import hash_password, verify_password, create_token
-from middleware.auth_middleware import get_current_user
+from utils.security import hash_password, verify_password, create_token
+from dependencies import get_current_user
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from models.token_blacklist import TokenBlacklist
 
