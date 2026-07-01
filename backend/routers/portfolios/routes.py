@@ -60,7 +60,7 @@ def get_portfolio(
 
     return portfolio
 
-router.put("/{portfolio_id}", response_model=PortfolioResponse)
+@router.put("/{portfolio_id}", response_model=PortfolioResponse)
 def update_portfolio(
     portfolio_id: int,
     body: PortfolioUpdate,
@@ -84,7 +84,7 @@ def update_portfolio(
 
     return portfolio
 
-router.delete("/{portfolio_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{portfolio_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_portfolio(
     portfolio_id: int,
     db: Session = Depends(get_db),
