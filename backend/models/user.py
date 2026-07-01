@@ -1,6 +1,7 @@
 from sqlalchemy import Column, String, Boolean, DateTime, BigInteger
 from database import Base
 from datetime import datetime
+from sqlalchemy.orm import relationship
 
 # User model — mirrors the users table in Supabase exactly
 class User(Base):
@@ -26,3 +27,6 @@ class User(Base):
 
     # Automatically updates when account details change
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    portfolios = relationship("Portfolio", back_populates="user")
+

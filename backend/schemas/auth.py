@@ -24,8 +24,3 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
-# Shape of user data returned to the frontend
-class UserResponse(BaseModel):
-    id: str
-    full_name: str
-    email: str
