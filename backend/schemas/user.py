@@ -8,7 +8,6 @@ class UserResponse(BaseModel):
     full_name: str
     email: EmailStr
     is_active: bool
-    password: str
     created_at: datetime
     updated_at: datetime
 
