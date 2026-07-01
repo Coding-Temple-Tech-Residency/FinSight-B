@@ -1,5 +1,9 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+if (!API_BASE_URL) {
+  throw new Error("Missing VITE_API_BASE_URL in frontend .env");
+}
+
 export async function apiClient<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -17,7 +21,6 @@ export async function apiClient<T>(
 
   if (!response.ok) {
     const error = await response.json().catch(() => null);
-
     throw new Error(error?.detail || error?.message || "API request failed");
   }
 

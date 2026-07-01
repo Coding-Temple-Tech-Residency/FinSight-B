@@ -37,7 +37,7 @@ const Sidebar = ({ isOpen, closeMenu }: SidebarProps) => {
 
   return (
     <aside
-      className={`side-bar flex flex-col py-2 h-svh max-lg:w-svw lg:flex flex-col max-lg:fixed max-lg:top-0 max-lg:left-0 max-lg:z-90 ${navOption} `}
+      className={`side-bar flex flex-col py-2 h-svh max-lg:w-svw lg:flex max-lg:fixed max-lg:top-0 max-lg:left-0 max-lg:z-10 ${navOption} `}
     >
       <div className="flex justify-between items-center pr-3">
         <Logo />

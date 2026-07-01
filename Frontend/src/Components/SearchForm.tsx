@@ -27,7 +27,7 @@ const SearchForm = () => {
     rounded-4xl
     overflow-hidden
     transition-all duration-300 ease-in-out
-    ${expanded ? "w-72 px-3 py-2 bg-stone-100" : "w-12 p-2 "} ${!isDesktop ? "sticky top-[70px] left-0 bg-[var(--bg-primary)] rounded-none min-w-screen z-90" : ""}
+    ${expanded ? "w-72 px-3 py-2 bg-stone-100" : "w-12 p-2 "} ${!isDesktop ? "sticky top-17.5 left-0 bg-(--bg-primary) rounded-none min-w-screen z-9" : ""}
   `}
     >
       <button
