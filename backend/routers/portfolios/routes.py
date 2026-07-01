@@ -32,3 +32,30 @@ def create_portfolio(
     db.refresh(portfolio)
 
     return portfolio
+
+
+@router.get("", response_model=list[PortfolioResponse])
+def get_portfolios(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return db.query(Portfolio).filter(
+        Portfolio.user_id == current_user.id
+    ).all()
+
+
+@router.get("/{portfolio_id}", response_model=PortfolioResponse)
+def get_portfolio(
+    portfolio_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    portfolio = db.query(Portfolio).filter(
+        Portfolio.id == portfolio_id,
+        Portfolio.user_id == current_user.id
+    ).first()
+
+    if not portfolio:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+
+    return portfolio
