@@ -5,15 +5,6 @@ from typing import Optional
 from pydantic import BaseModel
 
 
-class StockCreate(BaseModel):
-    symbol: str
-    company_name: str
-    company_logo_url: Optional[str] = None
-    exchange: Optional[str] = None
-    sector: Optional[str] = None
-    industry: Optional[str] = None
-    latest_price: Optional[Decimal] = None
-
 
 class StockResponse(BaseModel):
     id: int
