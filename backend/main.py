@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routers.auth.routes import router as auth_router
 from routers.portfolios.routes import router as portfolio_router
 from routers.stocks.routes import router as stock_router
-from routers.market_data.routes import router as market_data_router
+
 
 # Create all database tables if they don't exist
 Base.metadata.create_all(bind=engine)
