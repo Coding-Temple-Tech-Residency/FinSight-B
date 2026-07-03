@@ -6,23 +6,25 @@ import { useModal } from "../../../hooks/useModal";
 import LoginForm from "./LoginForm";
 import RegistrationForm from "./RegistrationForm";
 
-const AuthForm = () => {
-  const [isRegistering, setIsRegistering] = useState(false);
+type AuthMode = "login" | "register";
+
+const AuthForm = ({ mode }: { mode: AuthMode }) => {
+  const [isRegistering, setIsRegistering] = useState(mode === "register");
   const { closeModal } = useModal();
 
   return (
     <aside className="login-form min-h-svh w-svw fixed top-0 left-0 z-90">
       <button
         type="button"
-        className="absolute top-3 right-3 cursor-pointer text-2xl"
+        className="absolute top-3 right-3 cursor-pointer text-2xl text-stone-50"
         onClick={closeModal}
-        aria-label="Close login modal"
+        aria-label="Close auth modal"
       >
         <FontAwesomeIcon icon={faX} />
       </button>
 
       <section className="min-h-screen flex items-center justify-center px-4">
-        <div className=" login-form-container w-full max-w-lg space-y-1 pt-2">
+        <div className="login-form-container w-full max-w-lg space-y-1 pt-2">
           <h1 className="logo-text text-center mb-1">FinSight</h1>
 
           {isRegistering ? <RegistrationForm /> : <LoginForm />}
