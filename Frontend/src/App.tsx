@@ -1,14 +1,8 @@
-import ThemeButton from "./components/ThemeBtn";
 import AppRoutes from "./routes/AppRoutes";
 import "./styles/App.css";
 
 function App() {
-  return (
-    <>
-      <AppRoutes />
-      <ThemeButton />
-    </>
-  );
+  return <AppRoutes />;
 }
 
 export default App;

@@ -1,62 +1,59 @@
 import { Link, useNavigate } from "react-router-dom";
 import { navigation } from "../data/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import Logo from "./Logo";
 import { useBreakpoint } from "../hooks/useBreakingPoint";
-import { useModal } from "../hooks/useModal";
 import {
   faArrowRightFromBracket,
-  faArrowRightToBracket,
   faBars,
   faX,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../features/auth/hooks/useAuth";
-import { useState } from "react";
 
 interface SidebarProps {
   isOpen: boolean;
   closeMenu: () => void;
+  isCollapsed: boolean;
+  setIsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const Sidebar = ({ isOpen, closeMenu }: SidebarProps) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
-  const { isAuthenticated, user, logout } = useAuth();
+const Sidebar = ({
+  isOpen,
+  closeMenu,
+  isCollapsed,
+  setIsCollapsed,
+}: SidebarProps) => {
+  const { user, logout } = useAuth();
   const { isDesktop } = useBreakpoint();
-  const { openModal } = useModal();
   const navigate = useNavigate();
-
-  const nav = isAuthenticated ? navigation : navigation.slice(0, 1);
 
   const mobileStatus = isOpen
     ? "translate-x-0 opacity-100"
     : "-translate-x-full opacity-0";
 
-  const desktopWidth = isCollapsed ? "lg:w-20" : "lg:w-64";
-
   const handleLogout = () => {
     logout();
-    window.dispatchEvent(new Event("auth-change"));
-    navigate("/");
+    navigate("/", { replace: true });
   };
 
   return (
     <aside
       className={`
         side-bar
-        flex flex-col py-2 h-svh bg-(--bg-secondary)
+        flex flex-col py-2 h-svh bg-(--bg-primary)
         transition-all duration-300
         max-lg:w-svw max-lg:fixed max-lg:top-0 max-lg:left-0 max-lg:z-50
-        ${isDesktop ? desktopWidth : mobileStatus}
+        ${!isDesktop ? mobileStatus : ""}
       `}
     >
       <div
         className={`
           flex items-center px-3 mb-6
-          ${isCollapsed && isDesktop ? "justify-center" : "justify-between"}
+          ${isCollapsed && isDesktop ? "justify-center flex-col gap-3" : "justify-between"}
         `}
       >
-        {(!isCollapsed || !isDesktop) && <Logo />}
+        <h1 className="logo-text px-3 z-60">
+          {isDesktop && !isCollapsed ? "FinSight" : "FS"}
+        </h1>
 
         {isDesktop ? (
           <button
@@ -78,7 +75,7 @@ const Sidebar = ({ isOpen, closeMenu }: SidebarProps) => {
 
       <nav className="nav flex flex-col justify-between flex-1">
         <ul className="nav-ul space-y-2 px-3">
-          {nav.map((item) => (
+          {navigation.map((item) => (
             <li className="nav-li relative group" key={item.id}>
               <Link
                 to={item.path ? `/dashboard/${item.path}` : "/dashboard"}
@@ -87,14 +84,18 @@ const Sidebar = ({ isOpen, closeMenu }: SidebarProps) => {
                 }}
                 className={`
                   nav-li-a flex items-center gap-3 py-4 px-3 rounded-xl
-                  hover:bg-(--bg-primary) transition-all duration-300
+                  hover:bg-(--bg-secondary) transition-opacity duration-300
                   ${isCollapsed && isDesktop ? "justify-center" : ""}
                 `}
               >
                 <FontAwesomeIcon icon={item.icon} className="text-lg" />
 
                 {(!isCollapsed || !isDesktop) && (
-                  <span className="whitespace-nowrap">{item.name}</span>
+                  <span
+                    className={`whitespace-nowrap ${isCollapsed && isDesktop ? "opacity-0" : "opacity-100"}`}
+                  >
+                    {item.name}
+                  </span>
                 )}
               </Link>
 
@@ -102,7 +103,7 @@ const Sidebar = ({ isOpen, closeMenu }: SidebarProps) => {
                 <span
                   className="
                     absolute left-full top-1/2 -translate-y-1/2 ml-3
-                    rounded-md bg-(--bg-primary) px-3 py-2 text-sm
+                    rounded-md bg-(--bg-secondary) px-3 py-2 text-sm
                     opacity-0 invisible group-hover:opacity-100 group-hover:visible
                     transition-all duration-200 whitespace-nowrap z-50
                   "
@@ -114,47 +115,22 @@ const Sidebar = ({ isOpen, closeMenu }: SidebarProps) => {
           ))}
         </ul>
 
-        {isAuthenticated ? (
-          <div className="px-3 pb-4 space-y-3 text-center">
-            {(!isCollapsed || !isDesktop) && (
-              <p className="text-sm truncate">{user?.email}</p>
-            )}
+        <div className="px-3 pb-4 space-y-3 text-center">
+          {(!isCollapsed || !isDesktop) && (
+            <p className="text-sm truncate">{user?.email}</p>
+          )}
 
-            <button
-              className={`
-                login-btn flex items-center justify-center gap-2 w-full
-                ${isCollapsed && isDesktop ? "px-2" : ""}
-              `}
-              onClick={handleLogout}
-            >
-              {(!isCollapsed || !isDesktop) && <span>Log Out</span>}
-              <FontAwesomeIcon icon={faArrowRightFromBracket} />
-            </button>
-          </div>
-        ) : (
-          <div className="px-3 pb-4 relative group">
-            <button
-              className="login-btn flex items-center justify-center gap-2 w-full"
-              onClick={() => openModal("login")}
-            >
-              {(!isCollapsed || !isDesktop) && <span>Log In</span>}
-              <FontAwesomeIcon icon={faArrowRightToBracket} />
-            </button>
-
-            {isCollapsed && isDesktop && (
-              <span
-                className="
-                  absolute left-full top-1/2 -translate-y-1/2 ml-3
-                  rounded-md bg-(--bg-primary) px-3 py-2 text-sm
-                  opacity-0 invisible group-hover:opacity-100 group-hover:visible
-                  transition-all duration-200 whitespace-nowrap z-50
-                "
-              >
-                Log In
-              </span>
-            )}
-          </div>
-        )}
+          <button
+            className={`
+              login-btn flex items-center justify-center gap-2 w-full
+              ${isCollapsed && isDesktop ? "px-2" : ""}
+            `}
+            onClick={handleLogout}
+          >
+            {(!isCollapsed || !isDesktop) && <span>Log Out</span>}
+            <FontAwesomeIcon icon={faArrowRightFromBracket} />
+          </button>
+        </div>
       </nav>
     </aside>
   );

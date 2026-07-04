@@ -3,25 +3,22 @@ import { useBreakpoint } from "../hooks/useBreakingPoint";
 import Logo from "./Logo";
 import SearchForm from "./SearchForm";
 import UserBanner from "./UserBanner";
-import { faBars, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
+import { faMagnifyingGlass, faX } from "@fortawesome/free-solid-svg-icons";
+import ThemeButton from "./ThemeBtn";
 
 interface HeaderProps {
   openMenu: () => void;
+  showMobileSearch: boolean;
+  setShowMobileSearch: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const Header = ({ openMenu }: HeaderProps) => {
+const Header = ({ showMobileSearch, setShowMobileSearch }: HeaderProps) => {
   const { isDesktop } = useBreakpoint();
 
   return (
     <header className="header">
       <div className="header-container h-full px-4 flex justify-between items-center w-full">
         <div className="header-left flex items-center gap-4">
-          {!isDesktop && (
-            <button className="menu-btn" onClick={openMenu}>
-              <FontAwesomeIcon icon={faBars} className="text-xl" />
-            </button>
-          )}
-
           {!isDesktop && <Logo />}
           {isDesktop && <UserBanner />}
         </div>
@@ -30,9 +27,18 @@ const Header = ({ openMenu }: HeaderProps) => {
           {isDesktop ? (
             <SearchForm />
           ) : (
-            <button className="search-icon-btn">
-              <FontAwesomeIcon icon={faMagnifyingGlass} />
-            </button>
+            <>
+              <button
+                type="button"
+                className="search-icon-btn"
+                onClick={() => setShowMobileSearch((prev) => !prev)}
+              >
+                <FontAwesomeIcon
+                  icon={showMobileSearch ? faX : faMagnifyingGlass}
+                />
+              </button>
+              <ThemeButton />
+            </>
           )}
         </div>
       </div>

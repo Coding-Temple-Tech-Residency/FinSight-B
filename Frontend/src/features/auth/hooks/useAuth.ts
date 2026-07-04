@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { logoutUser } from "../../../api/authApi";
 
 type AuthUser = {
+  firstName?: string;
+  lastName?: string;
   email: string;
 };
 
@@ -15,6 +17,8 @@ const getUserFromToken = (): AuthUser | null => {
     const payload = JSON.parse(atob(token.split(".")[1]));
 
     return {
+      firstName: payload.firstName,
+      lastName: payload.lastName,
       email: payload.email,
     };
   } catch {

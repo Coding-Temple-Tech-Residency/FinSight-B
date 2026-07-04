@@ -9,6 +9,7 @@ import { features } from "../../../data/features";
 import { useModal } from "../../../hooks/useModal";
 import AuthForm from "../../auth/components/AuthForm";
 import { useState } from "react";
+import ThemeButton from "../../../components/ThemeBtn";
 
 const Home = ({
   isOpen,
@@ -43,7 +44,10 @@ const Home = ({
       <header
         className={`home-header min-h-17.5 px-3 inline-flex justify-between items-center sticky top-0 left-0 z-50 bg-(--bg-primary) w-full overflow-y-auto`}
       >
-        <Logo />
+        <a href="/" className="logo-link">
+          <Logo />
+        </a>
+
         <nav
           className={`home-nav bg-(--bg-primary) py-3 px-5 ${isOpen ? "translate-y-0 flex flex-col" : "-translate-y-300"} ${isDesktop ? "static translate-y-0" : "fixed top-0 left-0 h-screen w-screen -translate-y-300"} justify-center items-center m-auto transition-all duration-300`}
         >
@@ -108,7 +112,7 @@ const Home = ({
           </div>
         )}
       </header>
-      <main className="home-main min-h-svh flex-col pt-5">
+      <main className="home-main min-h-svh flex flex-col pt-5">
         <section
           className="hero max-lg:min-h-svh min-h-[90vsh] px-3 lg:px-10 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center max-w-7xl mx-auto"
           id="hero"
@@ -426,36 +430,37 @@ const Home = ({
             </article>
           </div>
         </section>
-        <footer id="footer" className="footer px-3 lg:px-10 py-10">
-          <section className="rounded-3xl bg-(--bg-secondary) p-8 lg:p-12 flex flex-col lg:flex-row justify-between gap-6 items-center">
-            <div>
-              <h2>Ready to invest smarter?</h2>
-              <p className="opacity-80 mt-2">
-                Join investors using FinSight to make clearer, data-driven
-                decisions.
-              </p>
-            </div>
-
-            <a
-              href="/register"
-              className="px-6 py-4 rounded-xl bg-(--accent-primary) font-bold text-white"
-            >
-              Get Started Free
-            </a>
-          </section>
-
-          <section className="flex flex-col md:flex-row justify-between  gap-5 mt-10 opacity-80 py-10 lg:py-5">
-            <p className="max-lg:text-center">
-              © 2026 FinSight. All rights reserved.
+      </main>{" "}
+      <footer id="footer" className="footer px-3 lg:px-10 py-10">
+        <section className="rounded-3xl bg-(--bg-secondary) p-8 lg:p-12 flex flex-col lg:flex-row justify-between gap-6 items-center">
+          <div>
+            <h2>Ready to invest smarter?</h2>
+            <p className="opacity-80 mt-2">
+              Join investors using FinSight to make clearer, data-driven
+              decisions.
             </p>
-            <div className="flex gap-5 justify-between items-center">
-              <a href="#features">Features</a>
-              <a href="#ai">AI Insights</a>
-              <button onClick={handleLoginClick}>Login</button>
-            </div>
-          </section>
-        </footer>
-      </main>
+          </div>
+
+          <a
+            href="/register"
+            className="px-6 py-4 rounded-xl bg-(--accent-primary) font-bold text-white"
+          >
+            Get Started Free
+          </a>
+        </section>
+
+        <section className="flex flex-col md:flex-row justify-between  gap-5 mt-10 opacity-80 py-5 lg:py-5">
+          <p className="max-lg:text-center">
+            © 2026 FinSight. All rights reserved.
+          </p>
+          <div className="flex gap-5 justify-between items-center">
+            <a href="#features">Features</a>
+            <a href="#ai">AI Insights</a>
+            <button onClick={handleLoginClick}>Login</button>
+          </div>
+        </section>
+      </footer>
+      <ThemeButton />
       {isModalOpen("login") && <AuthForm mode={authMode} />}
     </div>
   );

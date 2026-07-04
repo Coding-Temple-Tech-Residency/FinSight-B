@@ -4,6 +4,9 @@ import Sidebar from "../components/Sidebar";
 import UserBanner from "../components/UserBanner";
 import { useBreakpoint } from "../hooks/useBreakingPoint";
 import MobileDashboardNav from "../components/MobileDashboardNav";
+import SearchForm from "../components/SearchForm";
+import { useState } from "react";
+import ThemeButton from "../components/ThemeBtn";
 
 const DashboardLayout = ({
   isOpen,
@@ -15,20 +18,42 @@ const DashboardLayout = ({
   closeMenu: () => void;
 }) => {
   const { isDesktop } = useBreakpoint();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
 
   return (
-    <div className="dashboard-layout">
-      {isDesktop && <Sidebar isOpen={isOpen} closeMenu={closeMenu} />}
+    <div
+      className={`dashboard-layout ${
+        isSidebarCollapsed ? "sidebar-collapsed" : ""
+      }`}
+    >
+      {isDesktop && (
+        <Sidebar
+          isOpen={isOpen}
+          closeMenu={closeMenu}
+          isCollapsed={isSidebarCollapsed}
+          setIsCollapsed={setIsSidebarCollapsed}
+        />
+      )}
 
-      <div className="dashboard-content">
-        <Header openMenu={openMenu} />
+      <Header
+        openMenu={openMenu}
+        showMobileSearch={showMobileSearch}
+        setShowMobileSearch={setShowMobileSearch}
+      />
 
-        <main className="main">
-          {!isDesktop && <UserBanner />}
-          <Outlet />
-        </main>
-      </div>
+      {!isDesktop && showMobileSearch && (
+        <div className="mobile-search-row">
+          <SearchForm />
+        </div>
+      )}
 
+      <main className="main">
+        {!isDesktop && <UserBanner />}
+        <Outlet />
+      </main>
+
+      {isDesktop && <ThemeButton />}
       {!isDesktop && <MobileDashboardNav />}
     </div>
   );
