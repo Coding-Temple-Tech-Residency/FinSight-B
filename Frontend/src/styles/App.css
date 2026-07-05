@@ -323,3 +323,49 @@
     padding: 0.6rem 1rem;
   }
 }
+
+/* Portfolio */
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.card {
+  background-color: var(--bg-primary);
+  border-radius: 14px;
+  padding: 1rem;
+  min-height: 120px;
+  box-shadow: 0 4px 12px rbga(0, 0, 0, 0.08);
+}
+
+.card h3 {
+  margin-bottom: 0.5rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1.5rem;
+}
+
+th,
+td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+thead {
+  background-color: var(--bg-primary);
+}
+
+.portfolio-negative {
+  color: red;
+}
+
+.portfolio-positive {
+  color: var(--accent-primary);
+}
