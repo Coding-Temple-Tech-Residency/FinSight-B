@@ -4,7 +4,8 @@ import { useMutation } from "@tanstack/react-query";
 import { registerUser } from "../../../api/authApi";
 
 const RegistrationForm = () => {
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -14,7 +15,8 @@ const RegistrationForm = () => {
     onSuccess: () => {
       alert("Account created. You can now log in.");
 
-      setFullName("");
+      setFirstName("");
+      setLastName("");
       setEmail("");
       setPassword("");
       setConfirmPassword("");
@@ -34,7 +36,8 @@ const RegistrationForm = () => {
     }
 
     registerMutation.mutate({
-      full_name: fullName,
+      first_name: firstName,
+      last_name: lastName,
       email,
       password,
     });
@@ -51,8 +54,16 @@ const RegistrationForm = () => {
           type="text"
           placeholder="Full Name"
           className="w-full border border-gray-400 rounded-xl p-4 mt-1 mb-4"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          required
+        />
+        <input
+          type="text"
+          placeholder="Full Name"
+          className="w-full border border-gray-400 rounded-xl p-4 mt-1 mb-4"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
           required
         />
 
