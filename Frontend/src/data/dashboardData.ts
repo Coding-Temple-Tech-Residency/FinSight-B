@@ -6,7 +6,7 @@ import type {
   WatchlistItem,
   AiInsight,
   ChatMessage,
-} from "../types/dashboard";
+} from "../features/dashboard/types/dashboard";
 
 export const keyMetrics: KeyMetric[] = [
   {

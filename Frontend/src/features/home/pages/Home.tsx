@@ -9,7 +9,8 @@ import { features } from "../../../data/features";
 import { useModal } from "../../../hooks/useModal";
 import AuthForm from "../../auth/components/AuthForm";
 import { useState } from "react";
-import ThemeButton from "../../../components/ThemeBtn";
+import ThemeButton from "../../../components/ThemeButton";
+import HomePreviewChart from "../components/HomePreviewChart";
 
 const Home = ({
   isOpen,
@@ -184,17 +185,7 @@ const Home = ({
                   <p className="text-(--accent-primary)">1M</p>
                 </div>
 
-                <div className="h-40 flex items-end gap-2">
-                  {[35, 42, 38, 55, 50, 63, 58, 75, 71, 88, 82, 96].map(
-                    (height, index) => (
-                      <div
-                        key={index}
-                        className="flex-1 rounded-t-md bg-(--accent-primary)"
-                        style={{ height: `${height}%` }}
-                      />
-                    ),
-                  )}
-                </div>
+                <HomePreviewChart />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -360,16 +351,8 @@ const Home = ({
                 <span className="text-(--accent-primary)">1M</span>
               </div>
 
-              <div className="h-60 flex items-end gap-2">
-                {[30, 45, 40, 60, 55, 70, 66, 80, 75, 90, 85, 100].map(
-                  (height, index) => (
-                    <div
-                      key={index}
-                      className="flex-1 rounded-t-lg bg-(--accent-primary)"
-                      style={{ height: `${height}%` }}
-                    />
-                  ),
-                )}
+              <div className="h-60">
+                <HomePreviewChart />
               </div>
             </div>
           </article>
