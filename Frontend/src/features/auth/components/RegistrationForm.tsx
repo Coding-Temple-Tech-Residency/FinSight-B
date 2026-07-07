@@ -52,15 +52,16 @@ const RegistrationForm = () => {
 
         <input
           type="text"
-          placeholder="Full Name"
+          placeholder="First Name"
           className="w-full border border-gray-400 rounded-xl p-4 mt-1 mb-4"
           value={firstName}
           onChange={(e) => setFirstName(e.target.value)}
           required
         />
+
         <input
           type="text"
-          placeholder="Full Name"
+          placeholder="Last Name"
           className="w-full border border-gray-400 rounded-xl p-4 mt-1 mb-4"
           value={lastName}
           onChange={(e) => setLastName(e.target.value)}

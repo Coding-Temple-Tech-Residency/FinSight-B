@@ -1,31 +1,23 @@
-from pydantic import BaseModel, EmailStr, model_validator
+from datetime import datetime
+from decimal import Decimal
+from typing import Optional
 
-# Shape of data expected when a user registers
-class RegisterRequest(BaseModel):
-    full_name: str
-    email: EmailStr
-    password: str
-    confirm_password: str
+from pydantic import BaseModel
 
-    # Validate that both passwords match before registering
-    @model_validator(mode='after')
-    def passwords_match(self):
-        if self.password != self.confirm_password:
-            raise ValueError('Passwords do not match')
-        return self
 
-# Shape of data expected when a user logs in
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
 
-# Shape of data returned after successful login
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
+class StockResponse(BaseModel):
+    id: int
+    symbol: str
+    company_name: str
+    company_logo_url: Optional[str] = None
+    exchange: Optional[str] = None
+    sector: Optional[str] = None
+    industry: Optional[str] = None
+    latest_price: Optional[Decimal] = None
+    last_refreshed_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
 
-# Shape of user data returned to the frontend
-class UserResponse(BaseModel):
-    id: str
-    full_name: str
-    email: str
+    class Config:
+        from_attributes = True

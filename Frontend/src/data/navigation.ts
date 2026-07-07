@@ -55,3 +55,32 @@ export const navigation: NavigationItem[] = [
     icon: faGear,
   },
 ];
+
+export interface HomeNavigationItem {
+  id: number;
+  name: string;
+  section?: string;
+}
+
+export const homeNavigation: HomeNavigationItem[] = [
+  {
+    id: 1,
+    name: "Features",
+    section: "features",
+  },
+  {
+    id: 2,
+    name: "About",
+    section: "about",
+  },
+  {
+    id: 3,
+    name: "Demo",
+    section: "preview",
+  },
+  {
+    id: 4,
+    name: "Contact",
+    section: "footer",
+  },
+];

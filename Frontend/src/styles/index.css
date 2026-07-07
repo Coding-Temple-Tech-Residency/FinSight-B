@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  /* --bg-primary: #1a1f2e;
-  --bg-secondary: #2a3550;
-  --text-primary: #f0f4f1; */
+  --theme-primary: #1a1f2e;
+  --theme-secondary: #2a3550;
+  --theme-tertiary: #f0f4f1;
   --accent-primary: #00c48c;
   --accent-secondary: #f5c542;
 
@@ -74,9 +74,24 @@ body {
 }
 
 h1 {
-  font-size: 2rem;
+  font-size: 3rem;
+  line-height: 1.2;
+  font-weight: 500;
 }
 
-a {
+Link {
   color: var(--text-primary);
+}
+
+button {
+  cursor: pointer;
+}
+
+.home-header-cta-signup {
+  background-color: var(--accent-primary);
+  color: var(--theme-tertiary);
+}
+
+.home-header {
+  box-shadow: 0 0 5px var(--accent-primary);
 }

@@ -1,48 +1,45 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useBreakpoint } from "../hooks/useBreakingPoint";
-import useTheme from "../hooks/useTheme";
 import Logo from "./Logo";
 import SearchForm from "./SearchForm";
 import UserBanner from "./UserBanner";
-
-import { faBars, faMoon, faSun } from "@fortawesome/free-solid-svg-icons";
+import { faMagnifyingGlass, faX } from "@fortawesome/free-solid-svg-icons";
+import ThemeButton from "./ThemeBtn";
 
 interface HeaderProps {
   openMenu: () => void;
+  showMobileSearch: boolean;
+  setShowMobileSearch: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const Header = ({ openMenu }: HeaderProps) => {
-  const { toggleTheme, darkTheme } = useTheme();
+const Header = ({ showMobileSearch, setShowMobileSearch }: HeaderProps) => {
   const { isDesktop } = useBreakpoint();
 
-  const theme = darkTheme ? faMoon : faSun;
-
   return (
-    <header className="header shadow-(--bg-secondary)">
-      <div className="header-container p-3 flex justify-between items-center w-full">
-        <div className="header-left flex justify-between items-center gap-4 w-1/2">
-          {!isDesktop && (
-            <button className="menu-btn" onClick={openMenu}>
-              <FontAwesomeIcon
-                icon={faBars}
-                className="text-2xl cursor-pointer"
-              />
-            </button>
-          )}
-
+    <header className="header">
+      <div className="header-container h-full px-4 flex justify-between items-center w-full">
+        <div className="header-left flex items-center gap-4">
           {!isDesktop && <Logo />}
           {isDesktop && <UserBanner />}
         </div>
 
-        <div className="header-right flex items-center justify-end gap-4 lg:w-96">
-          {isDesktop && <SearchForm />}
-          <button className="theme-btn shrink-0">
-            <FontAwesomeIcon
-              icon={theme}
-              className="cursor-pointer"
-              onClick={toggleTheme}
-            />
-          </button>
+        <div className="header-right flex items-center justify-end gap-4">
+          {isDesktop ? (
+            <SearchForm />
+          ) : (
+            <>
+              <button
+                type="button"
+                className="search-icon-btn"
+                onClick={() => setShowMobileSearch((prev) => !prev)}
+              >
+                <FontAwesomeIcon
+                  icon={showMobileSearch ? faX : faMagnifyingGlass}
+                />
+              </button>
+              <ThemeButton />
+            </>
+          )}
         </div>
       </div>
     </header>
