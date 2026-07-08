@@ -3,13 +3,14 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { loginUser } from "../../../api/authApi";
 import { useModal } from "../../../hooks/useModal";
+import { useNavigate } from "react-router-dom";
 
 const LoginForm = () => {
   const { closeModal } = useModal();
   const queryClient = useQueryClient();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const navigate = useNavigate();
 
   const loginMutation = useMutation({
     mutationFn: loginUser,
@@ -21,6 +22,7 @@ const LoginForm = () => {
       });
 
       closeModal();
+      navigate("/dashboard");
     },
     onError: (error) => {
       console.error(error);

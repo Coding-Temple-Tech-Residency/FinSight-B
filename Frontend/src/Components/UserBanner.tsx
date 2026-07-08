@@ -6,7 +6,7 @@ const UserBanner = () => {
   return (
     <article className="header-intro">
       <p className="font-semibold">
-        Welcome, {isAuthenticated ? user?.email : "Guest"}
+        Welcome, {isAuthenticated ? user?.firstName : "Guest"}
       </p>
 
       <p className="text-sm opacity-75">
