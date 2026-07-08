@@ -33,3 +33,9 @@ class Stock(Base):
         back_populates="stock",
         cascade="all, delete-orphan"
     )
+
+    watchlist = relationship(
+        "Watchlist",
+        back_populates="stock",
+        cascade="all, delete-orphan"
+    )
