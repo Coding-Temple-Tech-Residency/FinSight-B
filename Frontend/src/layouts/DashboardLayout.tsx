@@ -1,12 +1,14 @@
 import { Outlet } from "react-router-dom";
+import { useState } from "react";
+
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
-import UserBanner from "../components/UserBanner";
-import { useBreakpoint } from "../hooks/useBreakingPoint";
 import MobileDashboardNav from "../components/MobileDashboardNav";
 import SearchForm from "../components/SearchForm";
-import { useState } from "react";
-import ThemeButton from "../components/ThemeBtn";
+import ThemeButton from "../components/ThemeButton";
+
+import { useBreakpoint } from "../hooks/useBreakingPoint";
+import DashboardProvider from "../features/dashboard/providers/DashboardProvider";
 
 const DashboardLayout = ({
   isOpen,
@@ -22,40 +24,41 @@ const DashboardLayout = ({
   const [showMobileSearch, setShowMobileSearch] = useState(false);
 
   return (
-    <div
-      className={`dashboard-layout ${
-        isSidebarCollapsed ? "sidebar-collapsed" : ""
-      }`}
-    >
-      {isDesktop && (
-        <Sidebar
-          isOpen={isOpen}
-          closeMenu={closeMenu}
-          isCollapsed={isSidebarCollapsed}
-          setIsCollapsed={setIsSidebarCollapsed}
+    <DashboardProvider>
+      <div
+        className={`dashboard-layout ${
+          isSidebarCollapsed ? "sidebar-collapsed" : ""
+        }`}
+      >
+        {isDesktop && (
+          <Sidebar
+            isOpen={isOpen}
+            closeMenu={closeMenu}
+            isCollapsed={isSidebarCollapsed}
+            setIsCollapsed={setIsSidebarCollapsed}
+          />
+        )}
+
+        <Header
+          openMenu={openMenu}
+          showMobileSearch={showMobileSearch}
+          setShowMobileSearch={setShowMobileSearch}
         />
-      )}
 
-      <Header
-        openMenu={openMenu}
-        showMobileSearch={showMobileSearch}
-        setShowMobileSearch={setShowMobileSearch}
-      />
+        {!isDesktop && showMobileSearch && (
+          <div className="mobile-search-row">
+            <SearchForm />
+          </div>
+        )}
 
-      {!isDesktop && showMobileSearch && (
-        <div className="mobile-search-row">
-          <SearchForm />
-        </div>
-      )}
+        <main className="main">
+          <Outlet />
+        </main>
 
-      <main className="main">
-        {!isDesktop && <UserBanner />}
-        <Outlet />
-      </main>
-
-      {isDesktop && <ThemeButton />}
-      {!isDesktop && <MobileDashboardNav />}
-    </div>
+        {isDesktop && <ThemeButton />}
+        {!isDesktop && <MobileDashboardNav />}
+      </div>
+    </DashboardProvider>
   );
 };
 

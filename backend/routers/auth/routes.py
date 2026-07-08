@@ -21,7 +21,8 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
     
     # Create new user with hashed password — never store plain text
     user = User(
-        full_name=body.full_name,
+        first_name=body.first_name,
+        last_name=body.last_name,
         email=body.email,
         password=hash_password(body.password)
     )
@@ -75,8 +76,9 @@ def logout(
 def get_current_user_info(current_user: User = Depends(get_current_user)):
     # Only reaches here if JWT token is valid
     return {
-        "id": current_user.id,
-        "full_name": current_user.full_name,
-        "email": current_user.email,
-        "is_active": current_user.is_active
-    }
+    "id": current_user.id,
+    "first_name": current_user.first_name,
+    "last_name": current_user.last_name,
+    "email": current_user.email,
+    "is_active": current_user.is_active
+}

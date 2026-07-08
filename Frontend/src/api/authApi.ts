@@ -1,3 +1,4 @@
+import type { CurrentUser } from "../features/auth/types/user";
 import { apiClient } from "./apiClient";
 
 export type LoginPayload = {
@@ -38,3 +39,5 @@ export const loginUser = async (payload: LoginPayload) => {
 export const logoutUser = () => {
   localStorage.removeItem("token");
 };
+
+export const getCurrentUser = () => apiClient<CurrentUser>("/api/auth/me");

@@ -2,7 +2,8 @@ from pydantic import BaseModel, EmailStr, model_validator
 
 # Shape of data expected when a user registers
 class RegisterRequest(BaseModel):
-    full_name: str
+    first_name: str
+    last_name: str
     email: EmailStr
     password: str
     confirm_password: str
@@ -23,4 +24,3 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-
