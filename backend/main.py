@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from database import engine, Base
 from fastapi.middleware.cors import CORSMiddleware
-
+from routers.users.routes import router as users_router
 from routers.auth.routes import router as auth_router
 from routers.portfolios.routes import router as portfolio_router
 from routers.stocks.routes import router as stock_router
@@ -34,9 +34,10 @@ app.add_middleware(
 app.include_router(auth_router)
 # Register portfolio routes
 app.include_router(portfolio_router)
+# Register users routes
+app.include_router(users_router)
 # Register stock routes
 app.include_router(stock_router)
-
 
 # Health check — confirms the server is running
 @app.get("/")

@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, Boolean, DateTime, BigInteger
-from database import Base
-from datetime import datetime
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+from database import Base
 
 # User model — mirrors the users table in Supabase exactly
 class User(Base):
@@ -10,8 +10,11 @@ class User(Base):
     # Primary key — bigint to match Supabase int8
     id = Column(BigInteger, primary_key=True, autoincrement=True)
 
-    # User's full name
-    full_name = Column(String, nullable=False)
+    # User's first name
+    first_name = Column(String, nullable=False)
+
+    # User's last name
+    last_name = Column(String, nullable=False)
 
     # Email must be unique — no duplicate accounts
     email = Column(String, unique=True, nullable=False)
@@ -23,10 +26,13 @@ class User(Base):
     is_active = Column(Boolean, default=True)
 
     # Automatically set when the account is created
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Automatically updates when account details change
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now()
+    )
 
     portfolios = relationship("Portfolio", back_populates="user")
-
