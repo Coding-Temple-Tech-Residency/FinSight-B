@@ -30,3 +30,9 @@ class User(Base):
 
     portfolios = relationship("Portfolio", back_populates="user")
 
+    watchlist = relationship(
+        "Watchlist",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+

@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routers.auth.routes import router as auth_router
 from routers.portfolios.routes import router as portfolio_router
 from routers.stocks.routes import router as stock_router
+from routers.watchlist.routes import router as watchlist_router
 
 
 # Create all database tables if they don't exist
@@ -36,7 +37,8 @@ app.include_router(auth_router)
 app.include_router(portfolio_router)
 # Register stock routes
 app.include_router(stock_router)
-
+# Register watchlist routes
+app.include_router(watchlist_router)
 
 # Health check — confirms the server is running
 @app.get("/")
