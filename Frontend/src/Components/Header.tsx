@@ -1,43 +1,50 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useBreakpoint } from "../hooks/useBreakingPoint";
-import Logo from "./Logo";
-import SearchForm from "./SearchForm";
 import { faMagnifyingGlass, faX } from "@fortawesome/free-solid-svg-icons";
+
+import Logo from "./Logo";
+import DashboardNav from "./DashboardNav";
+import SearchForm from "./SearchForm";
 import ThemeButton from "./ThemeButton";
+import UserAvatar from "./UserAvatar";
 
 interface HeaderProps {
-  openMenu: () => void;
   showMobileSearch: boolean;
   setShowMobileSearch: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const Header = ({ showMobileSearch, setShowMobileSearch }: HeaderProps) => {
-  const { isDesktop } = useBreakpoint();
-
   return (
     <header className="header">
-      <div className="header-container h-full px-4 flex justify-between items-center w-full">
-        <div className="header-left flex items-center gap-4">
-          {!isDesktop && <Logo />}
+      <div className="header-container">
+        <div className="header-left">
+          <Logo />
+
+          <div className="desktop-nav">
+            <DashboardNav />
+          </div>
         </div>
 
-        <div className="header-right flex items-center justify-end gap-4">
-          {isDesktop ? (
+        <div className="header-right">
+          <div className="desktop-actions">
             <SearchForm />
-          ) : (
-            <>
-              <button
-                type="button"
-                className="search-icon-btn"
-                onClick={() => setShowMobileSearch((prev) => !prev)}
-              >
-                <FontAwesomeIcon
-                  icon={showMobileSearch ? faX : faMagnifyingGlass}
-                />
-              </button>
-              <ThemeButton />
-            </>
-          )}
+            <ThemeButton />
+            <UserAvatar />
+          </div>
+
+          <div className="mobile-actions">
+            <button
+              type="button"
+              className="search-icon-btn"
+              onClick={() => setShowMobileSearch((prev) => !prev)}
+            >
+              <FontAwesomeIcon
+                icon={showMobileSearch ? faX : faMagnifyingGlass}
+              />
+            </button>
+
+            <ThemeButton />
+            <UserAvatar />
+          </div>
         </div>
       </div>
     </header>

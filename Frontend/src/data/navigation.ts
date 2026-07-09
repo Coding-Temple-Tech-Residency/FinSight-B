@@ -13,7 +13,7 @@ import { faCircleUser } from "@fortawesome/free-regular-svg-icons";
 export interface NavigationItem {
   id: number;
   name: string;
-  path?: string;
+  path: string;
   icon: IconDefinition;
 }
 
@@ -21,37 +21,37 @@ export const navigation: NavigationItem[] = [
   {
     id: 1,
     name: "Dashboard",
-    path: "",
+    path: "/dashboard",
     icon: faHouse,
   },
   {
     id: 2,
     name: "Portfolio",
-    path: "portfolio",
+    path: "/dashboard/portfolio",
     icon: faCircleUser,
   },
   {
     id: 3,
     name: "Watchlist",
-    path: "watchlist",
+    path: "/dashboard/watchlist",
     icon: faCode,
   },
   {
     id: 4,
     name: "Insights",
-    path: "insights",
+    path: "/dashboard/insights",
     icon: faChartLine,
   },
   {
     id: 5,
     name: "Chat",
-    path: "chat",
+    path: "/dashboard/chat",
     icon: faComments,
   },
   {
     id: 6,
     name: "Settings",
-    path: "settings",
+    path: "/dashboard/settings",
     icon: faGear,
   },
 ];
