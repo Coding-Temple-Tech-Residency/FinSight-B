@@ -4,8 +4,7 @@ import { faMagnifyingGlass, faX } from "@fortawesome/free-solid-svg-icons";
 import Logo from "./Logo";
 import DashboardNav from "./DashboardNav";
 import SearchForm from "./SearchForm";
-import ThemeButton from "./ThemeButton";
-import UserAvatar from "./UserAvatar";
+import ProfileMenu from "./ProfileMenu";
 
 interface HeaderProps {
   showMobileSearch: boolean;
@@ -27,8 +26,7 @@ const Header = ({ showMobileSearch, setShowMobileSearch }: HeaderProps) => {
         <div className="header-right">
           <div className="desktop-actions">
             <SearchForm />
-            <ThemeButton />
-            <UserAvatar />
+            <ProfileMenu />
           </div>
 
           <div className="mobile-actions">
@@ -42,8 +40,7 @@ const Header = ({ showMobileSearch, setShowMobileSearch }: HeaderProps) => {
               />
             </button>
 
-            <ThemeButton />
-            <UserAvatar />
+            <ProfileMenu />
           </div>
         </div>
       </div>
