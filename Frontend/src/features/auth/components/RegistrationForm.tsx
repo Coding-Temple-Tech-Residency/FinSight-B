@@ -40,6 +40,7 @@ const RegistrationForm = () => {
       last_name: lastName,
       email,
       password,
+      confirm_password: confirmPassword,
     });
   };
 
