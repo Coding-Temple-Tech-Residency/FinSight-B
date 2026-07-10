@@ -4,7 +4,6 @@ import {
   faChevronDown,
   faGear,
   faRightFromBracket,
-  faUser,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
@@ -29,15 +28,25 @@ const ProfileMenu = () => {
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
 
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, []);
 
   const handleLogout = () => {
     logout();
     setIsOpen(false);
-    navigate("/");
+    navigate("/", { replace: true });
   };
 
   return (
@@ -45,7 +54,9 @@ const ProfileMenu = () => {
       <button
         type="button"
         className="profile-menu-trigger"
-        onClick={() => setIsOpen((prev) => !prev)}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((current) => !current)}
       >
         <span className="profile-avatar">
           {firstName.charAt(0).toUpperCase()}
@@ -53,28 +64,23 @@ const ProfileMenu = () => {
 
         <span className="profile-name">{fullName}</span>
 
-        <FontAwesomeIcon icon={faChevronDown} className="profile-chevron" />
+        <FontAwesomeIcon
+          icon={faChevronDown}
+          className={`profile-chevron ${isOpen ? "profile-chevron-open" : ""}`}
+        />
       </button>
 
       {isOpen && (
-        <div className="profile-dropdown">
+        <div className="profile-dropdown" role="menu">
           <div className="profile-dropdown-header">
             <strong>{fullName}</strong>
-            <span>{user?.email}</span>
+            <span>{user?.email ?? "No email available"}</span>
           </div>
 
           <Link
             to="/dashboard/settings"
             className="profile-dropdown-item"
-            onClick={() => setIsOpen(false)}
-          >
-            <FontAwesomeIcon icon={faUser} />
-            Profile
-          </Link>
-
-          <Link
-            to="/dashboard/settings"
-            className="profile-dropdown-item"
+            role="menuitem"
             onClick={() => setIsOpen(false)}
           >
             <FontAwesomeIcon icon={faGear} />
@@ -82,13 +88,16 @@ const ProfileMenu = () => {
           </Link>
 
           <div className="profile-dropdown-item profile-theme-row">
-            <span>Theme</span>
+            <span>Appearance</span>
             <ThemeButton />
           </div>
+
+          <div className="profile-dropdown-divider" />
 
           <button
             type="button"
             className="profile-dropdown-item profile-logout"
+            role="menuitem"
             onClick={handleLogout}
           >
             <FontAwesomeIcon icon={faRightFromBracket} />

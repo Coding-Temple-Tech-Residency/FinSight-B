@@ -1,27 +1,28 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { useState } from "react";
 import type { ReactNode } from "react";
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-      staleTime: 1000 * 60 * 5,
-    },
-  },
-});
 
 type QueryProviderProps = {
   children: ReactNode;
 };
 
 const QueryProvider = ({ children }: QueryProviderProps) => {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: false,
+            refetchOnWindowFocus: false,
+            refetchOnReconnect: false,
+            staleTime: 5 * 60 * 1000,
+          },
+        },
+      }),
+  );
+
   return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 };
 

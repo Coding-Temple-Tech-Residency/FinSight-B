@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { navigation } from "../data/navigation";
+import { navigation } from "../constants/navigation";
 
 const DashboardNav = () => {
   return (

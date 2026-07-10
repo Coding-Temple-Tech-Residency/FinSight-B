@@ -1,5 +1,5 @@
 import Logo from "../../../components/Logo";
-import { homeNavigation } from "../../../data/navigation";
+
 import { useBreakpoint } from "../../../hooks/useBreakingPoint";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBars, faTimes } from "@fortawesome/free-solid-svg-icons";
@@ -11,6 +11,7 @@ import AuthForm from "../../auth/components/AuthForm";
 import { useState } from "react";
 import ThemeButton from "../../../components/ThemeButton";
 import HomePreviewChart from "../components/HomePreviewChart";
+import { homeNavigation } from "../../../constants/navigation";
 
 const Home = ({
   isOpen,

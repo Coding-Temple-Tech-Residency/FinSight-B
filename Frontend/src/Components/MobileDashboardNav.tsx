@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { navigation } from "../data/navigation";
+import { navigation } from "../constants/navigation";
 
 const MobileDashboardNav = () => {
   return (
