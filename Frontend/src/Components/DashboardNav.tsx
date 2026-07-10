@@ -1,25 +1,23 @@
 import { NavLink } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { navigation } from "../data/navigation";
 
-const MobileDashboardNav = () => {
+const DashboardNav = () => {
   return (
-    <nav className="mobile-dashboard-nav">
+    <nav className="dashboard-nav">
       {navigation.map((item) => (
         <NavLink
           key={item.id}
           to={item.path}
           end={item.path === "/dashboard"}
           className={({ isActive }) =>
-            `mobile-dashboard-link ${isActive ? "active" : ""}`
+            `dashboard-nav-link ${isActive ? "active" : ""}`
           }
         >
-          <FontAwesomeIcon icon={item.icon} />
-          <span>{item.name}</span>
+          {item.name}
         </NavLink>
       ))}
     </nav>
   );
 };
 
-export default MobileDashboardNav;
+export default DashboardNav;
