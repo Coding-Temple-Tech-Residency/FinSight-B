@@ -1,5 +1,5 @@
-import type { Portfolio } from "../../../api/portfolioApi";
 import type { StockQuote } from "../../market/types/stock";
+import type { Portfolio } from "../../portfolio/types/portfolio";
 import MetricCard from "./MetricCard";
 
 type DashboardMetricsProps = {

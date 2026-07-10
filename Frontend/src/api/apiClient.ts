@@ -4,6 +4,23 @@ if (!API_BASE_URL) {
   throw new Error("Missing VITE_API_BASE_URL in frontend .env");
 }
 
+type ApiErrorBody = {
+  detail?: string;
+  message?: string;
+};
+
+export class ApiError extends Error {
+  status: number;
+  data?: ApiErrorBody;
+
+  constructor(message: string, status: number, data?: ApiErrorBody) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.data = data;
+  }
+}
+
 export async function apiClient<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -14,15 +31,32 @@ export async function apiClient<T>(
     ...options,
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(token
+        ? {
+            Authorization: `Bearer ${token}`,
+          }
+        : {}),
       ...options.headers,
     },
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => null);
-    throw new Error(error?.detail || error?.message || "API request failed");
+    const errorData = (await response
+      .json()
+      .catch(() => null)) as ApiErrorBody | null;
+
+    throw new ApiError(
+      errorData?.detail ??
+        errorData?.message ??
+        `API request failed with status ${response.status}`,
+      response.status,
+      errorData ?? undefined,
+    );
   }
 
-  return response.json();
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return response.json() as Promise<T>;
 }

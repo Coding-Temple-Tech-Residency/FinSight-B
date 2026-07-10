@@ -1,4 +1,4 @@
-import { usePortfolio } from "../../portfolio/hooks/usePortfolio";
+import { usePortfolios } from "../../portfolio/hooks/usePortfolio";
 import { useMarketHistory } from "../../market/hooks/useMarketHistory";
 import { useStockQuote } from "../../market/hooks/useStockQuote";
 
@@ -31,7 +31,7 @@ const Dashboard = () => {
     data: portfolios,
     isLoading: portfolioLoading,
     isError: portfolioError,
-  } = usePortfolio();
+  } = usePortfolios();
 
   return (
     <section className="dashboard">
