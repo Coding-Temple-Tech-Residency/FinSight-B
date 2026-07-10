@@ -1,27 +1,24 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { useState } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
+
+import ProtectedRoute from "../features/auth/components/ProtectedRoute";
+import { useAuth } from "../features/auth/hooks/useAuth";
 
 import Dashboard from "../features/dashboard/pages/Dashboard";
 import DashboardLayout from "../layouts/DashboardLayout";
-import ProtectedRoute from "../features/auth/components/ProtectedRoute";
+import Home from "../features/home/pages/Home";
 import WatchlistPage from "../features/watchlist/pages/WatchlistPage";
 import Portfolio from "../features/portfolio/pages/Portfolio";
 import Insights from "../features/insights/pages/Insights";
 import Chat from "../features/chat/pages/Chat";
 import Settings from "../features/settings/pages/Settings";
-import Home from "../features/home/pages/Home";
-import { useState } from "react";
-import { useAuth } from "../features/auth/hooks/useAuth";
 
 const AppRoutes = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { isAuthenticated } = useAuth();
 
-  const openMenu = () => {
-    setIsOpen(true);
-  };
-  const closeMenu = () => {
-    setIsOpen(false);
-  };
+  const openMenu = () => setIsOpen(true);
+  const closeMenu = () => setIsOpen(false);
 
   return (
     <Routes>
@@ -40,11 +37,7 @@ const AppRoutes = () => {
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <DashboardLayout
-              isOpen={isOpen}
-              openMenu={openMenu}
-              closeMenu={closeMenu}
-            />
+            <DashboardLayout />
           </ProtectedRoute>
         }
       >
