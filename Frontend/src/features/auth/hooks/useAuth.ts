@@ -1,53 +1,34 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { logoutUser } from "../../../api/authApi";
-
-type AuthUser = {
-  first_name?: string;
-  last_name?: string;
-  email: string;
-};
-
-const getUserFromToken = (): AuthUser | null => {
-  const token = localStorage.getItem("token");
-
-  if (!token) return null;
-
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-
-    return {
-      first_name: payload.first_name,
-      last_name: payload.last_name,
-      email: payload.email,
-    };
-  } catch {
-    return null;
-  }
-};
+import { CURRENT_USER_QUERY_KEY, useCurrentUser } from "./useCurrentUser";
 
 export const useAuth = () => {
   const queryClient = useQueryClient();
+  const token = localStorage.getItem("token");
 
-  const { data: user = null, isLoading: loading } = useQuery<AuthUser | null>({
-    queryKey: ["current-user"],
-    queryFn: async () => getUserFromToken(),
-    initialData: getUserFromToken(),
-  });
+  const { data: user, isLoading, isFetching, isError } = useCurrentUser();
 
-  const logout = () => {
-    logoutUser();
-    queryClient.setQueryData(["current-user"], null);
+  const logout = async () => {
+    try {
+      await logoutUser();
+    } finally {
+      queryClient.clear();
+    }
   };
 
   const refreshUser = async () => {
-    queryClient.setQueryData(["current-user"], getUserFromToken());
+    await queryClient.invalidateQueries({
+      queryKey: CURRENT_USER_QUERY_KEY,
+    });
   };
 
   return {
-    user,
-    loading,
-    isAuthenticated: Boolean(user),
+    user: user ?? null,
+    loading: Boolean(token) && (isLoading || isFetching),
+    isAuthenticated: Boolean(token) && Boolean(user),
+    hasToken: Boolean(token),
+    isError,
     refreshUser,
     logout,
   };

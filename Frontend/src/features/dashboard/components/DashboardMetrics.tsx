@@ -1,5 +1,6 @@
 import type { StockQuote } from "../../market/types/stock";
 import type { Portfolio } from "../../portfolio/types/portfolio";
+
 import MetricCard from "./MetricCard";
 
 type DashboardMetricsProps = {
@@ -17,57 +18,47 @@ const DashboardMetrics = ({
   quote,
   quoteLoading,
   quoteError,
-  portfolios,
+  portfolios = [],
   portfolioLoading,
   portfolioError,
 }: DashboardMetricsProps) => {
-  const primaryPortfolio = portfolios?.[0];
+  const primaryPortfolio = portfolios[0];
+
+  const portfolioCountValue = portfolioLoading
+    ? "Loading..."
+    : portfolioError
+      ? "Unavailable"
+      : String(portfolios.length);
+
+  const primaryPortfolioValue = portfolioLoading
+    ? "Loading..."
+    : portfolioError
+      ? "Unavailable"
+      : (primaryPortfolio?.name ?? "None");
+
+  const currencyValue = portfolioLoading
+    ? "Loading..."
+    : portfolioError
+      ? "Unavailable"
+      : (primaryPortfolio?.currency ?? "N/A");
+
+  const quoteValue = quoteLoading
+    ? "Loading..."
+    : quoteError
+      ? "Unavailable"
+      : quote?.latest_price !== undefined
+        ? `$${Number(quote.latest_price).toFixed(2)}`
+        : "Unavailable";
 
   return (
     <>
-      <MetricCard
-        label="Portfolio Value"
-        value={
-          portfolioLoading
-            ? "Loading..."
-            : portfolioError
-              ? "Unavailable"
-              : `$${Number(primaryPortfolio?.total_value ?? 0).toLocaleString()}`
-        }
-      />
+      <MetricCard label="Portfolios" value={portfolioCountValue} />
 
-      <MetricCard
-        label="Buying Power"
-        value={
-          portfolioLoading
-            ? "Loading..."
-            : portfolioError
-              ? "Unavailable"
-              : `$${Number(primaryPortfolio?.buying_power ?? 0).toLocaleString()}`
-        }
-      />
+      <MetricCard label="Primary Portfolio" value={primaryPortfolioValue} />
 
-      <MetricCard
-        label={`${symbol} Price`}
-        value={
-          quoteLoading
-            ? "Loading..."
-            : quoteError
-              ? "Unavailable"
-              : `$${Number(quote?.latest_price ?? 0).toFixed(2)}`
-        }
-      />
+      <MetricCard label={`${symbol} Price`} value={quoteValue} />
 
-      <MetricCard
-        label="Cash Balance"
-        value={
-          portfolioLoading
-            ? "Loading..."
-            : portfolioError
-              ? "Unavailable"
-              : `$${Number(primaryPortfolio?.cash_balance ?? 0).toLocaleString()}`
-        }
-      />
+      <MetricCard label="Portfolio Currency" value={currencyValue} />
     </>
   );
 };

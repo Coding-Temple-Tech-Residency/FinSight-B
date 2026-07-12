@@ -23,22 +23,30 @@ export type RegisterResponse = {
   message: string;
 };
 
-export const registerUser = async (payload: RegisterPayload) => {
+export const registerUser = (payload: RegisterPayload) => {
   return apiClient<RegisterResponse>("/api/auth/register", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 };
 
-export const loginUser = async (payload: LoginPayload) => {
+export const loginUser = (payload: LoginPayload) => {
   return apiClient<LoginResponse>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 };
 
-export const logoutUser = () => {
-  localStorage.removeItem("token");
+export const logoutUser = async () => {
+  try {
+    await apiClient<void>("/api/auth/logout", {
+      method: "POST",
+    });
+  } finally {
+    localStorage.removeItem("token");
+  }
 };
 
-export const getCurrentUser = () => apiClient<CurrentUser>("/api/auth/me");
+export const getCurrentUser = () => {
+  return apiClient<CurrentUser>("/api/auth/me");
+};

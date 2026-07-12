@@ -18,6 +18,14 @@ type StockLineChartProps = {
 const StockLineChart = ({ data }: StockLineChartProps) => {
   const chartData = formatChartData(data);
 
+  if (chartData.length === 0) {
+    return (
+      <div className="chart-empty-state">
+        <p>No price history is available.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full h-80 rounded-xl border border-(--border-primary) bg-(--bg-secondary) p-4">
       <h2 className="mb-4 text-lg font-semibold">Price History</h2>
@@ -26,13 +34,30 @@ const StockLineChart = ({ data }: StockLineChartProps) => {
         <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" />
 
-          <XAxis dataKey="date" />
+          <XAxis dataKey="date" minTickGap={24} />
 
-          <YAxis domain={["auto", "auto"]} />
+          <YAxis
+            domain={["auto", "auto"]}
+            tickFormatter={(value) => `$${Number(value).toFixed(0)}`}
+          />
 
-          <Tooltip />
+          <Tooltip
+            formatter={(value) => [
+              Number(value).toLocaleString("en-US", {
+                style: "currency",
+                currency: "USD",
+              }),
+              "Close",
+            ]}
+          />
 
-          <Line type="monotone" dataKey="close" strokeWidth={2} dot={false} />
+          <Line
+            type="monotone"
+            dataKey="close"
+            stroke="var(--accent-primary)"
+            strokeWidth={2}
+            dot={false}
+          />
         </LineChart>
       </ResponsiveContainer>
     </div>

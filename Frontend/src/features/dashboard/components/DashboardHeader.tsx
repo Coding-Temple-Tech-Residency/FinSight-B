@@ -15,7 +15,7 @@ const DashboardHeader = () => {
   const { data: user, isLoading } = useCurrentUser();
   const { symbol } = useDashboard();
 
-  const firstName = user?.first_name ?? user?.firstName ?? "Investor";
+  const firstName = user?.first_name ?? "Investor";
 
   const greeting = getGreeting();
 

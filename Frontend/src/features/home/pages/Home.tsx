@@ -60,6 +60,9 @@ const Home = ({
               <li className={`home-nav-li`} key={item.id}>
                 <a
                   href={`#${item.section}`}
+                  onClick={() => {
+                    if (!isDesktop) closeMenu();
+                  }}
                   className={`home-nav-li-a px-3 ${isDesktop ? "block px-5" : "inline-block"} py-2 rounded-lg hover:text-emerald-500 transition-all duration-300`}
                 >
                   {item.name}

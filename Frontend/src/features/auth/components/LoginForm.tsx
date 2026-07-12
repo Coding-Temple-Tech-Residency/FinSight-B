@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { loginUser } from "../../../api/authApi";
+import { getCurrentUser, loginUser } from "../../../api/authApi";
 import { useModal } from "../../../hooks/useModal";
 import { useNavigate } from "react-router-dom";
 
@@ -17,8 +17,9 @@ const LoginForm = () => {
     onSuccess: async (data) => {
       localStorage.setItem("token", data.access_token);
 
-      await queryClient.invalidateQueries({
+      await queryClient.fetchQuery({
         queryKey: ["current-user"],
+        queryFn: getCurrentUser,
       });
 
       closeModal();

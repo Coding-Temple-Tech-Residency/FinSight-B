@@ -1,7 +1,11 @@
 import { NavLink } from "react-router-dom";
 import { navigation } from "../constants/navigation";
 
-const DashboardNav = () => {
+interface DashboardNavProps {
+  closeMenu: () => void;
+}
+
+const DashboardNav = ({ closeMenu }: DashboardNavProps) => {
   return (
     <nav className="dashboard-nav">
       {navigation.map((item) => (
@@ -9,6 +13,7 @@ const DashboardNav = () => {
           key={item.id}
           to={item.path}
           end={item.path === "/dashboard"}
+          onClick={closeMenu}
           className={({ isActive }) =>
             `dashboard-nav-link ${isActive ? "active" : ""}`
           }

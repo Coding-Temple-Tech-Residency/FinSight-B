@@ -6,6 +6,8 @@ export type Holding = {
   quantity: number | string;
   average_price: number | string;
   current_price?: number | string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type CreateHoldingPayload = {

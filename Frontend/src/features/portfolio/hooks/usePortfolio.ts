@@ -10,24 +10,38 @@ import {
 
 import type {
   CreatePortfolioPayload,
+  Portfolio,
   UpdatePortfolioPayload,
 } from "../types/portfolio";
 
+export const portfolioKeys = {
+  all: ["portfolios"] as const,
+  detail: (portfolioId: number) => ["portfolio", portfolioId] as const,
+};
+
+const isValidPortfolioId = (portfolioId?: number): portfolioId is number => {
+  return typeof portfolioId === "number" && portfolioId > 0;
+};
+
 export const usePortfolios = () => {
   return useQuery({
-    queryKey: ["portfolios"],
+    queryKey: portfolioKeys.all,
     queryFn: getPortfolios,
     staleTime: 5 * 60 * 1000,
     retry: false,
+    refetchOnWindowFocus: false,
   });
 };
 
 export const usePortfolio = (portfolioId?: number) => {
   return useQuery({
-    queryKey: ["portfolio", portfolioId],
+    queryKey: isValidPortfolioId(portfolioId)
+      ? portfolioKeys.detail(portfolioId)
+      : ["portfolio", "disabled"],
     queryFn: () => getPortfolioById(portfolioId!),
-    enabled: typeof portfolioId === "number",
+    enabled: isValidPortfolioId(portfolioId),
     retry: false,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -37,10 +51,16 @@ export const useCreatePortfolio = () => {
   return useMutation({
     mutationFn: (payload: CreatePortfolioPayload) => createPortfolio(payload),
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["portfolios"],
-      });
+    onSuccess: (newPortfolio) => {
+      queryClient.setQueryData<Portfolio[]>(
+        portfolioKeys.all,
+        (current = []) => [...current, newPortfolio],
+      );
+
+      queryClient.setQueryData(
+        portfolioKeys.detail(newPortfolio.id),
+        newPortfolio,
+      );
     },
   });
 };
@@ -58,12 +78,14 @@ export const useUpdatePortfolio = () => {
     }) => updatePortfolio(portfolioId, payload),
 
     onSuccess: (updatedPortfolio) => {
-      queryClient.invalidateQueries({
-        queryKey: ["portfolios"],
-      });
+      queryClient.setQueryData<Portfolio[]>(portfolioKeys.all, (current = []) =>
+        current.map((portfolio) =>
+          portfolio.id === updatedPortfolio.id ? updatedPortfolio : portfolio,
+        ),
+      );
 
       queryClient.setQueryData(
-        ["portfolio", updatedPortfolio.id],
+        portfolioKeys.detail(updatedPortfolio.id),
         updatedPortfolio,
       );
     },
@@ -76,9 +98,17 @@ export const useDeletePortfolio = () => {
   return useMutation({
     mutationFn: deletePortfolio,
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["portfolios"],
+    onSuccess: (_, portfolioId) => {
+      queryClient.setQueryData<Portfolio[]>(portfolioKeys.all, (current = []) =>
+        current.filter((portfolio) => portfolio.id !== portfolioId),
+      );
+
+      queryClient.removeQueries({
+        queryKey: portfolioKeys.detail(portfolioId),
+      });
+
+      queryClient.removeQueries({
+        queryKey: ["holdings", portfolioId],
       });
     },
   });
