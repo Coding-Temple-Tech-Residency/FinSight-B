@@ -1,81 +1,128 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
 import {
   createHolding,
   deleteHolding,
   getHoldings,
   updateHolding,
 } from "../../../api/holdingsApi";
+
 import type {
   CreateHoldingPayload,
   UpdateHoldingPayload,
 } from "../types/holdings";
 
+export const holdingKeys = {
+  all: ["holdings"] as const,
+  byPortfolio: (portfolioId: number) => ["holdings", portfolioId] as const,
+};
+
+export const portfolioKeys = {
+  all: ["portfolios"] as const,
+  detail: (portfolioId: number) => ["portfolio", portfolioId] as const,
+};
+
+const isValidPortfolioId = (portfolioId?: number): portfolioId is number => {
+  return typeof portfolioId === "number" && portfolioId > 0;
+};
+
 export const useHoldings = (portfolioId?: number) => {
   return useQuery({
-    queryKey: ["holdings", portfolioId],
+    queryKey: isValidPortfolioId(portfolioId)
+      ? holdingKeys.byPortfolio(portfolioId)
+      : [...holdingKeys.all, "disabled"],
     queryFn: () => getHoldings(portfolioId!),
-    enabled: typeof portfolioId === "number",
+    enabled: isValidPortfolioId(portfolioId),
     retry: false,
+    refetchOnWindowFocus: false,
   });
 };
 
-export const useCreateHolding = () => {
+export const useCreateHolding = (portfolioId: number) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      portfolioId,
-      payload,
-    }: {
-      portfolioId: number;
-      payload: CreateHoldingPayload;
-    }) => createHolding(portfolioId, payload),
+    mutationFn: (payload: CreateHoldingPayload) => {
+      if (!isValidPortfolioId(portfolioId)) {
+        throw new Error("A valid portfolio is required.");
+      }
 
-    onSuccess: (_, variables) => {
+      return createHolding(portfolioId, payload);
+    },
+
+    onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["holdings", variables.portfolioId],
+        queryKey: holdingKeys.byPortfolio(portfolioId),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: portfolioKeys.detail(portfolioId),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: portfolioKeys.all,
       });
     },
   });
 };
 
-export const useUpdateHolding = () => {
+export const useUpdateHolding = (portfolioId: number) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({
-      portfolioId,
       holdingId,
       payload,
     }: {
-      portfolioId: number;
       holdingId: number;
       payload: UpdateHoldingPayload;
-    }) => updateHolding(portfolioId, holdingId, payload),
+    }) => {
+      if (!isValidPortfolioId(portfolioId)) {
+        throw new Error("A valid portfolio is required.");
+      }
 
-    onSuccess: (_, variables) => {
+      return updateHolding(portfolioId, holdingId, payload);
+    },
+
+    onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["holdings", variables.portfolioId],
+        queryKey: holdingKeys.byPortfolio(portfolioId),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: portfolioKeys.detail(portfolioId),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: portfolioKeys.all,
       });
     },
   });
 };
 
-export const useDeleteHolding = () => {
+export const useDeleteHolding = (portfolioId: number) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      portfolioId,
-      holdingId,
-    }: {
-      portfolioId: number;
-      holdingId: number;
-    }) => deleteHolding(portfolioId, holdingId),
+    mutationFn: (holdingId: number) => {
+      if (!isValidPortfolioId(portfolioId)) {
+        throw new Error("A valid portfolio is required.");
+      }
 
-    onSuccess: (_, variables) => {
+      return deleteHolding(portfolioId, holdingId);
+    },
+
+    onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["holdings", variables.portfolioId],
+        queryKey: holdingKeys.byPortfolio(portfolioId),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: portfolioKeys.detail(portfolioId),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: portfolioKeys.all,
       });
     },
   });

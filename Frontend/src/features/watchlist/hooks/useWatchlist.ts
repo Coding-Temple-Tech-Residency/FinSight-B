@@ -6,12 +6,18 @@ import {
   removeWatchlistItem,
 } from "../../../api/watchlistApi";
 
+export const watchlistKeys = {
+  all: ["watchlist"] as const,
+  item: (symbol: string) => ["watchlist", symbol.trim().toUpperCase()] as const,
+};
+
 export const useWatchlist = () => {
   return useQuery({
-    queryKey: ["watchlist"],
+    queryKey: watchlistKeys.all,
     queryFn: getWatchlist,
-    staleTime: 60 * 1000,
+    staleTime: 5 * 60 * 1000,
     retry: false,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -21,10 +27,12 @@ export const useAddToWatchlist = () => {
   return useMutation({
     mutationFn: addWatchlistItem,
 
-    onSuccess: () => {
+    onSuccess: (newItem) => {
       queryClient.invalidateQueries({
-        queryKey: ["watchlist"],
+        queryKey: watchlistKeys.all,
       });
+
+      queryClient.setQueryData(watchlistKeys.item(newItem.symbol), newItem);
     },
   });
 };
@@ -35,9 +43,13 @@ export const useRemoveFromWatchlist = () => {
   return useMutation({
     mutationFn: removeWatchlistItem,
 
-    onSuccess: () => {
+    onSuccess: (_, symbol) => {
+      queryClient.removeQueries({
+        queryKey: watchlistKeys.item(symbol),
+      });
+
       queryClient.invalidateQueries({
-        queryKey: ["watchlist"],
+        queryKey: watchlistKeys.all,
       });
     },
   });

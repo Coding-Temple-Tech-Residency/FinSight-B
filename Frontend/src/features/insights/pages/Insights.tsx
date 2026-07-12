@@ -1,112 +1,107 @@
-import { useState } from "react";
-import { useInsights } from "../hooks/useInsights";
-const Insights = () => {
-  const [activeTab, setActiveTab] = useState("for-you");
-  const { data: insights = [], isLoading, isError } = useInsights();
-  console.log(insights);
+import EmptyCard from "../../../components/ui/EmptyCard";
+import ErrorCard from "../../../components/ui/ErrorCard";
+import LoadingCard from "../../../components/ui/LoadingCard";
 
-  const filteredInsights = insights.filter((item) => {
-    switch (activeTab) {
-      case "for-you":
-        return true;
-      case "earnings":
-        return item.category === "earnings";
-      case "market":
-        return item.category === "market";
-      case "news":
-        return item.category === "news";
-      default:
-        return true;
-    }
-  });
+import { useDashboard } from "../../dashboard/hooks/useDashboard";
+import { useAIInsights, useGenerateAIInsight } from "../hooks/useAIInsight";
+
+const Insights = () => {
+  const { symbol } = useDashboard();
+
+  const { data: insights = [], isLoading, isError, error } = useAIInsights();
+
+  const {
+    mutate: generateInsight,
+    isPending,
+    isError: generateError,
+    error: generateErrorData,
+  } = useGenerateAIInsight();
+
+  const handleGenerate = () => {
+    generateInsight({
+      symbol,
+      analysis_type: "market",
+    });
+  };
 
   return (
-    <div className="p-6">
-      <h1>AI Insights</h1>
-      {/* buttons */}
-      <div className="flex gap-3 mt-8">
-        <button
-          onClick={() => setActiveTab("for-you")}
-          className={`tab-button ${
-            activeTab === "for-you"
-              ? "tab-button-active"
-              : "tab-button-inactive"
-          }`}
-        >
-          For You
-        </button>
+    <section className="insights-page">
+      <header className="insights-header">
+        <div>
+          <h1>AI Insights</h1>
+          <p>AI-generated market analysis for {symbol}.</p>
+        </div>
 
-        <button
-          onClick={() => setActiveTab("earnings")}
-          className={`tab-button ${
-            activeTab === "earnings"
-              ? "tab-button-active"
-              : "tab-button-inactive"
-          }`}
-        >
-          Earnings
+        <button type="button" disabled={isPending} onClick={handleGenerate}>
+          {isPending ? "Analyzing..." : "Generate Insight"}
         </button>
-        <button
-          onClick={() => setActiveTab("market")}
-          className={`tab-button ${
-            activeTab === "market" ? "tab-button-active" : "tab-button-inactive"
-          }`}
-        >
-          Market
-        </button>
+      </header>
 
-        <button
-          onClick={() => setActiveTab("news")}
-          className={`tab-button ${
-            activeTab === "news" ? "tab-button-active" : "tab-button-inactive"
-          }`}
-        >
-          News
-        </button>
+      {isLoading && <LoadingCard title="Loading insights..." />}
+
+      {isError && (
+        <ErrorCard
+          message={
+            error instanceof Error
+              ? error.message
+              : "Unable to load AI insights."
+          }
+        />
+      )}
+
+      {generateError && (
+        <ErrorCard
+          message={
+            generateErrorData instanceof Error
+              ? generateErrorData.message
+              : "Unable to generate an insight."
+          }
+        />
+      )}
+
+      {!isLoading && !isError && insights.length === 0 && (
+        <EmptyCard
+          title="No AI insights"
+          message={`Generate your first market insight for ${symbol}.`}
+          action={
+            <button type="button" disabled={isPending} onClick={handleGenerate}>
+              Generate Insight
+            </button>
+          }
+        />
+      )}
+
+      <div className="insights-grid">
+        {insights.map((insight) => (
+          <article key={insight.id} className="insight-result-card">
+            <div className="card-header">
+              <h2>{insight.symbol}</h2>
+              <span className="badge">{insight.sentiment}</span>
+            </div>
+
+            <p>{insight.summary}</p>
+
+            {insight.key_points?.length ? (
+              <ul className="insight-key-points">
+                {insight.key_points.map((point) => (
+                  <li key={point}>{point}</li>
+                ))}
+              </ul>
+            ) : null}
+
+            {insight.risk_level && (
+              <p>
+                Risk level: <strong>{insight.risk_level}</strong>
+              </p>
+            )}
+          </article>
+        ))}
       </div>
 
-      <div className="mt-8 space-y-4">
-        {/* ActiveTab-For-you */}
-
-        {activeTab === "for-you" && (
-          <>
-            {isLoading && <p>Loading...</p>}
-
-            {isError && <p>Unable to load insights.</p>}
-
-            {!isLoading &&
-              !isError &&
-              filteredInsights.map((item) => (
-                <div key={item.id} className="insights-card">
-                  <div className="flex items-start gap-5">
-                    <div className="insights-icon"></div>
-
-                    <div>
-                      <h3 className="insights-title font-semibold text-lg">
-                        {item.title}
-                      </h3>
-
-                      <p className="insights-text text-sm mt-1">
-                        {item.description}
-                      </p>
-
-                      <div className="flex items-center gap-3 mt-3">
-                        <span className="font-medium text-sm">
-                          {item.sentiment}
-                        </span>
-
-                        <span className="insights-text text-sm">
-                          {item.created_at}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-          </>
-        )}
-      </div>
-    </div>
+      <p className="ai-disclaimer">
+        AI-generated information is educational and is not financial advice.
+      </p>
+    </section>
   );
 };
 

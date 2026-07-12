@@ -1,203 +1,127 @@
 import { useState } from "react";
 
+import { useDashboard } from "../../dashboard/hooks/useDashboard";
+import { useAIChat } from "../hooks/useAIChat";
+import type { AIChatMessage } from "../types/chat";
+
 const Chat = () => {
-  const [activeTab, setActiveTab] = useState("overview");
+  const { symbol } = useDashboard();
+
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState<AIChatMessage[]>([]);
+
+  const { mutate: sendMessage, isPending, isError, error, reset } = useAIChat();
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const trimmedMessage = message.trim();
+
+    if (!trimmedMessage || isPending) return;
+
+    reset();
+
+    const userMessage: AIChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: trimmedMessage,
+      created_at: new Date().toISOString(),
+    };
+
+    setMessages((current) => [...current, userMessage]);
+
+    setMessage("");
+
+    sendMessage(
+      {
+        message: trimmedMessage,
+        symbol,
+      },
+      {
+        onSuccess: (response) => {
+          const responseMessage = response.message.trim();
+
+          if (!responseMessage) return;
+
+          setMessages((current) => [
+            ...current,
+            {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              content: responseMessage,
+              created_at: new Date().toISOString(),
+            },
+          ]);
+        },
+      },
+    );
+  };
+
   return (
-    <div>
-      <div className="p-6">
-        <h1>Chat</h1>
-        {/* buttons */}
-        <div className="flex gap-3 mt-8">
-          <button
-            onClick={() => setActiveTab("overview")}
-            className={`tab-button ${
-              activeTab === "overview"
-                ? "tab-button-active"
-                : "tab-button-inactive"
-            }`}
-          >
-            Overview
-          </button>
+    <section className="chat-page">
+      <header className="chat-header">
+        <h1>Ask FinSight AI</h1>
+        <p>Currently discussing {symbol}.</p>
+      </header>
 
-          <button
-            onClick={() => setActiveTab("news")}
-            className={`tab-button ${
-              activeTab === "news" ? "tab-button-active" : "tab-button-inactive"
-            }`}
-          >
-            News
-          </button>
-          <button
-            onClick={() => setActiveTab("earnings")}
-            className={`tab-button ${
-              activeTab === "earnings"
-                ? "tab-button-active"
-                : "tab-button-inactive"
-            }`}
-          >
-            Earnings
-          </button>
-
-          <button
-            onClick={() => setActiveTab("answers")}
-            className={`tab-button ${
-              activeTab === "answers"
-                ? "tab-button-active"
-                : "tab-button-inactive"
-            }`}
-          >
-            Answers
-          </button>
-        </div>
-
-        {/* ActiveTab-overview */}
-        {activeTab === "overview" && (
-          <>
-            <div className="mt-8 space-y-6">
-              {/* User Message */}
-              <div className="flex justify-end">
-                <div className="bg-green-600 text-white p-4 rounded-2xl max-w-md">
-                  What stocks in my portfolio have the highest growth potential?
-                </div>
-              </div>
-
-              {/* AI Response */}
-              <div className="chat-card">
-                <p className="mt-4 chat-text">
-                  Based on your portfolio, here are the stocks with the highest
-                  growth potential:...
-                </p>
-
-                <p className="mt-4 chat-text">
-                  Would you like me to analyze any of these in more detail?
-                </p>
-              </div>
-
-              {/* Input */}
-              <div className="flex gap-3 mt-6">
-                <input
-                  type="text"
-                  placeholder="Ask anything about your portfolio..."
-                  className="flex-1 chat-input"
-                />
-
-                <button className="bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12">
-                  ➜
-                </button>
-              </div>
-            </div>
-          </>
+      <div className="chat-messages" aria-live="polite">
+        {messages.length === 0 && (
+          <p>Ask a question about {symbol}, the market, or your portfolio.</p>
         )}
 
-        {/* ActiveTab-news */}
-        {activeTab === "news" && (
-          <>
-            <div className="mt-8 space-y-6">
-              {/* User Message */}
-              <div className="flex justify-end">
-                <div className="bg-green-600 text-white p-4 rounded-2xl max-w-md">
-                  Latest News ....
-                </div>
-              </div>
+        {messages.map((chatMessage) => (
+          <article
+            key={chatMessage.id}
+            className={`chat-message ${chatMessage.role}`}
+          >
+            <p>{chatMessage.content}</p>
+          </article>
+        ))}
 
-              {/* AI Response */}
-              <div className="chat-card">
-                <p className="mt-4 chat-text">Apple Annouce...</p>
-
-                <p className="mt-4 chat-text">
-                  Would you like me to analyze any of these in more detail?
-                </p>
-              </div>
-
-              {/* Input */}
-              <div className="flex gap-3 mt-6">
-                <input
-                  type="text"
-                  placeholder="Ask anything about your portfolio..."
-                  className="flex-1 chat-input"
-                />
-
-                <button className="bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12">
-                  ➜
-                </button>
-              </div>
-            </div>
-          </>
+        {isPending && (
+          <article className="chat-message assistant">
+            <p>Thinking...</p>
+          </article>
         )}
 
-        {/* ActiveTab-earnings */}
-        {activeTab === "earnings" && (
-          <>
-            <div className="mt-8 space-y-6">
-              {/* User Message */}
-              <div className="flex justify-end">
-                <div className="bg-green-600 text-white p-4 rounded-2xl max-w-md">
-                  Upcoming Earnings
-                </div>
-              </div>
+        {isError && (
+          <div className="chat-error">
+            <p className="negative">
+              {error instanceof Error
+                ? error.message
+                : "Unable to send your message."}
+            </p>
 
-              {/* AI Response */}
-              <div className="chat-card">
-                <p className="mt-4 chat-text">Apple..</p>
-
-                <p className="mt-4 chat-text">
-                  Would you like me to analyze any of these in more detail?
-                </p>
-              </div>
-
-              {/* Input */}
-              <div className="flex gap-3 mt-6">
-                <input
-                  type="text"
-                  placeholder="Ask anything about your portfolio..."
-                  className="flex-1 chat-input"
-                />
-
-                <button className="bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12">
-                  ➜
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* ActiveTab-answers */}
-        {activeTab === "answers" && (
-          <>
-            <div className="mt-8 space-y-6">
-              {/* User Message */}
-              <div className="flex justify-end">
-                <div className="bg-green-600 text-white p-4 rounded-2xl max-w-md">
-                  How can I..?
-                </div>
-              </div>
-
-              {/* AI Response */}
-              <div className="chat-card">
-                <p className="mt-4 chat-text">Loading..</p>
-
-                <p className="mt-4 chat-text">
-                  Would you like me to analyze any of these in more detail?
-                </p>
-              </div>
-
-              {/* Input */}
-              <div className="flex gap-3 mt-6">
-                <input
-                  type="text"
-                  placeholder="Ask anything about your portfolio..."
-                  className="flex-1 chat-input"
-                />
-
-                <button className="bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12">
-                  ➜
-                </button>
-              </div>
-            </div>
-          </>
+            <p className="metric-label">
+              The AI backend may not be available yet.
+            </p>
+          </div>
         )}
       </div>
-    </div>
+
+      <form className="chat-form" onSubmit={handleSubmit}>
+        <label htmlFor="ai-chat-message" className="sr-only">
+          Ask FinSight AI
+        </label>
+
+        <input
+          id="ai-chat-message"
+          value={message}
+          maxLength={1000}
+          autoComplete="off"
+          onChange={(event) => setMessage(event.target.value)}
+          placeholder={`Ask about ${symbol}...`}
+        />
+
+        <button type="submit" disabled={!message.trim() || isPending}>
+          {isPending ? "Sending..." : "Send"}
+        </button>
+      </form>
+
+      <p className="ai-disclaimer">
+        AI responses are informational and are not financial advice.
+      </p>
+    </section>
   );
 };
 

@@ -1,8 +1,18 @@
+export type InsightSentiment = "bullish" | "bearish" | "neutral";
+
+export type RiskLevel = "low" | "moderate" | "high";
+
 export type AIInsight = {
   id: number;
-  title: string;
-  description: string;
-  category: string;
-  sentiment: string;
+  symbol: string;
+  summary: string;
+  sentiment: InsightSentiment;
+  risk_level: RiskLevel | null;
+  key_points: string[];
   created_at: string;
+};
+
+export type GenerateInsightPayload = {
+  symbol: string;
+  analysis_type?: "market" | "portfolio";
 };

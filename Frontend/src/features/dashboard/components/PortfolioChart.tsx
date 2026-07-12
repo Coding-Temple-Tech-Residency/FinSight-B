@@ -10,7 +10,7 @@ type PortfolioChartProps = {
 
 const PortfolioChart = ({
   symbol,
-  history,
+  history = [],
   isLoading,
   isError,
 }: PortfolioChartProps) => {
@@ -23,9 +23,17 @@ const PortfolioChart = ({
 
       {isLoading && <p>Loading chart...</p>}
 
-      {isError && <p>Chart data unavailable.</p>}
+      {isError && (
+        <p className="negative">Chart data is currently unavailable.</p>
+      )}
 
-      {!isLoading && !isError && history && <StockLineChart data={history} />}
+      {!isLoading && !isError && history.length === 0 && (
+        <p>No historical data is available for {symbol}.</p>
+      )}
+
+      {!isLoading && !isError && history.length > 0 && (
+        <StockLineChart data={history} />
+      )}
     </article>
   );
 };

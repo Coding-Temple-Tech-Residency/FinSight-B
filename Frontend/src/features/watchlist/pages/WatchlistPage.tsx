@@ -1,12 +1,4 @@
-import {
-  // useAddToWatchlist,
-  // useRemoveFromWatchlist,
-  useWatchlist,
-} from "../hooks/useWatchlist";
 const WatchlistPage = () => {
-  const { data: watchlist = [], isLoading, isError } = useWatchlist();
-  // const { mutate: addToWatchlist } = useAddToWatchlist();
-  // const { mutate: removeFromWatchlist } = useRemoveFromWatchlist();
   return (
     <div className="flex flex-col w-full mt-4">
       <div className="mt-4 mb-4">
@@ -25,37 +17,44 @@ const WatchlistPage = () => {
                 <th>Price</th>
                 <th>Change</th>
                 <th>Chart (7D)</th>
-                <th>Action</th>
               </tr>
             </thead>
 
             <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan={5}>Loading...</td>
-                </tr>
-              ) : isError ? (
-                <tr>
-                  <td colSpan={5}>Unable to load watchlist.</td>
-                </tr>
-              ) : watchlist.length === 0 ? (
-                <tr>
-                  <td colSpan={5}>No watchlist items.</td>
-                </tr>
-              ) : (
-                watchlist.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.symbol}</td>
-                    <td>${Number(item.stock?.latest_price ?? 0).toFixed(2)}</td>
-                    <td>--</td>
-                    <td>
-                      <button className="rounded-md border border-gray-300 bg-white px-3 py-1 text-sm font-semibold text-black hover:opacity-80">
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
+              <tr>
+                <td>AAPL</td>
+                <td>$1.96.39</td>
+                <td className="portfolio-positive">+2.3%</td>
+                <td>--</td>
+              </tr>
+
+              <tr>
+                <td>TSLA</td>
+                <td>$178.52</td>
+                <td className="portfolio-negative">-1.2%</td>
+                <td>--</td>
+              </tr>
+
+              <tr>
+                <td>NVDA</td>
+                <td>%1,034.86</td>
+                <td className="portfolio-positive">+3.2%</td>
+                <td>--</td>
+              </tr>
+
+              <tr>
+                <td>GOOGL</td>
+                <td>%170.50</td>
+                <td className="portfolio-positive">+0.2%</td>
+                <td>--</td>
+              </tr>
+
+              <tr>
+                <td>META</td>
+                <td>%459.54</td>
+                <td className="portfolio-negative">-0.8%</td>
+                <td>--</td>
+              </tr>
             </tbody>
           </table>
         </div>

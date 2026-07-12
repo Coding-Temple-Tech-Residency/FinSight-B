@@ -17,7 +17,7 @@ const ProfileMenu = () => {
 
   const { user, logout } = useAuth();
 
-  const firstName = user?.first_name ?? "User";
+  const firstName = user?.first_name ?? "Investor";
   const lastName = user?.last_name ?? "";
   const fullName = `${firstName} ${lastName}`.trim();
 
@@ -43,8 +43,8 @@ const ProfileMenu = () => {
     };
   }, []);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setIsOpen(false);
     navigate("/", { replace: true });
   };

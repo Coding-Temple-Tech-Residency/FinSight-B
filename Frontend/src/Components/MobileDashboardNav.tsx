@@ -2,7 +2,11 @@ import { NavLink } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { navigation } from "../constants/navigation";
 
-const MobileDashboardNav = () => {
+interface MobileDashboardNavProps {
+  closeMenu: () => void;
+}
+
+const MobileDashboardNav = ({ closeMenu }: MobileDashboardNavProps) => {
   return (
     <nav className="mobile-dashboard-nav">
       {navigation.map((item) => (
@@ -10,6 +14,7 @@ const MobileDashboardNav = () => {
           key={item.id}
           to={item.path}
           end={item.path === "/dashboard"}
+          onClick={closeMenu}
           className={({ isActive }) =>
             `mobile-dashboard-link ${isActive ? "active" : ""}`
           }

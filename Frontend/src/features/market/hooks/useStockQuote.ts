@@ -1,11 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
+
 import { getStockQuote } from "../../../api/marketDataApi";
+
+export const stockQuoteKeys = {
+  all: ["stock-quote"] as const,
+  detail: (symbol: string) =>
+    ["stock-quote", symbol.trim().toUpperCase()] as const,
+};
 
 export function useStockQuote(symbol: string) {
   const normalizedSymbol = symbol.trim().toUpperCase();
 
   return useQuery({
-    queryKey: ["stock-quote", normalizedSymbol],
+    queryKey: stockQuoteKeys.detail(normalizedSymbol),
     queryFn: () => getStockQuote(normalizedSymbol),
     enabled: Boolean(normalizedSymbol),
 

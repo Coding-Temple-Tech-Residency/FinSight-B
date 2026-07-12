@@ -1,4 +1,5 @@
 import { apiClient } from "./apiClient";
+
 import type {
   CreateHoldingPayload,
   Holding,
@@ -7,12 +8,6 @@ import type {
 
 export const getHoldings = (portfolioId: number) => {
   return apiClient<Holding[]>(`/api/portfolios/${portfolioId}/holdings`);
-};
-
-export const getHoldingById = (portfolioId: number, holdingId: number) => {
-  return apiClient<Holding>(
-    `/api/portfolios/${portfolioId}/holdings/${holdingId}`,
-  );
 };
 
 export const createHolding = (
