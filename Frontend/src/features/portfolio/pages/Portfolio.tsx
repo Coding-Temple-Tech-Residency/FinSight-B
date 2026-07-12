@@ -39,6 +39,12 @@ const Portfolio = () => {
     <div className="flex flex-col w-full mt-4">
       <h1>Portfolio</h1>
       <p className="mt-3">Manage your investments and holdings.</p>
+      <p className="text-sm text-gray-500 mt-2">
+        Last update:{""}
+        {primaryPortfolio?.updated_at
+          ? new Date(primaryPortfolio.updated_at).toLocaleString()
+          : "N/A"}
+      </p>
 
       <div className="summary-cards mt-8">
         {/* card 1 */}
