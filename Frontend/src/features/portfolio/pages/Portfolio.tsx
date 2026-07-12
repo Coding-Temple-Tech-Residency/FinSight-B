@@ -1,4 +1,40 @@
+import { usePortfolios } from "../hooks/usePortfolio";
+import {
+  useHoldings,
+  useCreateHolding,
+  useDeleteHolding,
+  useUpdateHolding,
+} from "../hooks/useHoldings";
+
+import type { Holding } from "../types/holdings";
+
 const Portfolio = () => {
+  const { data: portfolios, isLoading, isError } = usePortfolios();
+
+  const primaryPortfolio = portfolios?.[0];
+  console.log("portfolio:", portfolios);
+  console.log("primary", primaryPortfolio);
+  const {
+    data: holdings = [],
+    isLoading: holdingsLoading,
+    isError: holdingsError,
+  } = useHoldings(primaryPortfolio?.id);
+
+  const { mutate: deleteHolding } = useDeleteHolding();
+  const { mutate: updateHolding } = useUpdateHolding();
+  const { mutate: createHolding } = useCreateHolding();
+
+  const handleDelete = (holdingId: number) => {
+    deleteHolding({
+      portfolioId: primaryPortfolio!.id,
+      holdingId,
+    });
+  };
+
+  const handleEdit = (holding: Holding) => {
+    console.log("Edit", holding);
+  };
+
   return (
     <div className="flex flex-col w-full mt-4">
       <h1>Portfolio</h1>
@@ -8,37 +44,58 @@ const Portfolio = () => {
         {/* card 1 */}
         <article className="card">
           <p className="metric-label">Total Portfolio Value</p>
-          <h2 className="metric-value">$0.00</h2>
-          <p className="metric-change">+0.00%</p>
+          <h2 className="metric-value">
+            {isLoading
+              ? "Loading..."
+              : isError
+                ? "Unavailable"
+                : `$${Number(primaryPortfolio?.total_value ?? 0).toLocaleString()}`}
+          </h2>
         </article>
 
         {/* card 2 */}
         <article className="card">
-          <p className="metric-label">Total Gain/Loss</p>
-          <h2 className="metric-value">$0.00</h2>
-          <p className="metric-change positive">+$0.00</p>
+          <p className="metric-label">Buying Power</p>
+          <h2 className="metric-value">
+            {" "}
+            {isLoading
+              ? "Loading..."
+              : isError
+                ? "Unavailable"
+                : `$${Number(primaryPortfolio?.buying_power ?? 0).toLocaleString()}`}
+          </h2>
         </article>
 
         {/* card 3 */}
         <article className="card">
           <p className="metric-label">Cash Balance</p>
-          <h2 className="metric-value">$0.00</h2>
-          <p className="metric-change positive">$0.00</p>
+          <h2 className="metric-value">
+            {" "}
+            {isLoading
+              ? "Loading..."
+              : isError
+                ? "Unavailable"
+                : `$${Number(primaryPortfolio?.cash_balance ?? 0).toLocaleString()}`}
+          </h2>
         </article>
 
-        {/* card 4 */}
+        {/* card 4
         <article className="card">
           <p className="metric-label">Day's Change</p>
           <h2 className="metric-value">+$0.00</h2>
           <p className="metric-change positive">+0.00%</p>
-        </article>
+        </article> */}
       </div>
 
       {/* Holdings Table */}
       <div className="mt-8 w-full">
-        <h2 className="mt-8 mb-4 text-2xl font-normal">My Holdings</h2>
-
-        <div className="overflow-x-auto mt-2">
+        <div className="flex w-full items-end justify-between">
+          <h2 className="mt-8 mb-1 text-2xl font-normal">My Holdings</h2>
+          <button className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-black">
+            + Add Holding
+          </button>
+        </div>
+        <div className="overflow-x-auto mt-1">
           <table className="w-full">
             <thead>
               <tr>
@@ -47,33 +104,37 @@ const Portfolio = () => {
                 <th>Price</th>
                 <th>Market Value</th>
                 <th>Gain/Loss</th>
+                <th>Actions</th>
               </tr>
             </thead>
 
             <tbody>
-              <tr>
-                <td>AAPL</td>
-                <td>10</td>
-                <td>$210.50</td>
-                <td>$2,105.00</td>
-                <td className="portfolio-positive">+$105.00</td>
-              </tr>
-
-              <tr>
-                <td>TSLA</td>
-                <td>5</td>
-                <td>$325.40</td>
-                <td>$1,627.00</td>
-                <td className="portfolio-negative">-$42.00</td>
-              </tr>
-
-              <tr>
-                <td>NVDA</td>
-                <td>8</td>
-                <td>$145.80</td>
-                <td>$1,166.40</td>
-                <td className="portfolio-positive">+$86.40</td>
-              </tr>
+              {holdings.map((holding) => (
+                <tr key={holding.id}>
+                  <td>{holding.symbol}</td>
+                  <td>{holding.quantity}</td>
+                  <td>{holding.average_price}</td>
+                  <td>{holding.current_price}</td>
+                  <td>
+                    {Number(holding.current_price) -
+                      Number(holding.average_price)}
+                  </td>
+                  <td className="flex items-center gap-3">
+                    <button
+                      onClick={() => handleEdit(holding)}
+                      className="rounded-md border border-gray-300 bg-white px-3 py-1 text-sm font-semibold text-black hover:opacity-80"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(holding.id)}
+                      className="rounded-md border border-gray-300 bg-white px-3 py-1 text-sm font-semibold text-black hover:opacity-80"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
