@@ -28,3 +28,10 @@ class Portfolio(Base):
     )
 
     user = relationship("User", back_populates="portfolios")
+
+    # One portfolio has many holdings
+    holdings = relationship(
+        "Holding",
+        back_populates="portfolio",
+        cascade="all, delete-orphan"
+    )

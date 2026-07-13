@@ -6,6 +6,7 @@ from routers.auth.routes import router as auth_router
 from routers.portfolios.routes import router as portfolio_router
 from routers.stocks.routes import router as stock_router
 from routers.watchlist.routes import router as watchlist_router
+from routers.holdings.routes import router as holdings_router
 
 
 # Create all database tables if they don't exist
@@ -42,6 +43,8 @@ app.include_router(stock_router)
 
 # Register watchlist routes
 app.include_router(watchlist_router)
+# Register holdings routes
+app.include_router(holdings_router)
 # Health check — confirms the server is running
 @app.get("/")
 def root():

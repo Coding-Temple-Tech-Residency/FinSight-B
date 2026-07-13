@@ -39,3 +39,10 @@ class Stock(Base):
         back_populates="stock",
         cascade="all, delete-orphan"
     )
+
+    # One stock can be in many holdings
+    holdings = relationship(
+        "Holding",
+        back_populates="stock",
+        cascade="all, delete-orphan"
+    )
