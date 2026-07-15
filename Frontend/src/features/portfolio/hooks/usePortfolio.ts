@@ -14,17 +14,10 @@ import type {
   UpdatePortfolioPayload,
 } from "../types/portfolio";
 
-export const portfolioKeys = {
-  all: ["portfolios"] as const,
-  detail: (portfolioId: number) => ["portfolio", portfolioId] as const,
-};
-
-const isValidPortfolioId = (portfolioId?: number): portfolioId is number => {
-  return typeof portfolioId === "number" && portfolioId > 0;
-};
+import { portfolioKeys } from "./portfolioKeys";
 
 export const usePortfolios = () => {
-  return useQuery({
+  return useQuery<Portfolio[]>({
     queryKey: portfolioKeys.all,
     queryFn: getPortfolios,
     staleTime: 5 * 60 * 1000,
@@ -34,12 +27,14 @@ export const usePortfolios = () => {
 };
 
 export const usePortfolio = (portfolioId?: number) => {
-  return useQuery({
-    queryKey: isValidPortfolioId(portfolioId)
+  const isValidPortfolioId = typeof portfolioId === "number" && portfolioId > 0;
+
+  return useQuery<Portfolio>({
+    queryKey: isValidPortfolioId
       ? portfolioKeys.detail(portfolioId)
       : ["portfolio", "disabled"],
     queryFn: () => getPortfolioById(portfolioId!),
-    enabled: isValidPortfolioId(portfolioId),
+    enabled: isValidPortfolioId,
     retry: false,
     refetchOnWindowFocus: false,
   });
@@ -108,7 +103,7 @@ export const useDeletePortfolio = () => {
       });
 
       queryClient.removeQueries({
-        queryKey: ["holdings", portfolioId],
+        queryKey: portfolioKeys.holdings(portfolioId),
       });
     },
   });

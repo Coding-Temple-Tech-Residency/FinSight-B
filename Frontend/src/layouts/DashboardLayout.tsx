@@ -1,21 +1,27 @@
-import { Outlet } from "react-router-dom";
 import { useState } from "react";
+import { Outlet } from "react-router-dom";
 
 import Header from "../components/Header";
 import MobileDashboardNav from "../components/MobileDashboardNav";
 import SearchForm from "../components/SearchForm";
 
-import { useBreakpoint } from "../hooks/useBreakingPoint";
 import DashboardProvider from "../features/dashboard/providers/DashboardProvider";
+import { useBreakpoint } from "../hooks/useBreakingPoint";
 
-const DashboardLayout = () => {
+interface DashboardLayoutProps {
+  closeMenu: () => void;
+}
+
+const DashboardLayout = ({ closeMenu }: DashboardLayoutProps) => {
   const { isDesktop } = useBreakpoint();
+
   const [showMobileSearch, setShowMobileSearch] = useState(false);
 
   return (
     <DashboardProvider>
       <div className="dashboard-layout">
         <Header
+          closeMenu={closeMenu}
           showMobileSearch={showMobileSearch}
           setShowMobileSearch={setShowMobileSearch}
         />
@@ -30,7 +36,7 @@ const DashboardLayout = () => {
           <Outlet />
         </main>
 
-        {!isDesktop && <MobileDashboardNav />}
+        {!isDesktop && <MobileDashboardNav closeMenu={closeMenu} />}
       </div>
     </DashboardProvider>
   );
