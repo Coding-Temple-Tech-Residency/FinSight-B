@@ -12,15 +12,7 @@ import type {
   UpdateHoldingPayload,
 } from "../types/holdings";
 
-export const holdingKeys = {
-  all: ["holdings"] as const,
-  byPortfolio: (portfolioId: number) => ["holdings", portfolioId] as const,
-};
-
-export const portfolioKeys = {
-  all: ["portfolios"] as const,
-  detail: (portfolioId: number) => ["portfolio", portfolioId] as const,
-};
+import { portfolioKeys } from "./portfolioKeys";
 
 const isValidPortfolioId = (portfolioId?: number): portfolioId is number => {
   return typeof portfolioId === "number" && portfolioId > 0;
@@ -29,16 +21,20 @@ const isValidPortfolioId = (portfolioId?: number): portfolioId is number => {
 export const useHoldings = (portfolioId?: number) => {
   return useQuery({
     queryKey: isValidPortfolioId(portfolioId)
-      ? holdingKeys.byPortfolio(portfolioId)
-      : [...holdingKeys.all, "disabled"],
+      ? portfolioKeys.holdings(portfolioId)
+      : ["holdings", "disabled"],
+
     queryFn: () => getHoldings(portfolioId!),
+
     enabled: isValidPortfolioId(portfolioId),
+
+    staleTime: 5 * 60 * 1000,
     retry: false,
     refetchOnWindowFocus: false,
   });
 };
 
-export const useCreateHolding = (portfolioId: number) => {
+export const useCreateHolding = (portfolioId?: number) => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -51,8 +47,10 @@ export const useCreateHolding = (portfolioId: number) => {
     },
 
     onSuccess: () => {
+      if (!isValidPortfolioId(portfolioId)) return;
+
       queryClient.invalidateQueries({
-        queryKey: holdingKeys.byPortfolio(portfolioId),
+        queryKey: portfolioKeys.holdings(portfolioId),
       });
 
       queryClient.invalidateQueries({
@@ -66,7 +64,7 @@ export const useCreateHolding = (portfolioId: number) => {
   });
 };
 
-export const useUpdateHolding = (portfolioId: number) => {
+export const useUpdateHolding = (portfolioId?: number) => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -85,8 +83,10 @@ export const useUpdateHolding = (portfolioId: number) => {
     },
 
     onSuccess: () => {
+      if (!isValidPortfolioId(portfolioId)) return;
+
       queryClient.invalidateQueries({
-        queryKey: holdingKeys.byPortfolio(portfolioId),
+        queryKey: portfolioKeys.holdings(portfolioId),
       });
 
       queryClient.invalidateQueries({
@@ -100,7 +100,7 @@ export const useUpdateHolding = (portfolioId: number) => {
   });
 };
 
-export const useDeleteHolding = (portfolioId: number) => {
+export const useDeleteHolding = (portfolioId?: number) => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -113,8 +113,10 @@ export const useDeleteHolding = (portfolioId: number) => {
     },
 
     onSuccess: () => {
+      if (!isValidPortfolioId(portfolioId)) return;
+
       queryClient.invalidateQueries({
-        queryKey: holdingKeys.byPortfolio(portfolioId),
+        queryKey: portfolioKeys.holdings(portfolioId),
       });
 
       queryClient.invalidateQueries({

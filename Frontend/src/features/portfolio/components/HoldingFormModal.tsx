@@ -8,6 +8,7 @@ import type { CreateHoldingPayload, Holding } from "../types/holdings";
 type HoldingFormModalProps = {
   holding?: Holding;
   isSubmitting: boolean;
+  mutationError?: string;
   onSubmit: (payload: CreateHoldingPayload) => void;
   onClose?: () => void;
 };
@@ -15,6 +16,7 @@ type HoldingFormModalProps = {
 const HoldingFormModal = ({
   holding,
   isSubmitting,
+  mutationError,
   onSubmit,
   onClose,
 }: HoldingFormModalProps) => {
@@ -25,6 +27,8 @@ const HoldingFormModal = ({
   }
 
   const handleClose = () => {
+    if (isSubmitting) return;
+
     if (onClose) {
       onClose();
       return;
@@ -35,13 +39,14 @@ const HoldingFormModal = ({
 
   return (
     <ModalPanel
-      title={holding ? "Edit Holding" : "Add Holding"}
+      title={holding ? `Edit ${holding.symbol}` : "Add Holding"}
       onClose={handleClose}
     >
       <HoldingForm
         key={holding?.id ?? "new-holding"}
         holding={holding}
         isSubmitting={isSubmitting}
+        mutationError={mutationError}
         onSubmit={onSubmit}
         onCancel={handleClose}
       />

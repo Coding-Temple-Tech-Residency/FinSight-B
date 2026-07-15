@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import EmptyCard from "../../../components/ui/EmptyCard";
 import ErrorCard from "../../../components/ui/ErrorCard";
@@ -6,7 +6,16 @@ import LoadingCard from "../../../components/ui/LoadingCard";
 
 import { useModal } from "../../../hooks/useModal";
 
+import HoldingFormModal from "../components/HoldingFormModal";
+import HoldingsTable from "../components/HoldingsTable";
 import PortfolioFormModal from "../components/PortfolioFormModal";
+
+import {
+  useCreateHolding,
+  useDeleteHolding,
+  useHoldings,
+  useUpdateHolding,
+} from "../hooks/useHoldings";
 
 import {
   useCreatePortfolio,
@@ -14,6 +23,8 @@ import {
   usePortfolios,
   useUpdatePortfolio,
 } from "../hooks/usePortfolio";
+
+import type { CreateHoldingPayload, Holding } from "../types/holdings";
 
 type PortfolioFormMode = "create" | "edit";
 
@@ -33,6 +44,23 @@ const formatDate = (date: string | undefined) => {
   });
 };
 
+const formatCurrency = (value: number | null, currency = "USD") => {
+  if (value === null || !Number.isFinite(value)) {
+    return "Unavailable";
+  }
+
+  return value.toLocaleString("en-US", {
+    style: "currency",
+    currency,
+  });
+};
+
+const getMutationError = (error: unknown) => {
+  return error instanceof Error
+    ? error.message
+    : "Unable to complete the request.";
+};
+
 const Portfolio = () => {
   const { openModal, closeModal } = useModal();
 
@@ -42,6 +70,8 @@ const Portfolio = () => {
 
   const [portfolioFormMode, setPortfolioFormMode] =
     useState<PortfolioFormMode>("create");
+
+  const [editingHolding, setEditingHolding] = useState<Holding | undefined>();
 
   const {
     data: portfolios = [],
@@ -56,11 +86,81 @@ const Portfolio = () => {
     (portfolio) => portfolio.id === activePortfolioId,
   );
 
+  const {
+    data: holdings = [],
+    isLoading: holdingsLoading,
+    isError: holdingsError,
+    error: holdingsErrorData,
+  } = useHoldings(activePortfolioId);
+
   const createPortfolioMutation = useCreatePortfolio();
   const updatePortfolioMutation = useUpdatePortfolio();
   const deletePortfolioMutation = useDeletePortfolio();
 
+  const createHoldingMutation = useCreateHolding(activePortfolioId);
+  const updateHoldingMutation = useUpdateHolding(activePortfolioId);
+  const deleteHoldingMutation = useDeleteHolding(activePortfolioId);
+
+  const totals = useMemo(() => {
+    return holdings.reduce(
+      (summary, holding) => {
+        const shares = Number(holding.shares);
+        const averageBuyPrice = Number(holding.average_buy_price);
+
+        const latestPrice =
+          holding.latest_price === null ? null : Number(holding.latest_price);
+
+        const hasValidShares = Number.isFinite(shares);
+        const hasValidAveragePrice = Number.isFinite(averageBuyPrice);
+        const hasValidLatestPrice =
+          latestPrice !== null && Number.isFinite(latestPrice);
+
+        const costBasis =
+          hasValidShares && hasValidAveragePrice ? shares * averageBuyPrice : 0;
+
+        const marketValue =
+          hasValidShares && hasValidLatestPrice && latestPrice !== null
+            ? shares * latestPrice
+            : null;
+
+        const gainLoss = marketValue === null ? null : marketValue - costBasis;
+
+        return {
+          costBasis: summary.costBasis + costBasis,
+
+          marketValue:
+            marketValue === null
+              ? summary.marketValue
+              : summary.marketValue + marketValue,
+
+          gainLoss:
+            gainLoss === null ? summary.gainLoss : summary.gainLoss + gainLoss,
+
+          pricedHoldings:
+            marketValue === null
+              ? summary.pricedHoldings
+              : summary.pricedHoldings + 1,
+        };
+      },
+      {
+        costBasis: 0,
+        marketValue: 0,
+        gainLoss: 0,
+        pricedHoldings: 0,
+      },
+    );
+  }, [holdings]);
+
+  const allHoldingsHavePrices =
+    holdings.length > 0 && totals.pricedHoldings === holdings.length;
+
+  const gainLossPercent =
+    allHoldingsHavePrices && totals.costBasis > 0
+      ? (totals.gainLoss / totals.costBasis) * 100
+      : null;
+
   const openCreatePortfolioModal = () => {
+    createPortfolioMutation.reset();
     setPortfolioFormMode("create");
     openModal("portfolio-form");
   };
@@ -68,6 +168,7 @@ const Portfolio = () => {
   const openRenamePortfolioModal = () => {
     if (!selectedPortfolio) return;
 
+    updatePortfolioMutation.reset();
     setPortfolioFormMode("edit");
     openModal("portfolio-form");
   };
@@ -114,7 +215,9 @@ const Portfolio = () => {
   const handleDeletePortfolio = () => {
     if (!selectedPortfolio) return;
 
-    const confirmed = window.confirm(`Delete "${selectedPortfolio.name}"?`);
+    const confirmed = window.confirm(
+      `Delete "${selectedPortfolio.name}" and all of its holdings?`,
+    );
 
     if (!confirmed) return;
 
@@ -124,6 +227,97 @@ const Portfolio = () => {
       },
     });
   };
+
+  const openAddHoldingModal = () => {
+    if (!activePortfolioId) return;
+
+    createHoldingMutation.reset();
+    updateHoldingMutation.reset();
+    setEditingHolding(undefined);
+    openModal("holding-form");
+  };
+
+  const openEditHoldingModal = (holding: Holding) => {
+    if (!activePortfolioId) return;
+
+    createHoldingMutation.reset();
+    updateHoldingMutation.reset();
+    setEditingHolding(holding);
+    openModal("holding-form");
+  };
+
+  const handleHoldingSubmit = (payload: CreateHoldingPayload) => {
+    if (!activePortfolioId) return;
+
+    if (editingHolding) {
+      updateHoldingMutation.mutate(
+        {
+          holdingId: editingHolding.id,
+          payload: {
+            shares: payload.shares,
+            average_buy_price: payload.average_buy_price,
+            purchased_at: payload.purchased_at,
+          },
+        },
+        {
+          onSuccess: () => {
+            setEditingHolding(undefined);
+            closeModal();
+          },
+        },
+      );
+
+      return;
+    }
+
+    createHoldingMutation.mutate(payload, {
+      onSuccess: () => {
+        setEditingHolding(undefined);
+        closeModal();
+      },
+    });
+  };
+
+  const handleCloseHoldingModal = () => {
+    if (createHoldingMutation.isPending || updateHoldingMutation.isPending) {
+      return;
+    }
+
+    setEditingHolding(undefined);
+    createHoldingMutation.reset();
+    updateHoldingMutation.reset();
+    closeModal();
+  };
+
+  const handleDeleteHolding = (holding: Holding) => {
+    if (!activePortfolioId) return;
+
+    const confirmed = window.confirm(
+      `Remove ${holding.symbol} from "${selectedPortfolio?.name}"?`,
+    );
+
+    if (!confirmed) return;
+
+    deleteHoldingMutation.mutate(holding.id);
+  };
+
+  const holdingMutationError = editingHolding
+    ? updateHoldingMutation.isError
+      ? getMutationError(updateHoldingMutation.error)
+      : undefined
+    : createHoldingMutation.isError
+      ? getMutationError(createHoldingMutation.error)
+      : undefined;
+
+  const updatingHoldingId = updateHoldingMutation.isPending
+    ? updateHoldingMutation.variables?.holdingId
+    : undefined;
+
+  const deletingHoldingId = deleteHoldingMutation.isPending
+    ? deleteHoldingMutation.variables
+    : undefined;
+
+  const portfolioCurrency = selectedPortfolio?.currency ?? "USD";
 
   if (portfoliosLoading) {
     return <LoadingCard title="Loading portfolios..." />;
@@ -147,7 +341,7 @@ const Portfolio = () => {
         <header className="portfolio-page-header">
           <div>
             <h1>Portfolio</h1>
-            <p>Create and manage your investment portfolios.</p>
+            <p>Create and manage your investment portfolios and holdings.</p>
           </div>
 
           <button
@@ -163,11 +357,7 @@ const Portfolio = () => {
 
         {createPortfolioMutation.isError && (
           <ErrorCard
-            message={
-              createPortfolioMutation.error instanceof Error
-                ? createPortfolioMutation.error.message
-                : "Unable to create portfolio."
-            }
+            message={getMutationError(createPortfolioMutation.error)}
           />
         )}
 
@@ -198,6 +388,7 @@ const Portfolio = () => {
                     const portfolioId = Number(event.target.value);
 
                     setSelectedPortfolioId(portfolioId);
+                    setEditingHolding(undefined);
                   }}
                 >
                   {portfolios.map((portfolio) => (
@@ -234,21 +425,13 @@ const Portfolio = () => {
 
             {updatePortfolioMutation.isError && (
               <ErrorCard
-                message={
-                  updatePortfolioMutation.error instanceof Error
-                    ? updatePortfolioMutation.error.message
-                    : "Unable to update portfolio."
-                }
+                message={getMutationError(updatePortfolioMutation.error)}
               />
             )}
 
             {deletePortfolioMutation.isError && (
               <ErrorCard
-                message={
-                  deletePortfolioMutation.error instanceof Error
-                    ? deletePortfolioMutation.error.message
-                    : "Unable to delete portfolio."
-                }
+                message={getMutationError(deletePortfolioMutation.error)}
               />
             )}
 
@@ -256,32 +439,80 @@ const Portfolio = () => {
               <>
                 <section className="summary-cards">
                   <article className="card">
-                    <p className="metric-label">Portfolio Name</p>
-
-                    <h2 className="metric-value">{selectedPortfolio.name}</h2>
-                  </article>
-
-                  <article className="card">
-                    <p className="metric-label">Currency</p>
+                    <p className="metric-label">Portfolio Value</p>
 
                     <h2 className="metric-value">
-                      {selectedPortfolio.currency}
+                      {holdingsLoading
+                        ? "Loading..."
+                        : allHoldingsHavePrices
+                          ? formatCurrency(
+                              totals.marketValue,
+                              portfolioCurrency,
+                            )
+                          : holdings.length === 0
+                            ? formatCurrency(0, portfolioCurrency)
+                            : "Unavailable"}
+                    </h2>
+
+                    {!holdingsLoading &&
+                      holdings.length > 0 &&
+                      !allHoldingsHavePrices && (
+                        <p className="metric-label">
+                          One or more holdings are missing a latest price.
+                        </p>
+                      )}
+                  </article>
+
+                  <article className="card">
+                    <p className="metric-label">Total Cost Basis</p>
+
+                    <h2 className="metric-value">
+                      {holdingsLoading
+                        ? "Loading..."
+                        : formatCurrency(totals.costBasis, portfolioCurrency)}
                     </h2>
                   </article>
 
                   <article className="card">
-                    <p className="metric-label">Created</p>
+                    <p className="metric-label">Total Gain/Loss</p>
 
-                    <h2 className="portfolio-detail-value">
-                      {formatDate(selectedPortfolio.created_at)}
+                    <h2
+                      className={`metric-value ${
+                        gainLossPercent === null
+                          ? ""
+                          : totals.gainLoss >= 0
+                            ? "portfolio-positive"
+                            : "portfolio-negative"
+                      }`}
+                    >
+                      {holdingsLoading
+                        ? "Loading..."
+                        : allHoldingsHavePrices
+                          ? formatCurrency(totals.gainLoss, portfolioCurrency)
+                          : holdings.length === 0
+                            ? formatCurrency(0, portfolioCurrency)
+                            : "Unavailable"}
                     </h2>
+
+                    {gainLossPercent !== null && (
+                      <p
+                        className={
+                          gainLossPercent >= 0
+                            ? "portfolio-positive"
+                            : "portfolio-negative"
+                        }
+                      >
+                        {gainLossPercent >= 0 ? "+" : ""}
+                        {gainLossPercent.toFixed(2)}%
+                      </p>
+                    )}
                   </article>
 
                   <article className="card">
-                    <p className="metric-label">Last Updated</p>
+                    <p className="metric-label">Holdings</p>
 
-                    <h2 className="portfolio-detail-value">
-                      {formatDate(selectedPortfolio.updated_at)}
+                    <h2 className="metric-value">
+                      {holdingsLoading ? "Loading..." : holdings.length}
                     </h2>
                   </article>
                 </section>
@@ -309,6 +540,16 @@ const Portfolio = () => {
                       <dt>Currency</dt>
                       <dd>{selectedPortfolio.currency}</dd>
                     </div>
+
+                    <div>
+                      <dt>Created</dt>
+                      <dd>{formatDate(selectedPortfolio.created_at)}</dd>
+                    </div>
+
+                    <div>
+                      <dt>Last updated</dt>
+                      <dd>{formatDate(selectedPortfolio.updated_at)}</dd>
+                    </div>
                   </dl>
                 </section>
 
@@ -317,17 +558,71 @@ const Portfolio = () => {
                     <div>
                       <h2>Holdings</h2>
 
-                      <p>
-                        Holdings management will appear here once the backend
-                        endpoints are available.
-                      </p>
+                      <p>Track the stocks held in {selectedPortfolio.name}.</p>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={openAddHoldingModal}
+                      disabled={
+                        !activePortfolioId || createHoldingMutation.isPending
+                      }
+                    >
+                      {createHoldingMutation.isPending
+                        ? "Adding..."
+                        : "Add Holding"}
+                    </button>
                   </div>
 
-                  <EmptyCard
-                    title="Holdings API unavailable"
-                    message="Portfolio holding creation, editing, removal, market value, and gain/loss require the backend holdings routes."
-                  />
+                  {holdingsLoading && (
+                    <LoadingCard title="Loading holdings..." />
+                  )}
+
+                  {holdingsError && (
+                    <ErrorCard
+                      message={
+                        holdingsErrorData instanceof Error
+                          ? holdingsErrorData.message
+                          : "Unable to load holdings."
+                      }
+                    />
+                  )}
+
+                  {deleteHoldingMutation.isError && (
+                    <ErrorCard
+                      message={getMutationError(deleteHoldingMutation.error)}
+                    />
+                  )}
+
+                  {!holdingsLoading &&
+                    !holdingsError &&
+                    holdings.length === 0 && (
+                      <EmptyCard
+                        title="No holdings yet"
+                        message="Add your first stock holding to begin tracking this portfolio."
+                        action={
+                          <button
+                            type="button"
+                            onClick={openAddHoldingModal}
+                            disabled={createHoldingMutation.isPending}
+                          >
+                            Add Holding
+                          </button>
+                        }
+                      />
+                    )}
+
+                  {!holdingsLoading &&
+                    !holdingsError &&
+                    holdings.length > 0 && (
+                      <HoldingsTable
+                        holdings={holdings}
+                        updatingHoldingId={updatingHoldingId}
+                        deletingHoldingId={deletingHoldingId}
+                        onEdit={openEditHoldingModal}
+                        onDelete={handleDeleteHolding}
+                      />
+                    )}
                 </section>
               </>
             )}
@@ -344,6 +639,16 @@ const Portfolio = () => {
           createPortfolioMutation.isPending || updatePortfolioMutation.isPending
         }
         onSubmit={handlePortfolioSubmit}
+      />
+
+      <HoldingFormModal
+        holding={editingHolding}
+        isSubmitting={
+          createHoldingMutation.isPending || updateHoldingMutation.isPending
+        }
+        mutationError={holdingMutationError}
+        onSubmit={handleHoldingSubmit}
+        onClose={handleCloseHoldingModal}
       />
     </>
   );

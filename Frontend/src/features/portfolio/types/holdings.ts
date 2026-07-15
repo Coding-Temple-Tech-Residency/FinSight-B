@@ -1,22 +1,32 @@
 export type Holding = {
   id: number;
   portfolio_id: number;
-  stock_id?: number;
+  stock_id: number;
   symbol: string;
-  quantity: number | string;
-  average_price: number | string;
-  current_price?: number | string;
-  created_at?: string;
-  updated_at?: string;
+  company_name: string;
+
+  shares: number | string;
+  average_buy_price: number | string;
+  latest_price: number | string | null;
+
+  purchased_at: string | null;
+
+  created_at: string;
 };
 
 export type CreateHoldingPayload = {
   symbol: string;
-  quantity: number;
-  average_price: number;
+  shares: number;
+  average_buy_price: number;
+  purchased_at?: string | null;
 };
 
 export type UpdateHoldingPayload = {
-  quantity?: number;
-  average_price?: number;
+  shares?: number;
+  average_buy_price?: number;
+  purchased_at?: string | null;
+};
+
+export type DeleteHoldingResponse = {
+  message: string;
 };

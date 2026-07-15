@@ -37,7 +37,7 @@ const AppRoutes = () => {
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <DashboardLayout />
+            <DashboardLayout closeMenu={closeMenu} />
           </ProtectedRoute>
         }
       >

@@ -7,11 +7,16 @@ import SearchForm from "./SearchForm";
 import ProfileMenu from "./ProfileMenu";
 
 interface HeaderProps {
+  closeMenu: () => void;
   showMobileSearch: boolean;
   setShowMobileSearch: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const Header = ({ showMobileSearch, setShowMobileSearch }: HeaderProps) => {
+const Header = ({
+  showMobileSearch,
+  setShowMobileSearch,
+  closeMenu,
+}: HeaderProps) => {
   return (
     <header className="header">
       <div className="header-container">
@@ -19,7 +24,7 @@ const Header = ({ showMobileSearch, setShowMobileSearch }: HeaderProps) => {
           <Logo />
 
           <div className="desktop-nav">
-            <DashboardNav />
+            <DashboardNav closeMenu={closeMenu} />
           </div>
         </div>
 
