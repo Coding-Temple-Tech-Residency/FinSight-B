@@ -42,3 +42,11 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan"
     )
+
+
+    #One user can have many AI insights
+    ai_insights = relationship(
+    "AIInsight",
+    back_populates="user",
+    cascade="all, delete-orphan",
+    )   
