@@ -373,12 +373,12 @@ const Home = ({
                 activity to give investors simple, useful explanations.
               </p>
 
-              <a
-                href="/register"
+              <button
+                onClick={handleRegisterClick}
                 className="inline-block mt-6 px-6 py-4 rounded-xl bg-(--accent-primary) font-bold text-white"
               >
                 Learn More
-              </a>
+              </button>
             </article>
 
             <article className="space-y-4">
@@ -428,12 +428,12 @@ const Home = ({
             </p>
           </div>
 
-          <a
-            href="/register"
+          <button
+            onClick={handleRegisterClick}
             className="px-6 py-4 rounded-xl bg-(--accent-primary) font-bold text-white"
           >
             Get Started Free
-          </a>
+          </button>
         </section>
 
         <section className="flex flex-col md:flex-row justify-between  gap-5 mt-10 opacity-80 py-5 lg:py-5">

@@ -1,9 +1,5 @@
 @import "tailwindcss";
 
-/* ========================================
-   Global
-======================================== */
-
 #root {
   min-height: 100svh;
   width: 100%;
@@ -78,10 +74,6 @@ textarea::placeholder {
   color: var(--text-primary);
 }
 
-/* ========================================
-   Layout
-======================================== */
-
 .dashboard-layout {
   min-height: 100svh;
   width: 100%;
@@ -154,10 +146,6 @@ textarea::placeholder {
   background-color: var(--bg-secondary);
 }
 
-/* ========================================
-   Desktop navigation
-======================================== */
-
 .dashboard-nav {
   display: flex;
   align-items: center;
@@ -184,10 +172,6 @@ textarea::placeholder {
   color: var(--accent-primary);
   background-color: var(--bg-secondary);
 }
-
-/* ========================================
-   Profile menu
-======================================== */
 
 .profile-menu {
   position: relative;
@@ -309,10 +293,6 @@ textarea::placeholder {
   color: #ef4444;
 }
 
-/* ========================================
-   Shared buttons
-======================================== */
-
 .primary-button,
 .portfolio-page-header button,
 .holdings-header button,
@@ -357,10 +337,6 @@ textarea::placeholder {
   font-weight: 700;
   cursor: pointer;
 }
-
-/* ========================================
-   Dashboard
-======================================== */
 
 .dashboard {
   width: 100%;
@@ -496,10 +472,6 @@ textarea::placeholder {
   opacity: 0.65;
 }
 
-/* ========================================
-   Search
-======================================== */
-
 .search-form,
 .stock-search {
   width: 100%;
@@ -553,10 +525,6 @@ textarea::placeholder {
   cursor: pointer;
 }
 
-/* ========================================
-   Mobile navigation
-======================================== */
-
 .mobile-dashboard-nav {
   position: fixed;
   bottom: 0;
@@ -599,10 +567,6 @@ textarea::placeholder {
   color: var(--accent-primary);
   opacity: 1;
 }
-
-/* ========================================
-   Portfolio
-======================================== */
 
 .portfolio-page {
   width: 100%;
@@ -830,9 +794,35 @@ textarea::placeholder {
   cursor: pointer;
 }
 
-/* ========================================
-   Generic tables
-======================================== */
+.holdings-allocation-chart {
+  width: 100%;
+  height: 220px;
+}
+
+.allocation-legend-label,
+.allocation-legend-value {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.allocation-legend-label span,
+.allocation-legend-value span {
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+.allocation-legend-label strong,
+.allocation-legend-label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.allocation-legend-value {
+  text-align: right;
+}
 
 table {
   width: 100%;
@@ -849,10 +839,6 @@ td {
 thead {
   background-color: var(--bg-primary);
 }
-
-/* ========================================
-   Portfolio and holding forms
-======================================== */
 
 .portfolio-form,
 .holding-form {
@@ -934,10 +920,6 @@ thead {
   background-color: var(--bg-secondary);
   color: var(--text-primary);
 }
-
-/* ========================================
-   Modal
-======================================== */
 
 .modal-overlay {
   position: fixed;
@@ -1028,10 +1010,6 @@ thead {
   }
 }
 
-/* ========================================
-   Loading, error and empty cards
-======================================== */
-
 .empty-card,
 .loading-card,
 .error-card {
@@ -1101,10 +1079,6 @@ thead {
   cursor: pointer;
 }
 
-/* ========================================
-   Watchlist
-======================================== */
-
 .watchlist-page {
   width: 100%;
   display: flex;
@@ -1167,10 +1141,6 @@ thead {
     color-mix(in srgb, var(--accent-primary) 16%, transparent);
 }
 
-/* ========================================
-   Allocation
-======================================== */
-
 .allocation-legend {
   display: grid;
   gap: 0.65rem;
@@ -1190,10 +1160,6 @@ thead {
   height: 10px;
   border-radius: 999px;
 }
-
-/* ========================================
-   Chat
-======================================== */
 
 .chat-page {
   width: 100%;
@@ -1317,10 +1283,6 @@ thead {
   border-radius: 12px;
 }
 
-/* ========================================
-   Insights
-======================================== */
-
 .insights-page {
   width: 100%;
   display: flex;
@@ -1428,10 +1390,6 @@ thead {
   border-radius: 9999px;
 }
 
-/* ========================================
-   Settings
-======================================== */
-
 .settings-page {
   display: flex;
   flex-direction: column;
@@ -1533,10 +1491,6 @@ thead {
   color: #ffffff;
 }
 
-/* ========================================
-   Tabs
-======================================== */
-
 .tab-button {
   min-width: 120px;
   padding: 10px 20px;
@@ -1555,10 +1509,6 @@ thead {
   background-color: #d1d5db;
   color: #1a1f2e;
 }
-
-/* ========================================
-   Home preview
-======================================== */
 
 .home-preview-placeholder {
   width: 100%;
@@ -1609,10 +1559,6 @@ thead {
   );
   border-radius: 999px;
 }
-
-/* ========================================
-   Tablet
-======================================== */
 
 @media screen and (min-width: 640px) {
   .portfolio-page-header,
@@ -1692,10 +1638,6 @@ thead {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-
-/* ========================================
-   Desktop
-======================================== */
 
 @media screen and (min-width: 1024px) {
   .dashboard-layout {
@@ -1800,10 +1742,6 @@ thead {
   }
 }
 
-/* ========================================
-   Large desktop
-======================================== */
-
 @media screen and (min-width: 1200px) {
   .dashboard-nav {
     gap: 0.5rem;
@@ -1813,10 +1751,6 @@ thead {
     padding-inline: 0.8rem;
   }
 }
-
-/* ========================================
-   Reduced motion
-======================================== */
 
 @media (prefers-reduced-motion: reduce) {
   *,

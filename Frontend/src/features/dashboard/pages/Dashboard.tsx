@@ -22,16 +22,18 @@ const Dashboard = () => {
   } = useStockQuote(symbol);
 
   const {
-    data: history,
+    data: history = [],
     isLoading: historyLoading,
     isError: historyError,
   } = useMarketHistory(symbol);
 
   const {
-    data: portfolios,
+    data: portfolios = [],
     isLoading: portfolioLoading,
     isError: portfolioError,
   } = usePortfolios();
+
+  const primaryPortfolio = portfolios[0];
 
   return (
     <section className="dashboard">
@@ -55,8 +57,15 @@ const Dashboard = () => {
       />
 
       <AIInsightCard />
-      <HoldingsAllocation />
+
+      <HoldingsAllocation
+        portfolioId={primaryPortfolio?.id}
+        portfolioLoading={portfolioLoading}
+        portfolioError={portfolioError}
+      />
+
       <TopMovers />
+
       <WatchlistPreview />
     </section>
   );
