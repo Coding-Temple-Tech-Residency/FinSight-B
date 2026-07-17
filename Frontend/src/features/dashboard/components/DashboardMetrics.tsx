@@ -13,6 +13,7 @@ type DashboardMetricsProps = {
   portfolioError: boolean;
 };
 
+
 const DashboardMetrics = ({
   symbol,
   quote,

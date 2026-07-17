@@ -35,3 +35,10 @@ class Portfolio(Base):
         back_populates="portfolio",
         cascade="all, delete-orphan"
     )
+    
+    #One portfolio can have many AI insights
+    ai_insights = relationship(
+    "AIInsight",
+    back_populates="portfolio",
+    cascade="all, delete-orphan",
+    )

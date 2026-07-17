@@ -46,3 +46,10 @@ class Stock(Base):
         back_populates="stock",
         cascade="all, delete-orphan"
     )
+
+    # One stock can have many AI insights
+    ai_insights = relationship(
+    "AIInsight",
+    back_populates="stock",
+    cascade="all, delete-orphan",
+    )

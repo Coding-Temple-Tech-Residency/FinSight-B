@@ -10,42 +10,88 @@ from models.stock import Stock
 from models.market_data import MarketData
 
 
+
 ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
 BASE_URL = "https://www.alphavantage.co/query"
 
-# Fetches the latest stock quote for a given symbol from the Alpha Vantage API
-def fetch_global_quote(symbol: str) -> dict:
+
+import time
+import requests
+from fastapi import HTTPException, status
+
+
+def fetch_daily_history(symbol: str) -> dict:
     params = {
-        "function": "GLOBAL_QUOTE",
-        "symbol": symbol.upper(),
+        "function": "TIME_SERIES_DAILY",
+        "symbol": symbol.strip().upper(),
+        "outputsize": "compact",
         "apikey": ALPHA_VANTAGE_API_KEY,
     }
 
-    response = requests.get(BASE_URL, params=params, timeout=10)
-    data = response.json()
+    last_error = None
 
+    for attempt in range(3):
+        try:
+            response = requests.get(
+                BASE_URL,
+                params=params,
+                timeout=20,
+            )
+            response.raise_for_status()
+            data = response.json()
+            break
 
-    quote = data.get("Global Quote")
+        except requests.RequestException as error:
+            last_error = error
 
-    if not quote:
+            if attempt < 2:
+                time.sleep(1.5)
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="Unable to contact Alpha Vantage after multiple attempts",
+                ) from error
+
+    if "Error Message" in data:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Stock quote not found"
+            detail="Invalid stock symbol",
         )
 
-    return quote
+    if "Note" in data or "Information" in data:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=data.get("Note") or data.get("Information"),
+        )
 
-# Retrieves an existing stock from the database or fetches and updates it if not present
-def get_or_update_stock(db: Session, symbol: str) -> Stock:
-    symbol = symbol.upper()
+    time_series = data.get("Time Series (Daily)")
 
-    quote = fetch_global_quote(symbol)
+    if not time_series:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Daily market history not found",
+        )
+
+    return time_series
+
+
+def get_or_update_stock(
+    db: Session,
+    symbol: str,
+    time_series: dict | None = None,
+) -> Stock:
+    symbol = symbol.strip().upper()
+
+    if time_series is None:
+        time_series = fetch_daily_history(symbol)
+
+    latest_timestamp = max(time_series.keys())
+    latest_values = time_series[latest_timestamp]
+    latest_price = Decimal(latest_values["4. close"])
 
     stock = db.query(Stock).filter(
         Stock.symbol == symbol
     ).first()
-
-    latest_price = Decimal(quote["05. price"])
 
     if stock:
         stock.latest_price = latest_price
@@ -64,35 +110,26 @@ def get_or_update_stock(db: Session, symbol: str) -> Stock:
 
     return stock
 
-# Fetches daily market history for a given stock symbol from the Alpha Vantage API
-def fetch_daily_history(symbol: str) -> dict:
-    params = {
-    "function": "TIME_SERIES_DAILY",
-    "symbol": symbol.upper(),
-    "outputsize": "compact",
-    "apikey": ALPHA_VANTAGE_API_KEY,
-}
 
-    response = requests.get(BASE_URL, params=params, timeout=10)
-    data = response.json()
-
-    time_series = data.get("Time Series (Daily)")
-
-    if not time_series:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Market history not found"
-        )
-
-    return time_series
-
-# Saves daily market history for a given stock in the database
-def save_daily_history(db: Session, stock: Stock, symbol: str) -> list[MarketData]:
-    time_series = fetch_daily_history(symbol)
-
+def save_daily_history(
+    db: Session,
+    stock: Stock,
+    time_series: dict,
+) -> list[MarketData]:
     saved_records = []
 
     for timestamp, values in time_series.items():
+        price_timestamp = datetime.fromisoformat(timestamp)
+
+        existing_record = db.query(MarketData).filter(
+            MarketData.stock_id == stock.id,
+            MarketData.timeframe == "daily",
+            MarketData.price_timestamp == price_timestamp,
+        ).first()
+
+        if existing_record:
+            continue
+
         market_data = MarketData(
             stock_id=stock.id,
             timeframe="daily",
@@ -101,12 +138,15 @@ def save_daily_history(db: Session, stock: Stock, symbol: str) -> list[MarketDat
             low_price=Decimal(values["3. low"]),
             close_price=Decimal(values["4. close"]),
             volume=int(values["5. volume"]),
-            price_timestamp=datetime.fromisoformat(timestamp),
+            price_timestamp=price_timestamp,
         )
 
         db.add(market_data)
         saved_records.append(market_data)
 
     db.commit()
+
+    for record in saved_records:
+        db.refresh(record)
 
     return saved_records
