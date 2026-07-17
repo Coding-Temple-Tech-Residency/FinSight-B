@@ -11,6 +11,7 @@ import TopMovers from "../components/TopMovers";
 import WatchlistPreview from "../components/WatchlistPreview";
 
 import { useDashboard } from "../hooks/useDashboard";
+import { usePortfolioPerformance } from "../hooks/usePortfolioPerformance";
 
 const Dashboard = () => {
   const { symbol } = useDashboard();
@@ -33,7 +34,18 @@ const Dashboard = () => {
     isError: portfolioError,
   } = usePortfolios();
 
-  const primaryPortfolio = portfolios[0];
+  const {
+    summary,
+    isLoading: performanceLoading,
+    isFetching: performanceFetching,
+    isError: performanceError,
+  } = usePortfolioPerformance(portfolios);
+
+  const primaryPortfolio = portfolios.length > 0 ? portfolios[0] : undefined;
+
+  const dashboardPerformanceLoading = portfolioLoading || performanceLoading;
+
+  const dashboardPerformanceError = portfolioError || performanceError;
 
   return (
     <section className="dashboard">
@@ -47,7 +59,16 @@ const Dashboard = () => {
         portfolios={portfolios}
         portfolioLoading={portfolioLoading}
         portfolioError={portfolioError}
+        performance={summary}
+        performanceLoading={dashboardPerformanceLoading}
+        performanceError={dashboardPerformanceError}
       />
+
+      {performanceFetching && !dashboardPerformanceLoading && (
+        <p className="dashboard-refresh-status" role="status">
+          Updating portfolio data...
+        </p>
+      )}
 
       <PortfolioChart
         symbol={symbol}

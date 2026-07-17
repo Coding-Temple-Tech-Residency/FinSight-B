@@ -5,6 +5,7 @@ import Logo from "./Logo";
 import DashboardNav from "./DashboardNav";
 import SearchForm from "./SearchForm";
 import ProfileMenu from "./ProfileMenu";
+import { Link } from "react-router-dom";
 
 interface HeaderProps {
   closeMenu: () => void;
@@ -21,7 +22,9 @@ const Header = ({
     <header className="header">
       <div className="header-container">
         <div className="header-left">
-          <Logo />
+          <Link to={"/"} className={``}>
+            <Logo />
+          </Link>
 
           <div className="desktop-nav">
             <DashboardNav closeMenu={closeMenu} />

@@ -14,10 +14,15 @@ const MetricCard = ({
   return (
     <article className="metric-card">
       <p className="metric-label">{label}</p>
+
       <h2 className="metric-value">{value}</h2>
 
       {change && (
-        <p className={`metric-change ${positive ? "positive" : "negative"}`}>
+        <p
+          className={
+            positive ? "metric-change positive" : "metric-change negative"
+          }
+        >
           {change}
         </p>
       )}
