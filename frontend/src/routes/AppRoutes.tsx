@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 
 import ProtectedRoute from "../features/auth/components/ProtectedRoute";
-import { useAuth } from "../features/auth/hooks/useAuth";
 
 import Dashboard from "../features/dashboard/pages/Dashboard";
 import DashboardLayout from "../layouts/DashboardLayout";
@@ -15,7 +14,6 @@ import Settings from "../features/settings/pages/Settings";
 
 const AppRoutes = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { isAuthenticated } = useAuth();
 
   const openMenu = () => setIsOpen(true);
   const closeMenu = () => setIsOpen(false);
@@ -25,11 +23,7 @@ const AppRoutes = () => {
       <Route
         path="/"
         element={
-          isAuthenticated ? (
-            <Navigate to="/dashboard" replace />
-          ) : (
-            <Home isOpen={isOpen} openMenu={openMenu} closeMenu={closeMenu} />
-          )
+          <Home isOpen={isOpen} openMenu={openMenu} closeMenu={closeMenu} />
         }
       />
 

@@ -1,16 +1,20 @@
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+
 import Logo from "../../../components/Logo";
+import ThemeButton from "../../../components/ThemeButton";
+import HomePreviewChart from "../components/HomePreviewChart";
+import AuthForm from "../../auth/components/AuthForm";
 
 import { useBreakpoint } from "../../../hooks/useBreakingPoint";
+import { useModal } from "../../../hooks/useModal";
+import { useAuth } from "../../auth/hooks/useAuth";
+
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBars, faTimes } from "@fortawesome/free-solid-svg-icons";
 
 import { stats } from "../../../data/stats";
 import { features } from "../../../data/features";
-import { useModal } from "../../../hooks/useModal";
-import AuthForm from "../../auth/components/AuthForm";
-import { useState } from "react";
-import ThemeButton from "../../../components/ThemeButton";
-import HomePreviewChart from "../components/HomePreviewChart";
 import { homeNavigation } from "../../../constants/navigation";
 
 const Home = ({
@@ -23,8 +27,10 @@ const Home = ({
   closeMenu: () => void;
 }) => {
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
-  const { isModalOpen, openModal } = useModal();
 
+  const navigate = useNavigate();
+  const { isAuthenticated, loading, logout } = useAuth();
+  const { isModalOpen, openModal } = useModal();
   const { isDesktop } = useBreakpoint();
 
   const handleLoginClick = () => {
@@ -39,7 +45,65 @@ const Home = ({
     closeMenu();
   };
 
+  const handleLogout = async () => {
+    closeMenu();
+
+    try {
+      await logout();
+    } finally {
+      navigate("/", { replace: true });
+    }
+  };
+
   const menuIcon = isOpen ? faTimes : faBars;
+
+  const renderAuthActions = () => {
+    if (loading) {
+      return null;
+    }
+
+    if (isAuthenticated) {
+      return (
+        <>
+          <Link
+            to="/dashboard"
+            onClick={closeMenu}
+            className="home-header-cta-signup px-5 py-2 rounded-xl font-bold"
+          >
+            Dashboard
+          </Link>
+
+          <button
+            type="button"
+            className="home-header-cta-login px-5 py-2 font-bold"
+            onClick={handleLogout}
+          >
+            Sign Out
+          </button>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <button
+          type="button"
+          className="home-header-cta-login px-5 py-2 font-bold"
+          onClick={handleLoginClick}
+        >
+          Login
+        </button>
+
+        <button
+          type="button"
+          className="home-header-cta-signup px-5 py-2 rounded-xl font-bold"
+          onClick={handleRegisterClick}
+        >
+          Sign Up
+        </button>
+      </>
+    );
+  };
 
   return (
     <div className="home">
@@ -72,18 +136,7 @@ const Home = ({
           </ul>
           {!isDesktop && (
             <div className="home-header-cta flex gap-3 pb-10">
-              <button
-                className="home-header-cta-login px-5 py-2 font-bold"
-                onClick={handleLoginClick}
-              >
-                Login
-              </button>
-              <button
-                className="home-header-cta-signup px-5 py-2 rounded-xl font-bold"
-                onClick={handleRegisterClick}
-              >
-                Sign Up
-              </button>
+              {renderAuthActions()}
             </div>
           )}
         </nav>
@@ -102,18 +155,7 @@ const Home = ({
 
         {isDesktop && (
           <div className="home-header-cta flex gap-3">
-            <button
-              className="home-header-cta-login px-5 py-2 font-bold"
-              onClick={handleLoginClick}
-            >
-              Login
-            </button>
-            <button
-              className="home-header-cta-signup px-5 py-2 rounded-xl font-bold"
-              onClick={handleRegisterClick}
-            >
-              Sign Up
-            </button>
+            {renderAuthActions()}
           </div>
         )}
       </header>
@@ -142,12 +184,22 @@ const Home = ({
             </p>
 
             <section className="hero-cta flex gap-3 flex-col sm:flex-row">
-              <button
-                onClick={handleRegisterClick}
-                className="px-6 py-4 rounded-xl font-bold bg-(--accent-primary) text-(--bg-primary) text-center hover:bg-(--accent-secondary) transition-all duration-300"
-              >
-                Get Started Free
-              </button>
+              {isAuthenticated ? (
+                <Link
+                  to="/dashboard"
+                  className="px-6 py-4 rounded-xl font-bold bg-(--accent-primary) text-(--bg-primary) text-center hover:bg-(--accent-secondary) transition-all duration-300"
+                >
+                  Go to Dashboard
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleRegisterClick}
+                  className="px-6 py-4 rounded-xl font-bold bg-(--accent-primary) text-(--bg-primary) text-center hover:bg-(--accent-secondary) transition-all duration-300"
+                >
+                  Get Started Free
+                </button>
+              )}
 
               <a
                 href="#preview"
@@ -372,13 +424,22 @@ const Home = ({
                 FinSight analyzes earnings reports, market news, and portfolio
                 activity to give investors simple, useful explanations.
               </p>
-
-              <button
-                onClick={handleRegisterClick}
-                className="inline-block mt-6 px-6 py-4 rounded-xl bg-(--accent-primary) font-bold text-white"
-              >
-                Learn More
-              </button>
+              {isAuthenticated ? (
+                <Link
+                  to="/dashboard/insights"
+                  className="inline-block mt-6 px-6 py-4 rounded-xl bg-(--accent-primary) font-bold text-white"
+                >
+                  View AI Insights
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleRegisterClick}
+                  className="inline-block mt-6 px-6 py-4 rounded-xl bg-(--accent-primary) font-bold text-white"
+                >
+                  Learn More
+                </button>
+              )}
             </article>
 
             <article className="space-y-4">
@@ -428,12 +489,22 @@ const Home = ({
             </p>
           </div>
 
-          <button
-            onClick={handleRegisterClick}
-            className="px-6 py-4 rounded-xl bg-(--accent-primary) font-bold text-white"
-          >
-            Get Started Free
-          </button>
+          {isAuthenticated ? (
+            <Link
+              to="/dashboard"
+              className="px-6 py-4 rounded-xl bg-(--accent-primary) font-bold text-white"
+            >
+              Return to Dashboard
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={handleRegisterClick}
+              className="px-6 py-4 rounded-xl bg-(--accent-primary) font-bold text-white"
+            >
+              Get Started Free
+            </button>
+          )}
         </section>
 
         <section className="flex flex-col md:flex-row justify-between  gap-5 mt-10 opacity-80 py-5 lg:py-5">
@@ -443,12 +514,20 @@ const Home = ({
           <div className="flex gap-5 justify-between items-center">
             <a href="#features">Features</a>
             <a href="#ai">AI Insights</a>
-            <button onClick={handleLoginClick}>Login</button>
+            {isAuthenticated ? (
+              <button type="button" onClick={handleLogout}>
+                Sign Out
+              </button>
+            ) : (
+              <button type="button" onClick={handleLoginClick}>
+                Login
+              </button>
+            )}
           </div>
         </section>
       </footer>
       <ThemeButton />
-      {isModalOpen("login") && <AuthForm mode={authMode} />}
+      {!isAuthenticated && isModalOpen("login") && <AuthForm mode={authMode} />}
     </div>
   );
 };
