@@ -2,7 +2,8 @@ import { apiClient } from "./apiClient";
 
 import type {
   AIInsight,
-  GenerateInsightPayload,
+  CreateAIInsightPayload,
+  UpdateAIInsightVariables,
 } from "../features/insights/types/ai";
 
 import type {
@@ -10,17 +11,36 @@ import type {
   AIChatResponse,
 } from "../features/chat/types/chat";
 
+const AI_INSIGHTS_URL = "/api/ai-insights";
+
 export const getAIInsights = () => {
-  return apiClient<AIInsight[]>("/api/ai/insights");
+  return apiClient<AIInsight[]>(AI_INSIGHTS_URL);
 };
 
-export const generateAIInsight = (payload: GenerateInsightPayload) => {
-  return apiClient<AIInsight>("/api/ai/insights", {
+export const getAIInsight = (insightId: number) => {
+  return apiClient<AIInsight>(`${AI_INSIGHTS_URL}/${insightId}`);
+};
+
+export const createAIInsight = (payload: CreateAIInsightPayload) => {
+  return apiClient<AIInsight>(AI_INSIGHTS_URL, {
     method: "POST",
-    body: JSON.stringify({
-      ...payload,
-      symbol: payload.symbol.trim().toUpperCase(),
-    }),
+    body: JSON.stringify(payload),
+  });
+};
+
+export const updateAIInsight = ({
+  insightId,
+  payload,
+}: UpdateAIInsightVariables) => {
+  return apiClient<AIInsight>(`${AI_INSIGHTS_URL}/${insightId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+};
+
+export const deleteAIInsight = (insightId: number) => {
+  return apiClient<void>(`${AI_INSIGHTS_URL}/${insightId}`, {
+    method: "DELETE",
   });
 };
 
