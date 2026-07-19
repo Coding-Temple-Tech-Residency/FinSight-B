@@ -1,8 +1,8 @@
 import { apiClient } from "./apiClient";
 
 import type {
+  AIChatPayload,
   AIInsight,
-  CreateAIInsightPayload,
   UpdateAIInsightVariables,
 } from "../features/insights/types/ai";
 
@@ -16,13 +16,46 @@ export const getAIInsight = (insightId: number): Promise<AIInsight> => {
   return apiClient<AIInsight>(`${AI_INSIGHTS_URL}/${insightId}`);
 };
 
-export const createAIInsight = (
-  payload: CreateAIInsightPayload,
+/**
+ * Sends a general financial question.
+ *
+ * The backend stores the generated response as an AI insight.
+ * This can eventually be moved to aiChatApi.ts when the chat
+ * feature is separated from the insights feature.
+ */
+export const generateGeneralAIInsight = (
+  payload: AIChatPayload,
 ): Promise<AIInsight> => {
   return apiClient<AIInsight>(AI_INSIGHTS_URL, {
     method: "POST",
     body: JSON.stringify(payload),
   });
+};
+
+export const generatePortfolioAIInsight = (
+  portfolioId: number,
+): Promise<AIInsight> => {
+  return apiClient<AIInsight>(
+    `${AI_INSIGHTS_URL}/generate/portfolio/${portfolioId}`,
+    {
+      method: "POST",
+    },
+  );
+};
+
+export const generateStockAIInsight = (symbol: string): Promise<AIInsight> => {
+  const normalizedSymbol = symbol.trim().toUpperCase();
+
+  if (!normalizedSymbol) {
+    throw new Error("A stock symbol is required.");
+  }
+
+  return apiClient<AIInsight>(
+    `${AI_INSIGHTS_URL}/generate/stock/${encodeURIComponent(normalizedSymbol)}`,
+    {
+      method: "POST",
+    },
+  );
 };
 
 export const updateAIInsight = ({

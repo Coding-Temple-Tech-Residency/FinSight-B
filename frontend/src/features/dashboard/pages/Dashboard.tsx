@@ -5,13 +5,14 @@ import { useStockQuote } from "../../market/hooks/useStockQuote";
 import DashboardHeader from "../components/DashboardHeader";
 import DashboardMetrics from "../components/DashboardMetrics";
 import PortfolioChart from "../components/PortfolioChart";
-import AIInsightCard from "../components/AIInsightCard";
+
 import HoldingsAllocation from "../components/HoldingsAllocation";
 
 import WatchlistPreview from "../components/WatchlistPreview";
 
 import { useDashboard } from "../hooks/useDashboard";
 import { usePortfolioPerformance } from "../hooks/usePortfolioPerformance";
+import AIInsightCard from "../../insights/components/InsightCard";
 
 const Dashboard = () => {
   const { symbol } = useDashboard();
@@ -77,7 +78,10 @@ const Dashboard = () => {
         isError={historyError}
       />
 
-      <AIInsightCard />
+      <AIInsightCard
+        portfolioId={primaryPortfolio?.id}
+        portfolioLoading={portfolioLoading}
+      />
 
       <HoldingsAllocation
         portfolioId={primaryPortfolio?.id}
