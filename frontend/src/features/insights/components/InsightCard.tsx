@@ -1,84 +1,150 @@
-import type { AIInsight } from "../types/ai";
+import { Link } from "react-router-dom";
+
+import {
+  useAIInsights,
+  useGeneratePortfolioAIInsight,
+} from "../../insights/hooks/useAIInsights";
 
 import {
   formatInsightDate,
   getInsightTypeLabel,
   getSentimentLabel,
-  isInsightExpired,
-} from "../utils/insightFormatting";
+} from "../../insights/utils/insightFormatting";
 
-interface InsightCardProps {
-  insight: AIInsight;
-  isDeleting: boolean;
-  onDelete: (insightId: number) => void;
+interface AIInsightCardProps {
+  portfolioId?: number;
+  portfolioLoading?: boolean;
 }
 
-const InsightCard = ({ insight, isDeleting, onDelete }: InsightCardProps) => {
-  const expired = isInsightExpired(insight.expires_at);
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
 
-  const sentimentClassName =
-    insight.sentiment !== null
-      ? `insight-sentiment insight-sentiment-${insight.sentiment}`
-      : "";
+  return "Unable to generate an AI insight.";
+};
+
+const AIInsightCard = ({
+  portfolioId,
+  portfolioLoading = false,
+}: AIInsightCardProps) => {
+  const {
+    data: insights = [],
+    isLoading,
+    isFetching,
+    isError,
+    error,
+  } = useAIInsights();
+
+  const generateMutation = useGeneratePortfolioAIInsight();
+
+  const latestInsight = insights[0];
+
+  const handleGenerateInsight = async () => {
+    if (!portfolioId) return;
+
+    try {
+      await generateMutation.mutateAsync({
+        portfolioId,
+      });
+    } catch (generationError) {
+      console.error("Failed to generate portfolio insight:", generationError);
+    }
+  };
+
+  const isGenerating = generateMutation.isPending;
 
   return (
-    <article className="insight-result-card">
+    <article className="insight-card">
       <div className="card-header">
         <div>
-          <h2>{getInsightTypeLabel(insight.insight_type)}</h2>
+          <h2>AI Insights</h2>
 
-          <p className="metric-label">
-            {formatInsightDate(insight.created_at)}
-          </p>
-        </div>
-
-        <div className="insight-badges">
-          {insight.sentiment && (
-            <span className={sentimentClassName}>
-              {getSentimentLabel(insight.sentiment)}
-            </span>
+          {isFetching && !isLoading && (
+            <p className="metric-label">Updating...</p>
           )}
-
-          {expired && <span className="insight-expired">Expired</span>}
         </div>
-      </div>
 
-      <p className="insight-summary">{insight.summary}</p>
-
-      <div className="insight-metadata">
-        {insight.portfolio_id !== null && (
-          <span className="metric-label">
-            Portfolio ID: {insight.portfolio_id}
-          </span>
-        )}
-
-        {insight.stock_id !== null && (
-          <span className="metric-label">Stock ID: {insight.stock_id}</span>
-        )}
-
-        {insight.source && (
-          <span className="metric-label">Source: {insight.source}</span>
-        )}
-
-        {insight.expires_at && (
-          <span className="metric-label">
-            Expires: {formatInsightDate(insight.expires_at)}
+        {latestInsight?.sentiment && (
+          <span
+            className={`insight-sentiment insight-sentiment-${latestInsight.sentiment}`}
+          >
+            {getSentimentLabel(latestInsight.sentiment)}
           </span>
         )}
       </div>
 
-      <div className="insight-card-actions">
+      {isLoading && <p role="status">Loading AI insights...</p>}
+
+      {!isLoading && isError && (
+        <p className="negative" role="alert">
+          {error instanceof Error
+            ? error.message
+            : "Unable to load AI insights."}
+        </p>
+      )}
+
+      {!isLoading && !isError && !latestInsight && (
+        <p>
+          Generate an AI analysis of your portfolio to see important insights.
+        </p>
+      )}
+
+      {!isLoading && !isError && latestInsight && (
+        <>
+          <p>{latestInsight.summary}</p>
+
+          <div className="mt-3 flex flex-wrap gap-3 text-sm">
+            <span className="metric-label">
+              Type:{" "}
+              <strong>{getInsightTypeLabel(latestInsight.insight_type)}</strong>
+            </span>
+
+            <span className="metric-label">
+              {formatInsightDate(latestInsight.created_at)}
+            </span>
+          </div>
+
+          {latestInsight.source && (
+            <p className="metric-label mt-2">Source: {latestInsight.source}</p>
+          )}
+        </>
+      )}
+
+      {generateMutation.isError && (
+        <p className="negative mt-3" role="alert">
+          {getErrorMessage(generateMutation.error)}
+        </p>
+      )}
+
+      <div className="insight-actions">
         <button
           type="button"
-          disabled={isDeleting}
-          onClick={() => onDelete(insight.id)}
-          className="insight-delete-button"
+          onClick={handleGenerateInsight}
+          disabled={!portfolioId || portfolioLoading || isGenerating}
         >
-          {isDeleting ? "Deleting..." : "Delete"}
+          {isGenerating
+            ? "Generating insight..."
+            : latestInsight
+              ? "Generate new insight"
+              : "Generate portfolio insight"}
         </button>
+
+        <Link to="/dashboard/insights">View all insights</Link>
       </div>
+
+      {!portfolioLoading && !portfolioId && (
+        <p className="metric-label mt-2">
+          Create a portfolio before generating a portfolio insight.
+        </p>
+      )}
+
+      <p className="ai-disclaimer">
+        AI-generated information is for educational purposes and is not
+        financial advice.
+      </p>
     </article>
   );
 };
 
-export default InsightCard;
+export default AIInsightCard;

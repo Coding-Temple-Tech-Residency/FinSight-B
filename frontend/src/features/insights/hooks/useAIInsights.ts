@@ -1,34 +1,63 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
-  createAIInsight,
   deleteAIInsight,
+  generateGeneralAIInsight,
+  generatePortfolioAIInsight,
+  generateStockAIInsight,
   getAIInsight,
   getAIInsights,
   updateAIInsight,
 } from "../../../api/aiInsightsApi";
 
 import type {
+  AIChatPayload,
   AIInsight,
-  CreateAIInsightPayload,
+  GeneratePortfolioInsightVariables,
+  GenerateStockInsightVariables,
   UpdateAIInsightVariables,
 } from "../types/ai";
 
 export const aiInsightKeys = {
   all: ["ai-insights"] as const,
 
+  lists: () => [...aiInsightKeys.all, "list"] as const,
+
   detail: (insightId: number) =>
     [...aiInsightKeys.all, "detail", insightId] as const,
 };
 
+const addInsightToCache = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  insight: AIInsight,
+) => {
+  queryClient.setQueryData<AIInsight[]>(
+    aiInsightKeys.lists(),
+    (current = []) => [
+      insight,
+      ...current.filter((currentInsight) => currentInsight.id !== insight.id),
+    ],
+  );
+
+  queryClient.setQueryData(aiInsightKeys.detail(insight.id), insight);
+};
+
 export const useAIInsights = () => {
   return useQuery({
-    queryKey: aiInsightKeys.all,
+    queryKey: aiInsightKeys.lists(),
     queryFn: getAIInsights,
     staleTime: 10 * 60 * 1000,
     retry: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
+
+    select: (insights) =>
+      [...insights].sort((firstInsight, secondInsight) => {
+        return (
+          new Date(secondInsight.created_at).getTime() -
+          new Date(firstInsight.created_at).getTime()
+        );
+      }),
   });
 };
 
@@ -42,27 +71,57 @@ export const useAIInsight = (insightId: number) => {
   });
 };
 
-export const useCreateAIInsight = () => {
+export const useGenerateGeneralAIInsight = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: CreateAIInsightPayload) => createAIInsight(payload),
+    mutationFn: (payload: AIChatPayload) => generateGeneralAIInsight(payload),
 
     onSuccess: (newInsight) => {
-      queryClient.setQueryData<AIInsight[]>(
-        aiInsightKeys.all,
-        (current = []) => [
-          newInsight,
-          ...current.filter((insight) => insight.id !== newInsight.id),
-        ],
-      );
-
-      queryClient.setQueryData(aiInsightKeys.detail(newInsight.id), newInsight);
+      addInsightToCache(queryClient, newInsight);
     },
 
     onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: aiInsightKeys.all,
+        queryKey: aiInsightKeys.lists(),
+      });
+    },
+  });
+};
+
+export const useGeneratePortfolioAIInsight = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ portfolioId }: GeneratePortfolioInsightVariables) =>
+      generatePortfolioAIInsight(portfolioId),
+
+    onSuccess: (newInsight) => {
+      addInsightToCache(queryClient, newInsight);
+    },
+
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: aiInsightKeys.lists(),
+      });
+    },
+  });
+};
+
+export const useGenerateStockAIInsight = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ symbol }: GenerateStockInsightVariables) =>
+      generateStockAIInsight(symbol),
+
+    onSuccess: (newInsight) => {
+      addInsightToCache(queryClient, newInsight);
+    },
+
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: aiInsightKeys.lists(),
       });
     },
   });
@@ -76,10 +135,12 @@ export const useUpdateAIInsight = () => {
       updateAIInsight(variables),
 
     onSuccess: (updatedInsight) => {
-      queryClient.setQueryData<AIInsight[]>(aiInsightKeys.all, (current = []) =>
-        current.map((insight) =>
-          insight.id === updatedInsight.id ? updatedInsight : insight,
-        ),
+      queryClient.setQueryData<AIInsight[]>(
+        aiInsightKeys.lists(),
+        (current = []) =>
+          current.map((insight) =>
+            insight.id === updatedInsight.id ? updatedInsight : insight,
+          ),
       );
 
       queryClient.setQueryData(
@@ -90,7 +151,7 @@ export const useUpdateAIInsight = () => {
 
     onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: aiInsightKeys.all,
+        queryKey: aiInsightKeys.lists(),
       });
     },
   });
@@ -103,8 +164,9 @@ export const useDeleteAIInsight = () => {
     mutationFn: (insightId: number) => deleteAIInsight(insightId),
 
     onSuccess: (_, insightId) => {
-      queryClient.setQueryData<AIInsight[]>(aiInsightKeys.all, (current = []) =>
-        current.filter((insight) => insight.id !== insightId),
+      queryClient.setQueryData<AIInsight[]>(
+        aiInsightKeys.lists(),
+        (current = []) => current.filter((insight) => insight.id !== insightId),
       );
 
       queryClient.removeQueries({
@@ -114,7 +176,7 @@ export const useDeleteAIInsight = () => {
 
     onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: aiInsightKeys.all,
+        queryKey: aiInsightKeys.lists(),
       });
     },
   });

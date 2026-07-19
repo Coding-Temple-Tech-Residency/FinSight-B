@@ -25,21 +25,29 @@ export type AIInsight = {
   updated_at: string;
 };
 
-export type CreateAIInsightPayload = {
+export type AIChatPayload = {
+  message: string;
+};
+
+export type UpdateAIInsightPayload = {
   portfolio_id?: number | null;
   stock_id?: number | null;
-
-  insight_type: InsightType;
-  summary: string;
-
+  insight_type?: InsightType;
+  summary?: string;
   sentiment?: InsightSentiment | null;
   source?: string | null;
   expires_at?: string | null;
 };
 
-export type UpdateAIInsightPayload = Partial<CreateAIInsightPayload>;
-
 export type UpdateAIInsightVariables = {
   insightId: number;
   payload: UpdateAIInsightPayload;
+};
+
+export type GeneratePortfolioInsightVariables = {
+  portfolioId: number;
+};
+
+export type GenerateStockInsightVariables = {
+  symbol: string;
 };
