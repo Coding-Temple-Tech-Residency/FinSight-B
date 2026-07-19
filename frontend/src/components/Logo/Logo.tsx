@@ -1,4 +1,5 @@
-import { useBreakpoint } from "../hooks/useBreakingPoint";
+import { useBreakpoint } from "../../hooks/useBreakingPoint";
+import "./Logo.css";
 
 const Logo = () => {
   const { isDesktop } = useBreakpoint();

@@ -1,0 +1,45 @@
+.dashboard-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.dashboard-nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0.5rem 0.8rem;
+  color: var(--text-primary);
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  opacity: 0.7;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.dashboard-nav-link:hover {
+  background-color: var(--bg-secondary);
+  color: var(--accent-primary);
+  opacity: 1;
+}
+
+.dashboard-nav-link.active {
+  background-color: color-mix(
+    in srgb,
+    var(--bg-secondary) 82%,
+    var(--accent-primary)
+  );
+  color: var(--accent-primary);
+  opacity: 1;
+}
+
+.dashboard-nav-link:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}

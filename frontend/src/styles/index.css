@@ -1,97 +1,16 @@
 @import "tailwindcss";
 
-:root {
-  --theme-primary: #1a1f2e;
-  --theme-secondary: #2a3550;
-  --theme-tertiary: #f0f4f1;
-  --accent-primary: #00c48c;
-  --accent-secondary: #f5c542;
+@import "./base.css";
+@import "./App.css";
 
-  color-scheme: light dark;
-}
-
-body.light-theme {
-  color-scheme: light;
-
-  --bg-primary: #fff;
-  --bg-secondary: #f0f4f1;
-
-  --text-primary: #1a1f2e;
-  --text-secondary: #2a3550;
-}
-
-body.dark-theme {
-  color-scheme: dark;
-
-  --bg-primary: #1a1f2e;
-  --bg-secondary: #2a3550;
-
-  --text-primary: #fff;
-  --text-secondary: #f0f4f1;
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  list-style-type: none;
-  text-decoration: none;
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
-html,
-body {
-  max-width: 100svw;
-  max-height: 100svh;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-body {
-  font-family: "Geist Mono", monospace;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-}
-
-.logo-text {
-  /* background: linear-gradient(
-    to right,
-    var(--accent-primary),
-    var(--accent-secondary)
-  );
-
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent; */
-  color: var(--accent-primary);
-  font-family: "Crete Round", serif;
-}
-
-h1 {
-  font-size: 3rem;
-  line-height: 1.2;
-  font-weight: 500;
-}
-
-Link {
-  color: var(--text-primary);
-}
-
-button {
-  cursor: pointer;
-}
-
-.home-header-cta-signup {
-  background-color: var(--accent-primary);
-  color: var(--theme-tertiary);
-}
-
-.home-header {
-  box-shadow: 0 0 5px var(--accent-primary);
-}
+@import "../features/auth/styles/auth.css";
+@import "../features/dashboard/styles/dashboard.css";
+@import "../features/home/styles/home.css";
+@import "../features/chat/styles/chat.css";
+@import "../features/insights/styles/insights.css";
+@import "../features/market/styles/market.css";
+@import "../features/portfolio/styles/portfolio.css";
+@import "../features/search/styles/search.css";
+@import "../features/search/styles/SearchResults.css";
+@import "../features/settings/styles/settings.css";
+@import "../features/watchlist/styles/watchlist.css";

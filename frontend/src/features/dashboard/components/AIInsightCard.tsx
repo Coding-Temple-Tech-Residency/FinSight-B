@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-import { useAIInsights } from "../../insights/hooks/useAIInsight";
+import { useAIInsights } from "../../insights/hooks/useAIInsights";
 
 const formatDate = (value: string): string => {
   const date = new Date(value);

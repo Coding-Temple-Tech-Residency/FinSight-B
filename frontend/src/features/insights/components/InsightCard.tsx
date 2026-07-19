@@ -1,53 +1,84 @@
-import { Link } from "react-router-dom";
-import { useDashboard } from "../../dashboard/hooks/useDashboard";
-import { useGenerateAIInsight } from "../hooks/useAIInsight";
+import type { AIInsight } from "../types/ai";
 
-const AIInsightCard = () => {
-  const { symbol } = useDashboard();
+import {
+  formatInsightDate,
+  getInsightTypeLabel,
+  getSentimentLabel,
+  isInsightExpired,
+} from "../utils/insightFormatting";
 
-  const {
-    data: insight,
-    mutate: generateInsight,
-    isPending,
-    isError,
-  } = useGenerateAIInsight();
+interface InsightCardProps {
+  insight: AIInsight;
+  isDeleting: boolean;
+  onDelete: (insightId: number) => void;
+}
 
-  const handleGenerate = () => {
-    generateInsight({
-      symbol,
-      analysis_type: "market",
-    });
-  };
+const InsightCard = ({ insight, isDeleting, onDelete }: InsightCardProps) => {
+  const expired = isInsightExpired(insight.expires_at);
+
+  const sentimentClassName =
+    insight.sentiment !== null
+      ? `insight-sentiment insight-sentiment-${insight.sentiment}`
+      : "";
 
   return (
-    <article className="insight-card">
+    <article className="insight-result-card">
       <div className="card-header">
-        <h2>AI Market Insight</h2>
+        <div>
+          <h2>{getInsightTypeLabel(insight.insight_type)}</h2>
 
-        {insight?.sentiment && (
-          <span className="badge">{insight.sentiment}</span>
+          <p className="metric-label">
+            {formatInsightDate(insight.created_at)}
+          </p>
+        </div>
+
+        <div className="insight-badges">
+          {insight.sentiment && (
+            <span className={sentimentClassName}>
+              {getSentimentLabel(insight.sentiment)}
+            </span>
+          )}
+
+          {expired && <span className="insight-expired">Expired</span>}
+        </div>
+      </div>
+
+      <p className="insight-summary">{insight.summary}</p>
+
+      <div className="insight-metadata">
+        {insight.portfolio_id !== null && (
+          <span className="metric-label">
+            Portfolio ID: {insight.portfolio_id}
+          </span>
+        )}
+
+        {insight.stock_id !== null && (
+          <span className="metric-label">Stock ID: {insight.stock_id}</span>
+        )}
+
+        {insight.source && (
+          <span className="metric-label">Source: {insight.source}</span>
+        )}
+
+        {insight.expires_at && (
+          <span className="metric-label">
+            Expires: {formatInsightDate(insight.expires_at)}
+          </span>
         )}
       </div>
 
-      {!insight && !isPending && (
-        <p>Generate an AI-powered summary for {symbol}.</p>
-      )}
-
-      {isPending && <p>Analyzing {symbol}...</p>}
-
-      {isError && <p className="negative">Unable to generate an insight.</p>}
-
-      {insight && <p>{insight.summary}</p>}
-
-      <div className="insight-actions">
-        <button type="button" onClick={handleGenerate} disabled={isPending}>
-          {isPending ? "Analyzing..." : "Generate Insight"}
+      <div className="insight-card-actions">
+        <button
+          type="button"
+          disabled={isDeleting}
+          onClick={() => onDelete(insight.id)}
+          className="insight-delete-button"
+        >
+          {isDeleting ? "Deleting..." : "Delete"}
         </button>
-
-        {insight && <Link to="/dashboard/insights">View details</Link>}
       </div>
     </article>
   );
 };
 
-export default AIInsightCard;
+export default InsightCard;

@@ -17,7 +17,8 @@ import type {
 export const aiInsightKeys = {
   all: ["ai-insights"] as const,
 
-  detail: (insightId: number) => [...aiInsightKeys.all, insightId] as const,
+  detail: (insightId: number) =>
+    [...aiInsightKeys.all, "detail", insightId] as const,
 };
 
 export const useAIInsights = () => {

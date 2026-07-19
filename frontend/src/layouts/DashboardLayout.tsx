@@ -7,6 +7,7 @@ import SearchForm from "../components/SearchForm";
 
 import DashboardProvider from "../features/dashboard/providers/DashboardProvider";
 import { useBreakpoint } from "../hooks/useBreakingPoint";
+import "./DashboardLayout.css";
 
 interface DashboardLayoutProps {
   closeMenu: () => void;
@@ -15,25 +16,35 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ closeMenu }: DashboardLayoutProps) => {
   const { isDesktop } = useBreakpoint();
 
-  const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+
+  const closeSearch = () => {
+    setShowSearch(false);
+  };
 
   return (
     <DashboardProvider>
       <div className="dashboard-layout">
         <Header
           closeMenu={closeMenu}
-          showMobileSearch={showMobileSearch}
-          setShowMobileSearch={setShowMobileSearch}
+          showSearch={showSearch}
+          setShowSearch={setShowSearch}
         />
 
-        {!isDesktop && showMobileSearch && (
-          <div className="mobile-search-row">
-            <SearchForm />
+        {showSearch && (
+          <div id="platform-search-row" className="search-row">
+            <SearchForm
+              closeSearch={closeSearch}
+              placeholder="Search the platform..."
+              autoFocus
+            />
           </div>
         )}
 
         <main className="main">
-          <Outlet />
+          <div className="main-container">
+            <Outlet />
+          </div>
         </main>
 
         {!isDesktop && <MobileDashboardNav closeMenu={closeMenu} />}

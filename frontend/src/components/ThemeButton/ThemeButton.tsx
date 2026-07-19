@@ -1,6 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMoon, faSun } from "@fortawesome/free-solid-svg-icons";
-import useTheme from "../hooks/useTheme";
+import useTheme from "../../hooks/useTheme";
 
 const ThemeButton = () => {
   const { toggleTheme, darkTheme } = useTheme();

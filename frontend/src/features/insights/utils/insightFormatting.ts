@@ -1,39 +1,33 @@
 import type { InsightSentiment, InsightType } from "../types/ai";
 
-export const getInsightTypeLabel = (insightType: InsightType): string => {
-  const labels: Record<InsightType, string> = {
-    market: "Market Insight",
-    stock: "Stock Insight",
-    portfolio: "Portfolio Insight",
-    watchlist: "Watchlist Insight",
-    news: "News Insight",
-    earnings: "Earnings Insight",
-  };
-
-  return labels[insightType];
+const insightTypeLabels: Record<InsightType, string> = {
+  market: "Market Insight",
+  stock: "Stock Insight",
+  portfolio: "Portfolio Insight",
+  watchlist: "Watchlist Insight",
+  news: "News Insight",
+  earnings: "Earnings Insight",
 };
 
-export const getSentimentLabel = (
-  sentiment: InsightSentiment | null,
-): string => {
-  if (!sentiment) {
-    return "Not available";
-  }
+const sentimentLabels: Record<InsightSentiment, string> = {
+  bullish: "Bullish",
+  bearish: "Bearish",
+  neutral: "Neutral",
+};
 
-  const labels: Record<InsightSentiment, string> = {
-    bullish: "Bullish",
-    bearish: "Bearish",
-    neutral: "Neutral",
-  };
+export const getInsightTypeLabel = (insightType: InsightType): string => {
+  return insightTypeLabels[insightType];
+};
 
-  return labels[sentiment];
+export const getSentimentLabel = (sentiment: InsightSentiment): string => {
+  return sentimentLabels[sentiment];
 };
 
 export const formatInsightDate = (value: string): string => {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return "Unknown date";
+    return "Date unavailable";
   }
 
   return new Intl.DateTimeFormat("en-US", {

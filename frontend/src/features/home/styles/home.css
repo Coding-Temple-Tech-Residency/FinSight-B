@@ -1,0 +1,58 @@
+.home-header-cta-signup {
+  background-color: var(--accent-primary);
+  color: var(--theme-tertiary);
+}
+
+.home-header {
+  box-shadow: 0 0 5px var(--accent-primary);
+}
+
+.home-preview-placeholder {
+  width: 100%;
+  min-height: 180px;
+  overflow: hidden;
+  background-color: var(--bg-primary);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+}
+
+.home-preview-placeholder-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.8rem;
+}
+
+.home-preview-placeholder-header span:last-child {
+  color: var(--accent-primary);
+}
+
+.home-preview-placeholder-body {
+  min-height: 135px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.home-preview-placeholder-body p {
+  max-width: 520px;
+  line-height: 1.6;
+  opacity: 0.7;
+}
+
+.preview-chart-line {
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--accent-primary),
+    transparent
+  );
+  border-radius: 999px;
+}

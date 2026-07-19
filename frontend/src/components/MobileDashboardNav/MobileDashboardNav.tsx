@@ -1,6 +1,7 @@
-import { NavLink } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { navigation } from "../constants/navigation";
+import { NavLink } from "react-router-dom";
+import { navigation } from "../../constants/navigation";
+import "./MobileDashboardNav.css";
 
 interface MobileDashboardNavProps {
   closeMenu: () => void;
@@ -8,7 +9,10 @@ interface MobileDashboardNavProps {
 
 const MobileDashboardNav = ({ closeMenu }: MobileDashboardNavProps) => {
   return (
-    <nav className="mobile-dashboard-nav">
+    <nav
+      className="mobile-dashboard-nav"
+      aria-label="Mobile dashboard navigation"
+    >
       {navigation.map((item) => (
         <NavLink
           key={item.id}
@@ -19,7 +23,8 @@ const MobileDashboardNav = ({ closeMenu }: MobileDashboardNavProps) => {
             `mobile-dashboard-link ${isActive ? "active" : ""}`
           }
         >
-          <FontAwesomeIcon icon={item.icon} />
+          <FontAwesomeIcon icon={item.icon} aria-hidden="true" />
+
           <span>{item.name}</span>
         </NavLink>
       ))}
