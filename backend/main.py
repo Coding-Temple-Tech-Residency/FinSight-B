@@ -8,6 +8,7 @@ from routers.stocks.routes import router as stock_router
 from routers.watchlist.routes import router as watchlist_router
 from routers.holdings.routes import router as holdings_router
 from routers.ai_insights.routes import router as ai_insights_router
+from routers.market_data.routes import router as market_data_router
 
 
 # Create all database tables if they don't exist
@@ -41,15 +42,16 @@ app.include_router(portfolio_router)
 app.include_router(users_router)
 # Register stock routes
 app.include_router(stock_router)
-
 # Register watchlist routes
 app.include_router(watchlist_router)
 # Register holdings routes
 app.include_router(holdings_router)
 # Register AI insights routes
 app.include_router(ai_insights_router)
-# Health check — confirms the server is running
+# Register market data routes
+app.include_router(market_data_router)
 
+# Health check — confirms the server is running
 @app.get("/")
 def root():
     return {"status": "FinSight backend is running"}
