@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
-import { navigation } from "../constants/navigation";
+import { navigation } from "../../constants/navigation";
+import "./DashboardNav.css";
 
 interface DashboardNavProps {
   closeMenu: () => void;
@@ -7,7 +8,7 @@ interface DashboardNavProps {
 
 const DashboardNav = ({ closeMenu }: DashboardNavProps) => {
   return (
-    <nav className="dashboard-nav">
+    <nav className="dashboard-nav" aria-label="Dashboard navigation">
       {navigation.map((item) => (
         <NavLink
           key={item.id}

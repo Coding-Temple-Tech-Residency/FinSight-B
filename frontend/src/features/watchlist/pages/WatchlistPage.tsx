@@ -6,6 +6,8 @@ import {
   useWatchlist,
 } from "../hooks/useWatchlist";
 
+import "../styles/watchlist.css";
+
 const formatCurrency = (value: number | string | null | undefined): string => {
   if (value === null || value === undefined || value === "") {
     return "Unavailable";

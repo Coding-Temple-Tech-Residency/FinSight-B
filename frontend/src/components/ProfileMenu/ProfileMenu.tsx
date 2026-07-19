@@ -6,9 +6,9 @@ import {
   faRightFromBracket,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-
-import { useAuth } from "../features/auth/hooks/useAuth";
-import ThemeButton from "./ThemeButton";
+import { useAuth } from "../../features/auth/hooks/useAuth";
+import ThemeButton from "../ThemeButton";
+import "./ProfileMenu.css";
 
 const ProfileMenu = () => {
   const [isOpen, setIsOpen] = useState(false);

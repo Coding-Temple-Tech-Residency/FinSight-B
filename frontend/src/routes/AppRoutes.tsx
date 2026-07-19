@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 
 import ProtectedRoute from "../features/auth/components/ProtectedRoute";
 
@@ -11,6 +11,7 @@ import Portfolio from "../features/portfolio/pages/Portfolio";
 import Insights from "../features/insights/pages/Insights";
 import Chat from "../features/chat/pages/Chat";
 import Settings from "../features/settings/pages/Settings";
+import SearchResults from "../features/search/pages/SearchResults";
 
 const AppRoutes = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -41,6 +42,8 @@ const AppRoutes = () => {
         <Route path="insights" element={<Insights />} />
         <Route path="chat" element={<Chat />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="search" element={<SearchResults />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   );

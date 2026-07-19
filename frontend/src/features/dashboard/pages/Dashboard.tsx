@@ -7,7 +7,7 @@ import DashboardMetrics from "../components/DashboardMetrics";
 import PortfolioChart from "../components/PortfolioChart";
 import AIInsightCard from "../components/AIInsightCard";
 import HoldingsAllocation from "../components/HoldingsAllocation";
-import TopMovers from "../components/TopMovers";
+
 import WatchlistPreview from "../components/WatchlistPreview";
 
 import { useDashboard } from "../hooks/useDashboard";
@@ -84,8 +84,6 @@ const Dashboard = () => {
         portfolioLoading={portfolioLoading}
         portfolioError={portfolioError}
       />
-
-      <TopMovers />
 
       <WatchlistPreview />
     </section>

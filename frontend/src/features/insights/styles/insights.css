@@ -1,0 +1,135 @@
+.insights-page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.insights-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: var(--bg-primary);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+}
+
+.insights-header h1 {
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.insights-header p {
+  margin-top: 0.35rem;
+  opacity: 0.7;
+}
+
+.insights-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.insight-result-card,
+.insights-card {
+  padding: 1rem;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.insight-result-card > p {
+  line-height: 1.6;
+}
+
+.insight-key-points {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  padding-left: 1.25rem;
+}
+
+.insight-key-points li {
+  list-style: disc;
+  line-height: 1.5;
+}
+
+.insight-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.insight-actions button,
+.insight-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.insight-actions button {
+  background-color: var(--accent-primary);
+  color: var(--bg-primary);
+  cursor: pointer;
+}
+
+.insight-actions a {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.insights-text {
+  color: var(--text-secondary);
+}
+
+.insights-title {
+  color: var(--text-primary);
+}
+
+.insights-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+}
+
+@media screen and (min-width: 640px) {
+  .insights-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .insight-actions {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+@media screen and (min-width: 768px) {
+  .insights-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  .insights-header {
+    padding: 1.25rem;
+  }
+
+  .insights-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

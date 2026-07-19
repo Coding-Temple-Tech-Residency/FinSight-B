@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 
-import { sendAIChatMessage } from "../../../api/aiInsightsApi";
+import { sendAIChatMessage } from "../../../api/aiChatApi";
 
 export const useAIChat = () => {
   return useMutation({
