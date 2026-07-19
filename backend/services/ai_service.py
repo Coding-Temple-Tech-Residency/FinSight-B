@@ -510,7 +510,6 @@ def build_user_portfolios_context(
         context_lines.extend(
             [
                 "",
-                f"Portfolio ID: {portfolio.id}",
                 f"Portfolio name: {portfolio.name}",
                 f"Currency: {portfolio.currency}",
                 (
