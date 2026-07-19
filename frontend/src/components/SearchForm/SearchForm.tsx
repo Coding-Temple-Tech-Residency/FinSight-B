@@ -1,6 +1,7 @@
 import {
   type ChangeEvent,
   type FormEvent,
+  type KeyboardEvent,
   useEffect,
   useId,
   useRef,
@@ -11,6 +12,12 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faXmark } from "@fortawesome/free-solid-svg-icons";
 
 import { useLocation, useNavigate } from "react-router-dom";
+
+import SearchResultsDropdown from "../../features/search/components/SearchResultsDropdown";
+import { useDebouncedValue } from "../../features/search/hooks/useDebouncedValue";
+import { usePlatformSearch } from "../../features/search/hooks/usePlatformSearch";
+import type { SearchResult } from "../../features/search/types/search";
+
 import "./SearchForm.css";
 
 interface SearchFormProps {
@@ -18,6 +25,9 @@ interface SearchFormProps {
   placeholder?: string;
   autoFocus?: boolean;
 }
+
+const MAX_INSTANT_RESULTS = 6;
+const MINIMUM_QUERY_LENGTH = 2;
 
 const SearchForm = ({
   closeSearch,
@@ -28,6 +38,8 @@ const SearchForm = ({
   const location = useLocation();
 
   const inputId = useId();
+
+  const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const currentQuery =
@@ -35,38 +47,161 @@ const SearchForm = ({
       ? (new URLSearchParams(location.search).get("q") ?? "")
       : "";
 
-  const [query, setQuery] = useState(currentQuery);
+  const [query, setQuery] = useState(() => currentQuery);
+  const [isFocused, setIsFocused] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
 
-  useEffect(() => {
-    setQuery(currentQuery);
-  }, [currentQuery]);
+  const debouncedQuery = useDebouncedValue(query, 250);
+  const normalizedDebouncedQuery = debouncedQuery.trim();
+
+  const { results } = usePlatformSearch(normalizedDebouncedQuery);
+
+  const instantResults = results.slice(0, MAX_INSTANT_RESULTS);
+
+  const hasValidQuery = normalizedDebouncedQuery.length >= MINIMUM_QUERY_LENGTH;
+
+  const shouldShowDropdown = isFocused && isDropdownOpen && hasValidQuery;
 
   useEffect(() => {
     if (!autoFocus) return;
 
-    requestAnimationFrame(() => {
+    const frameId = window.requestAnimationFrame(() => {
       inputRef.current?.focus();
     });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
   }, [autoFocus]);
 
-  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setQuery(event.target.value);
-  };
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      const target = event.target as Node;
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+      if (!formRef.current?.contains(target)) {
+        setIsDropdownOpen(false);
+        setActiveIndex(-1);
+      }
+    };
 
-    const normalizedQuery = query.trim();
+    document.addEventListener("mousedown", handleOutsideClick);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, []);
+
+  const openSearchResultsPage = (searchQuery: string) => {
+    const normalizedQuery = searchQuery.trim();
 
     if (!normalizedQuery) return;
+
+    setIsDropdownOpen(false);
+    setActiveIndex(-1);
 
     navigate(`/dashboard/search?q=${encodeURIComponent(normalizedQuery)}`);
 
     closeSearch?.();
   };
 
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const nextQuery = event.target.value;
+
+    setQuery(nextQuery);
+    setActiveIndex(-1);
+    setIsDropdownOpen(nextQuery.trim().length >= MINIMUM_QUERY_LENGTH);
+  };
+
+  const handleFocus = () => {
+    setIsFocused(true);
+
+    if (query.trim().length >= MINIMUM_QUERY_LENGTH) {
+      setIsDropdownOpen(true);
+    }
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+  };
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (activeIndex >= 0 && activeIndex < instantResults.length) {
+      handleResultSelect(instantResults[activeIndex]);
+      return;
+    }
+
+    openSearchResultsPage(query);
+  };
+
+  const handleResultSelect = (result: SearchResult) => {
+    setQuery("");
+    setIsDropdownOpen(false);
+    setActiveIndex(-1);
+
+    navigate(result.path);
+
+    closeSearch?.();
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+
+      setIsDropdownOpen(false);
+      setActiveIndex(-1);
+
+      return;
+    }
+
+    if (!shouldShowDropdown || instantResults.length === 0) {
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+
+      setActiveIndex((currentIndex) => {
+        if (currentIndex >= instantResults.length - 1) {
+          return 0;
+        }
+
+        return currentIndex + 1;
+      });
+
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+
+      setActiveIndex((currentIndex) => {
+        if (currentIndex <= 0) {
+          return instantResults.length - 1;
+        }
+
+        return currentIndex - 1;
+      });
+
+      return;
+    }
+
+    if (
+      event.key === "Enter" &&
+      activeIndex >= 0 &&
+      activeIndex < instantResults.length
+    ) {
+      event.preventDefault();
+      handleResultSelect(instantResults[activeIndex]);
+    }
+  };
+
   const handleClear = () => {
     setQuery("");
+    setIsDropdownOpen(false);
+    setActiveIndex(-1);
 
     if (location.pathname === "/dashboard/search") {
       navigate("/dashboard/search", {
@@ -74,44 +209,79 @@ const SearchForm = ({
       });
     }
 
-    requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
       inputRef.current?.focus();
     });
   };
 
   return (
-    <form className="search-form" role="search" onSubmit={handleSubmit}>
-      <label htmlFor={inputId} className="sr-only">
-        Search the FinSight platform
-      </label>
+    <form
+      ref={formRef}
+      className="search-form"
+      role="search"
+      onSubmit={handleSubmit}
+    >
+      <div className="search-field relative flex-1 min-w-0">
+        <label htmlFor={inputId} className="sr-only">
+          Search the FinSight platform
+        </label>
 
-      <div className="search-input-wrapper">
-        <FontAwesomeIcon
-          icon={faMagnifyingGlass}
-          className="search-form-icon"
-          aria-hidden="true"
-        />
+        <div className="search-input-wrapper">
+          <FontAwesomeIcon
+            icon={faMagnifyingGlass}
+            className="search-form-icon"
+            aria-hidden="true"
+          />
 
-        <input
-          ref={inputRef}
-          id={inputId}
-          name="platform-search"
-          type="search"
-          value={query}
-          placeholder={placeholder}
-          autoComplete="off"
-          onChange={handleChange}
-        />
+          <input
+            ref={inputRef}
+            id={inputId}
+            name="platform-search"
+            type="search"
+            value={query}
+            placeholder={placeholder}
+            autoComplete="off"
+            aria-autocomplete="list"
+            aria-controls={
+              shouldShowDropdown ? "instant-search-results" : undefined
+            }
+            aria-expanded={shouldShowDropdown}
+            aria-activedescendant={
+              activeIndex >= 0
+                ? `instant-search-result-${instantResults[activeIndex]?.id}`
+                : undefined
+            }
+            onChange={handleChange}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+          />
 
-        {query.length > 0 && (
-          <button
-            type="button"
-            className="search-clear-button"
-            aria-label="Clear search"
-            onClick={handleClear}
-          >
-            <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
-          </button>
+          {query.length > 0 && (
+            <button
+              type="button"
+              className="search-clear-button"
+              aria-label="Clear search"
+              onMouseDown={(event) => {
+                event.preventDefault();
+              }}
+              onClick={handleClear}
+            >
+              <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+
+        {shouldShowDropdown && (
+          <SearchResultsDropdown
+            query={normalizedDebouncedQuery}
+            results={instantResults}
+            activeIndex={activeIndex}
+            onResultSelect={handleResultSelect}
+            onViewAll={() => {
+              openSearchResultsPage(query);
+            }}
+          />
         )}
       </div>
 
