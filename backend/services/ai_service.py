@@ -654,7 +654,7 @@ def generate_portfolio_ai_insight(
         # the summary, so the AI receives recent stored information.
         stock = refresh_market_data(
             db=db,
-            symbol=holding.symbol,
+            symbol=holding.stock.symbol,
         )
 
         shares = float(holding.shares)
