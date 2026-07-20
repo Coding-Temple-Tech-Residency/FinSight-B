@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import EmptyCard from "../../../components/ui/EmptyCard";
 import ErrorCard from "../../../components/ui/ErrorCard";
@@ -6,9 +6,15 @@ import LoadingCard from "../../../components/ui/LoadingCard";
 
 import { useModal } from "../../../hooks/useModal";
 
+import DeletePortfolioDialog from "../components/DeletePortfolioDialog";
 import HoldingFormModal from "../components/HoldingFormModal";
 import HoldingsTable from "../components/HoldingsTable";
 import PortfolioFormModal from "../components/PortfolioFormModal";
+import PortfolioHeader from "../components/PortfolioHeader";
+import PortfolioSelector from "../components/PortfolioSelector";
+import PortfolioSummary from "../components/PortfolioSummary";
+
+import type { PortfolioFormValues } from "../components/PortfolioForm";
 
 import {
   useCreateHolding,
@@ -25,38 +31,12 @@ import {
 } from "../hooks/usePortfolio";
 
 import type { CreateHoldingPayload, Holding } from "../types/holdings";
+
 import "../styles/portfolio.css";
 
 type PortfolioFormMode = "create" | "edit";
 
-const formatDate = (date: string | undefined) => {
-  if (!date) return "Not available";
-
-  const parsedDate = new Date(date);
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    return "Not available";
-  }
-
-  return parsedDate.toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-};
-
-const formatCurrency = (value: number | null, currency = "USD") => {
-  if (value === null || !Number.isFinite(value)) {
-    return "Unavailable";
-  }
-
-  return value.toLocaleString("en-US", {
-    style: "currency",
-    currency,
-  });
-};
-
-const getMutationError = (error: unknown) => {
+const getMutationError = (error: unknown): string => {
   return error instanceof Error
     ? error.message
     : "Unable to complete the request.";
@@ -73,6 +53,9 @@ const Portfolio = () => {
     useState<PortfolioFormMode>("create");
 
   const [editingHolding, setEditingHolding] = useState<Holding | undefined>();
+
+  const [isDeletePortfolioDialogOpen, setIsDeletePortfolioDialogOpen] =
+    useState(false);
 
   const {
     data: portfolios = [],
@@ -95,99 +78,60 @@ const Portfolio = () => {
   } = useHoldings(activePortfolioId);
 
   const createPortfolioMutation = useCreatePortfolio();
+
   const updatePortfolioMutation = useUpdatePortfolio();
+
   const deletePortfolioMutation = useDeletePortfolio();
 
   const createHoldingMutation = useCreateHolding(activePortfolioId);
+
   const updateHoldingMutation = useUpdateHolding(activePortfolioId);
+
   const deleteHoldingMutation = useDeleteHolding(activePortfolioId);
-
-  const totals = useMemo(() => {
-    return holdings.reduce(
-      (summary, holding) => {
-        const shares = Number(holding.shares);
-        const averageBuyPrice = Number(holding.average_buy_price);
-
-        const latestPrice =
-          holding.latest_price === null ? null : Number(holding.latest_price);
-
-        const hasValidShares = Number.isFinite(shares);
-        const hasValidAveragePrice = Number.isFinite(averageBuyPrice);
-        const hasValidLatestPrice =
-          latestPrice !== null && Number.isFinite(latestPrice);
-
-        const costBasis =
-          hasValidShares && hasValidAveragePrice ? shares * averageBuyPrice : 0;
-
-        const marketValue =
-          hasValidShares && hasValidLatestPrice && latestPrice !== null
-            ? shares * latestPrice
-            : null;
-
-        const gainLoss = marketValue === null ? null : marketValue - costBasis;
-
-        return {
-          costBasis: summary.costBasis + costBasis,
-
-          marketValue:
-            marketValue === null
-              ? summary.marketValue
-              : summary.marketValue + marketValue,
-
-          gainLoss:
-            gainLoss === null ? summary.gainLoss : summary.gainLoss + gainLoss,
-
-          pricedHoldings:
-            marketValue === null
-              ? summary.pricedHoldings
-              : summary.pricedHoldings + 1,
-        };
-      },
-      {
-        costBasis: 0,
-        marketValue: 0,
-        gainLoss: 0,
-        pricedHoldings: 0,
-      },
-    );
-  }, [holdings]);
-
-  const allHoldingsHavePrices =
-    holdings.length > 0 && totals.pricedHoldings === holdings.length;
-
-  const gainLossPercent =
-    allHoldingsHavePrices && totals.costBasis > 0
-      ? (totals.gainLoss / totals.costBasis) * 100
-      : null;
 
   const openCreatePortfolioModal = () => {
     createPortfolioMutation.reset();
-    setPortfolioFormMode("create");
-    openModal("portfolio-form");
-  };
-
-  const openRenamePortfolioModal = () => {
-    if (!selectedPortfolio) return;
-
     updatePortfolioMutation.reset();
-    setPortfolioFormMode("edit");
+
+    setPortfolioFormMode("create");
+
     openModal("portfolio-form");
   };
 
-  const handlePortfolioSubmit = (name: string) => {
+  const openEditPortfolioModal = () => {
+    if (!selectedPortfolio) {
+      return;
+    }
+
+    createPortfolioMutation.reset();
+    updatePortfolioMutation.reset();
+
+    setPortfolioFormMode("edit");
+
+    openModal("portfolio-form");
+  };
+
+  const handlePortfolioSubmit = ({
+    name,
+    description,
+  }: PortfolioFormValues) => {
     const trimmedName = name.trim();
 
-    if (!trimmedName) return;
+    if (!trimmedName) {
+      return;
+    }
 
     if (portfolioFormMode === "create") {
       createPortfolioMutation.mutate(
         {
           name: trimmedName,
+          description,
           currency: "USD",
         },
         {
           onSuccess: (portfolio) => {
             setSelectedPortfolioId(portfolio.id);
+
             closeModal();
           },
         },
@@ -196,13 +140,17 @@ const Portfolio = () => {
       return;
     }
 
-    if (!selectedPortfolio) return;
+    if (!selectedPortfolio) {
+      return;
+    }
 
     updatePortfolioMutation.mutate(
       {
         portfolioId: selectedPortfolio.id,
+
         payload: {
           name: trimmedName,
+          description,
         },
       },
       {
@@ -213,50 +161,91 @@ const Portfolio = () => {
     );
   };
 
+  const handlePortfolioSelect = (portfolioId: number) => {
+    setSelectedPortfolioId(portfolioId);
+    setEditingHolding(undefined);
+
+    createHoldingMutation.reset();
+    updateHoldingMutation.reset();
+    deleteHoldingMutation.reset();
+  };
+
+  const openDeletePortfolioDialog = () => {
+    if (!selectedPortfolio) {
+      return;
+    }
+
+    deletePortfolioMutation.reset();
+
+    setIsDeletePortfolioDialogOpen(true);
+  };
+
+  const closeDeletePortfolioDialog = () => {
+    if (deletePortfolioMutation.isPending) {
+      return;
+    }
+
+    deletePortfolioMutation.reset();
+
+    setIsDeletePortfolioDialogOpen(false);
+  };
+
   const handleDeletePortfolio = () => {
-    if (!selectedPortfolio) return;
-
-    const confirmed = window.confirm(
-      `Delete "${selectedPortfolio.name}" and all of its holdings?`,
-    );
-
-    if (!confirmed) return;
+    if (!selectedPortfolio || deletePortfolioMutation.isPending) {
+      return;
+    }
 
     deletePortfolioMutation.mutate(selectedPortfolio.id, {
       onSuccess: () => {
         setSelectedPortfolioId(undefined);
+        setEditingHolding(undefined);
+
+        setIsDeletePortfolioDialogOpen(false);
       },
     });
   };
 
   const openAddHoldingModal = () => {
-    if (!activePortfolioId) return;
+    if (!activePortfolioId) {
+      return;
+    }
 
     createHoldingMutation.reset();
     updateHoldingMutation.reset();
+
     setEditingHolding(undefined);
+
     openModal("holding-form");
   };
 
   const openEditHoldingModal = (holding: Holding) => {
-    if (!activePortfolioId) return;
+    if (!activePortfolioId) {
+      return;
+    }
 
     createHoldingMutation.reset();
     updateHoldingMutation.reset();
+
     setEditingHolding(holding);
+
     openModal("holding-form");
   };
 
   const handleHoldingSubmit = (payload: CreateHoldingPayload) => {
-    if (!activePortfolioId) return;
+    if (!activePortfolioId) {
+      return;
+    }
 
     if (editingHolding) {
       updateHoldingMutation.mutate(
         {
           holdingId: editingHolding.id,
+
           payload: {
             shares: payload.shares,
+
             average_buy_price: payload.average_buy_price,
+
             purchased_at: payload.purchased_at,
           },
         },
@@ -285,19 +274,25 @@ const Portfolio = () => {
     }
 
     setEditingHolding(undefined);
+
     createHoldingMutation.reset();
     updateHoldingMutation.reset();
+
     closeModal();
   };
 
   const handleDeleteHolding = (holding: Holding) => {
-    if (!activePortfolioId) return;
+    if (!activePortfolioId || deleteHoldingMutation.isPending) {
+      return;
+    }
 
     const confirmed = window.confirm(
       `Remove ${holding.symbol} from "${selectedPortfolio?.name}"?`,
     );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     deleteHoldingMutation.mutate(holding.id);
   };
@@ -310,6 +305,15 @@ const Portfolio = () => {
       ? getMutationError(createHoldingMutation.error)
       : undefined;
 
+  const portfolioFormMutationError =
+    portfolioFormMode === "create"
+      ? createPortfolioMutation.isError
+        ? getMutationError(createPortfolioMutation.error)
+        : undefined
+      : updatePortfolioMutation.isError
+        ? getMutationError(updatePortfolioMutation.error)
+        : undefined;
+
   const updatingHoldingId = updateHoldingMutation.isPending
     ? updateHoldingMutation.variables?.holdingId
     : undefined;
@@ -317,8 +321,6 @@ const Portfolio = () => {
   const deletingHoldingId = deleteHoldingMutation.isPending
     ? deleteHoldingMutation.variables
     : undefined;
-
-  const portfolioCurrency = selectedPortfolio?.currency ?? "USD";
 
   if (portfoliosLoading) {
     return <LoadingCard title="Loading portfolios..." />;
@@ -339,24 +341,12 @@ const Portfolio = () => {
   return (
     <>
       <section className="portfolio-page">
-        <header className="portfolio-page-header">
-          <div>
-            <h1>Portfolio</h1>
-            <p>Create and manage your investment portfolios and holdings.</p>
-          </div>
+        <PortfolioHeader
+          isCreating={createPortfolioMutation.isPending}
+          onCreatePortfolio={openCreatePortfolioModal}
+        />
 
-          <button
-            type="button"
-            onClick={openCreatePortfolioModal}
-            disabled={createPortfolioMutation.isPending}
-          >
-            {createPortfolioMutation.isPending
-              ? "Creating..."
-              : "Create Portfolio"}
-          </button>
-        </header>
-
-        {createPortfolioMutation.isError && (
+        {createPortfolioMutation.isError && portfolioFormMode !== "create" && (
           <ErrorCard
             message={getMutationError(createPortfolioMutation.error)}
           />
@@ -378,185 +368,29 @@ const Portfolio = () => {
           />
         ) : (
           <>
-            <section className="portfolio-toolbar">
-              <div className="portfolio-selector-group">
-                <label htmlFor="portfolio-selector">Portfolio</label>
-
-                <select
-                  id="portfolio-selector"
-                  value={activePortfolioId ?? ""}
-                  onChange={(event) => {
-                    const portfolioId = Number(event.target.value);
-
-                    setSelectedPortfolioId(portfolioId);
-                    setEditingHolding(undefined);
-                  }}
-                >
-                  {portfolios.map((portfolio) => (
-                    <option key={portfolio.id} value={portfolio.id}>
-                      {portfolio.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="portfolio-toolbar-actions">
-                <button
-                  type="button"
-                  onClick={openRenamePortfolioModal}
-                  disabled={
-                    !selectedPortfolio || updatePortfolioMutation.isPending
-                  }
-                >
-                  {updatePortfolioMutation.isPending ? "Saving..." : "Rename"}
-                </button>
-
-                <button
-                  type="button"
-                  className="danger-button"
-                  onClick={handleDeletePortfolio}
-                  disabled={
-                    !selectedPortfolio || deletePortfolioMutation.isPending
-                  }
-                >
-                  {deletePortfolioMutation.isPending ? "Deleting..." : "Delete"}
-                </button>
-              </div>
-            </section>
-
-            {updatePortfolioMutation.isError && (
-              <ErrorCard
-                message={getMutationError(updatePortfolioMutation.error)}
-              />
-            )}
-
-            {deletePortfolioMutation.isError && (
-              <ErrorCard
-                message={getMutationError(deletePortfolioMutation.error)}
-              />
-            )}
+            <PortfolioSelector
+              portfolios={portfolios}
+              selectedPortfolioId={activePortfolioId}
+              isUpdating={updatePortfolioMutation.isPending}
+              isDeleting={deletePortfolioMutation.isPending}
+              onSelect={handlePortfolioSelect}
+              onEdit={openEditPortfolioModal}
+              onDelete={openDeletePortfolioDialog}
+            />
 
             {selectedPortfolio && (
               <>
-                <section className="summary-cards">
-                  <article className="card">
-                    <p className="metric-label">Portfolio Value</p>
-
-                    <h2 className="metric-value">
-                      {holdingsLoading
-                        ? "Loading..."
-                        : allHoldingsHavePrices
-                          ? formatCurrency(
-                              totals.marketValue,
-                              portfolioCurrency,
-                            )
-                          : holdings.length === 0
-                            ? formatCurrency(0, portfolioCurrency)
-                            : "Unavailable"}
-                    </h2>
-
-                    {!holdingsLoading &&
-                      holdings.length > 0 &&
-                      !allHoldingsHavePrices && (
-                        <p className="metric-label">
-                          One or more holdings are missing a latest price.
-                        </p>
-                      )}
-                  </article>
-
-                  <article className="card">
-                    <p className="metric-label">Total Cost Basis</p>
-
-                    <h2 className="metric-value">
-                      {holdingsLoading
-                        ? "Loading..."
-                        : formatCurrency(totals.costBasis, portfolioCurrency)}
-                    </h2>
-                  </article>
-
-                  <article className="card">
-                    <p className="metric-label">Total Gain/Loss</p>
-
-                    <h2
-                      className={`metric-value ${
-                        gainLossPercent === null
-                          ? ""
-                          : totals.gainLoss >= 0
-                            ? "portfolio-positive"
-                            : "portfolio-negative"
-                      }`}
-                    >
-                      {holdingsLoading
-                        ? "Loading..."
-                        : allHoldingsHavePrices
-                          ? formatCurrency(totals.gainLoss, portfolioCurrency)
-                          : holdings.length === 0
-                            ? formatCurrency(0, portfolioCurrency)
-                            : "Unavailable"}
-                    </h2>
-
-                    {gainLossPercent !== null && (
-                      <p
-                        className={
-                          gainLossPercent >= 0
-                            ? "portfolio-positive"
-                            : "portfolio-negative"
-                        }
-                      >
-                        {gainLossPercent >= 0 ? "+" : ""}
-                        {gainLossPercent.toFixed(2)}%
-                      </p>
-                    )}
-                  </article>
-
-                  <article className="card">
-                    <p className="metric-label">Holdings</p>
-
-                    <h2 className="metric-value">
-                      {holdingsLoading ? "Loading..." : holdings.length}
-                    </h2>
-                  </article>
-                </section>
-
-                <section className="portfolio-details-card">
-                  <div className="card-header">
-                    <h2>Portfolio Details</h2>
-                  </div>
-
-                  <dl className="portfolio-details-list">
-                    <div>
-                      <dt>Name</dt>
-                      <dd>{selectedPortfolio.name}</dd>
-                    </div>
-
-                    <div>
-                      <dt>Description</dt>
-                      <dd>
-                        {selectedPortfolio.description ||
-                          "No description has been added."}
-                      </dd>
-                    </div>
-
-                    <div>
-                      <dt>Currency</dt>
-                      <dd>{selectedPortfolio.currency}</dd>
-                    </div>
-
-                    <div>
-                      <dt>Created</dt>
-                      <dd>{formatDate(selectedPortfolio.created_at)}</dd>
-                    </div>
-
-                    <div>
-                      <dt>Last updated</dt>
-                      <dd>{formatDate(selectedPortfolio.updated_at)}</dd>
-                    </div>
-                  </dl>
-                </section>
+                <PortfolioSummary
+                  portfolio={selectedPortfolio}
+                  holdings={holdings}
+                  isLoading={holdingsLoading}
+                />
 
                 <section className="holdings-section">
                   <div className="holdings-header">
                     <div>
+                      <p className="page-eyebrow">Assets</p>
+
                       <h2>Holdings</h2>
 
                       <p>Track the stocks held in {selectedPortfolio.name}.</p>
@@ -636,9 +470,13 @@ const Portfolio = () => {
         initialName={
           portfolioFormMode === "edit" ? selectedPortfolio?.name : ""
         }
+        initialDescription={
+          portfolioFormMode === "edit" ? selectedPortfolio?.description : ""
+        }
         isSubmitting={
           createPortfolioMutation.isPending || updatePortfolioMutation.isPending
         }
+        mutationError={portfolioFormMutationError}
         onSubmit={handlePortfolioSubmit}
       />
 
@@ -650,6 +488,19 @@ const Portfolio = () => {
         mutationError={holdingMutationError}
         onSubmit={handleHoldingSubmit}
         onClose={handleCloseHoldingModal}
+      />
+
+      <DeletePortfolioDialog
+        isOpen={isDeletePortfolioDialogOpen}
+        portfolioName={selectedPortfolio?.name}
+        isDeleting={deletePortfolioMutation.isPending}
+        errorMessage={
+          deletePortfolioMutation.isError
+            ? getMutationError(deletePortfolioMutation.error)
+            : undefined
+        }
+        onClose={closeDeletePortfolioDialog}
+        onConfirm={handleDeletePortfolio}
       />
     </>
   );
