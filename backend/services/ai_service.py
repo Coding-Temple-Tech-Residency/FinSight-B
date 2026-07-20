@@ -545,7 +545,7 @@ def build_user_portfolios_context(
                 holding.stock.symbol
             """
 
-            symbol = holding.symbol.strip().upper()
+            symbol = holding.stock.symbol.strip().upper()
 
             # Refresh and cache current market information.
             # This gives the AI more recent data than the original
