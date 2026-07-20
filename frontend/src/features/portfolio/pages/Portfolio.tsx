@@ -25,6 +25,7 @@ import {
 } from "../hooks/usePortfolio";
 
 import type { CreateHoldingPayload, Holding } from "../types/holdings";
+import "../styles/portfolio.css";
 
 type PortfolioFormMode = "create" | "edit";
 

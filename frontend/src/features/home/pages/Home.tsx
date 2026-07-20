@@ -18,6 +18,7 @@ import { faBars, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { stats } from "../../../data/stats";
 import { features } from "../../../data/features";
 import { homeNavigation } from "../../../constants/navigation";
+import "../styles/home.css";
 
 type HomeProps = {
   isOpen: boolean;

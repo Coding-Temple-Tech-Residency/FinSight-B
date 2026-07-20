@@ -1,3 +1,5 @@
+import "./ErrorCard.css";
+
 type ErrorCardProps = {
   message?: string;
 };

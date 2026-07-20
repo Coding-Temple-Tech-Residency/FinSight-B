@@ -1,3 +1,4 @@
+import "./LoadingCard.css";
 type LoadingCardProps = {
   title?: string;
 };

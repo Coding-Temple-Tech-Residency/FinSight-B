@@ -1,13 +1,20 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 1000;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   padding: 1rem;
+
   background-color: rgba(0, 0, 0, 0.68);
   backdrop-filter: blur(5px);
+
+  overflow-y: auto;
+  overscroll-behavior: contain;
+
   animation: modal-overlay-fade 0.18s ease;
 }
 

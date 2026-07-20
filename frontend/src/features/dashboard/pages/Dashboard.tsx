@@ -13,6 +13,7 @@ import WatchlistPreview from "../components/WatchlistPreview";
 import { useDashboard } from "../hooks/useDashboard";
 import { usePortfolioPerformance } from "../hooks/usePortfolioPerformance";
 import AIInsightCard from "../../insights/components/InsightCard";
+import "../styles/dashboard.css";
 
 const Dashboard = () => {
   const { symbol } = useDashboard();

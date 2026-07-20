@@ -1,5 +1,7 @@
-import { useEffect } from "react";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+
+import "./Modal.css";
 
 type ModalProps = {
   isOpen: boolean;
@@ -12,6 +14,8 @@ const Modal = ({ isOpen, title, children, onClose }: ModalProps) => {
   useEffect(() => {
     if (!isOpen) return;
 
+    const previousOverflow = document.body.style.overflow;
+
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         onClose();
@@ -22,14 +26,14 @@ const Modal = ({ isOpen, title, children, onClose }: ModalProps) => {
     document.addEventListener("keydown", handleEscape);
 
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleEscape);
     };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="modal-overlay" role="presentation" onMouseDown={onClose}>
       <section
         className="modal-panel"
@@ -53,7 +57,8 @@ const Modal = ({ isOpen, title, children, onClose }: ModalProps) => {
 
         <div className="modal-content">{children}</div>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 };
 

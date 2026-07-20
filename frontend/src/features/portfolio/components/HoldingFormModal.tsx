@@ -1,4 +1,4 @@
-import ModalPanel from "../../../components/ui/ModalPanel";
+import Modal from "../../../components/ui/Modal";
 import { useModal } from "../../../hooks/useModal";
 
 import HoldingForm from "./HoldingForm";
@@ -22,10 +22,6 @@ const HoldingFormModal = ({
 }: HoldingFormModalProps) => {
   const { closeModal, isModalOpen } = useModal();
 
-  if (!isModalOpen("holding-form")) {
-    return null;
-  }
-
   const handleClose = () => {
     if (isSubmitting) return;
 
@@ -38,7 +34,8 @@ const HoldingFormModal = ({
   };
 
   return (
-    <ModalPanel
+    <Modal
+      isOpen={isModalOpen("holding-form")}
       title={holding ? `Edit ${holding.symbol}` : "Add Holding"}
       onClose={handleClose}
     >
@@ -50,7 +47,7 @@ const HoldingFormModal = ({
         onSubmit={onSubmit}
         onCancel={handleClose}
       />
-    </ModalPanel>
+    </Modal>
   );
 };
 
