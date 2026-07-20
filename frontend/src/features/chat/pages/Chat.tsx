@@ -1,12 +1,9 @@
 import { useState } from "react";
 
-import { useDashboard } from "../../dashboard/hooks/useDashboard";
 import { useAIChat } from "../hooks/useAIChat";
 import type { AIChatMessage } from "../types/chat";
 
 const Chat = () => {
-  const { symbol } = useDashboard();
-
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<AIChatMessage[]>([]);
 
@@ -17,7 +14,9 @@ const Chat = () => {
 
     const trimmedMessage = message.trim();
 
-    if (!trimmedMessage || isPending) return;
+    if (!trimmedMessage || isPending) {
+      return;
+    }
 
     reset();
 
@@ -28,29 +27,32 @@ const Chat = () => {
       created_at: new Date().toISOString(),
     };
 
-    setMessages((current) => [...current, userMessage]);
+    setMessages((currentMessages) => [...currentMessages, userMessage]);
 
     setMessage("");
 
     sendMessage(
       {
         message: trimmedMessage,
-        symbol,
       },
       {
-        onSuccess: (response) => {
-          const responseMessage = response.message.trim();
+        onSuccess: (insight) => {
+          const responseMessage = insight.summary.trim();
 
-          if (!responseMessage) return;
+          if (!responseMessage) {
+            return;
+          }
 
-          setMessages((current) => [
-            ...current,
-            {
-              id: crypto.randomUUID(),
-              role: "assistant",
-              content: responseMessage,
-              created_at: new Date().toISOString(),
-            },
+          const assistantMessage: AIChatMessage = {
+            id: String(insight.id),
+            role: "assistant",
+            content: responseMessage,
+            created_at: insight.created_at,
+          };
+
+          setMessages((currentMessages) => [
+            ...currentMessages,
+            assistantMessage,
           ]);
         },
       },
@@ -61,12 +63,15 @@ const Chat = () => {
     <section className="chat-page">
       <header className="chat-header">
         <h1>Ask FinSight AI</h1>
-        <p>Currently discussing {symbol}.</p>
+
+        <p>Ask questions about the market and your current portfolios.</p>
       </header>
 
       <div className="chat-messages" aria-live="polite">
         {messages.length === 0 && (
-          <p>Ask a question about {symbol}, the market, or your portfolio.</p>
+          <p>
+            Ask about your portfolios, holdings, diversification, or the market.
+          </p>
         )}
 
         {messages.map((chatMessage) => (
@@ -79,21 +84,17 @@ const Chat = () => {
         ))}
 
         {isPending && (
-          <article className="chat-message assistant">
+          <article className="chat-message assistant" role="status">
             <p>Thinking...</p>
           </article>
         )}
 
         {isError && (
-          <div className="chat-error">
+          <div className="chat-error" role="alert">
             <p className="negative">
               {error instanceof Error
                 ? error.message
                 : "Unable to send your message."}
-            </p>
-
-            <p className="metric-label">
-              The AI backend may not be available yet.
             </p>
           </div>
         )}
@@ -107,10 +108,10 @@ const Chat = () => {
         <input
           id="ai-chat-message"
           value={message}
-          maxLength={1000}
+          maxLength={4000}
           autoComplete="off"
           onChange={(event) => setMessage(event.target.value)}
-          placeholder={`Ask about ${symbol}...`}
+          placeholder="Ask about your portfolios..."
         />
 
         <button type="submit" disabled={!message.trim() || isPending}>

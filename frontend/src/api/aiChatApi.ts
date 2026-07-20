@@ -1,21 +1,23 @@
 import { apiClient } from "./apiClient";
 
-import type {
-  AIChatPayload,
-  AIChatResponse,
-} from "../features/chat/types/chat";
+import type { AIChatPayload } from "../features/chat/types/chat";
+import type { AIInsight } from "../features/insights/types/ai";
 
-const AI_CHAT_URL = "/api/ai/chat";
+const AI_CHAT_URL = "/api/ai-insights";
 
 export const sendAIChatMessage = (
   payload: AIChatPayload,
-): Promise<AIChatResponse> => {
-  return apiClient<AIChatResponse>(AI_CHAT_URL, {
+): Promise<AIInsight> => {
+  const message = payload.message.trim();
+
+  if (!message) {
+    throw new Error("A message is required.");
+  }
+
+  return apiClient<AIInsight>(AI_CHAT_URL, {
     method: "POST",
     body: JSON.stringify({
-      ...payload,
-      message: payload.message.trim(),
-      symbol: payload.symbol?.trim().toUpperCase() || undefined,
+      message,
     }),
   });
 };
