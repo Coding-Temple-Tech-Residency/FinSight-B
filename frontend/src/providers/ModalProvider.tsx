@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { ModalContext } from "../context/ModalContext";
 import type { ModalName } from "../types/modals";
@@ -21,26 +21,6 @@ const ModalProvider = ({ children }: ModalProviderProps) => {
   const isModalOpen = (modal: Exclude<ModalName, null>) => {
     return activeModal === modal;
   };
-
-  useEffect(() => {
-    if (!activeModal) return;
-
-    const previousOverflow = document.body.style.overflow;
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        closeModal();
-      }
-    };
-
-    document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [activeModal]);
 
   return (
     <ModalContext.Provider

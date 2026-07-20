@@ -1,5 +1,6 @@
-import ModalPanel from "../../../components/ui/ModalPanel";
+import Modal from "../../../components/ui/Modal";
 import { useModal } from "../../../hooks/useModal";
+
 import PortfolioForm from "./PortfolioForm";
 
 type PortfolioFormModalProps = {
@@ -17,12 +18,9 @@ const PortfolioFormModal = ({
 }: PortfolioFormModalProps) => {
   const { closeModal, isModalOpen } = useModal();
 
-  if (!isModalOpen("portfolio-form")) {
-    return null;
-  }
-
   return (
-    <ModalPanel
+    <Modal
+      isOpen={isModalOpen("portfolio-form")}
       title={mode === "create" ? "Create Portfolio" : "Rename Portfolio"}
       onClose={closeModal}
     >
@@ -34,7 +32,7 @@ const PortfolioFormModal = ({
         onSubmit={onSubmit}
         onCancel={closeModal}
       />
-    </ModalPanel>
+    </Modal>
   );
 };
 

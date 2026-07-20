@@ -1,6 +1,7 @@
 import type { InsightSentiment, InsightType } from "../types/ai";
 
 const insightTypeLabels: Record<InsightType, string> = {
+  general: "AI Conversation",
   market: "Market Insight",
   stock: "Stock Insight",
   portfolio: "Portfolio Insight",

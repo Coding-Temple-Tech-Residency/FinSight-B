@@ -1,6 +1,7 @@
 export type InsightSentiment = "bullish" | "bearish" | "neutral";
 
 export type InsightType =
+  | "general"
   | "market"
   | "stock"
   | "portfolio"

@@ -1,13 +1,19 @@
 .modal-panel {
   width: min(100%, 540px);
   max-height: calc(100svh - 2rem);
-  overflow-y: auto;
-  overscroll-behavior: contain;
+
+  display: flex;
+  flex-direction: column;
+
   background-color: var(--bg-primary);
   color: var(--text-primary);
+
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 18px;
+
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.4);
+
+  overflow: hidden;
   animation: modal-panel-enter 0.2s ease;
 }
 
@@ -15,16 +21,22 @@
   position: sticky;
   top: 0;
   z-index: 2;
+
+  flex-shrink: 0;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+
   padding: 1rem 1.25rem;
+
   background-color: var(--bg-primary);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .modal-header h2 {
+  margin: 0;
   font-size: 1.25rem;
   font-weight: 800;
 }
@@ -33,14 +45,22 @@
   width: 38px;
   height: 38px;
   flex-shrink: 0;
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
+
+  padding: 0;
+
   background-color: var(--bg-secondary);
   color: var(--text-primary);
+
+  border: 0;
   border-radius: 999px;
+
   font-size: 1.4rem;
   line-height: 1;
+
   cursor: pointer;
 }
 
@@ -48,8 +68,17 @@
   color: var(--accent-primary);
 }
 
+.modal-close-button:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
 .modal-content {
+  min-height: 0;
   padding: 1.25rem;
+
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 @keyframes modal-panel-enter {

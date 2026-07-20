@@ -9,10 +9,4 @@ export type AIChatMessage = {
 
 export type AIChatPayload = {
   message: string;
-  symbol?: string;
-};
-
-export type AIChatResponse = {
-  message: string;
-  symbol?: string;
 };

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import "./EmptyCard.css";
 
 type EmptyCardProps = {
   title?: string;

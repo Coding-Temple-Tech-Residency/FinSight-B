@@ -1,16 +1,27 @@
-import { useEffect } from "react";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+
+import "./Modal.css";
 
 type ModalProps = {
   isOpen: boolean;
   title: string;
   children: ReactNode;
   onClose: () => void;
+  panelClassName?: string;
 };
 
-const Modal = ({ isOpen, title, children, onClose }: ModalProps) => {
+const Modal = ({
+  isOpen,
+  title,
+  children,
+  onClose,
+  panelClassName = "",
+}: ModalProps) => {
   useEffect(() => {
     if (!isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -22,17 +33,17 @@ const Modal = ({ isOpen, title, children, onClose }: ModalProps) => {
     document.addEventListener("keydown", handleEscape);
 
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleEscape);
     };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="modal-overlay" role="presentation" onMouseDown={onClose}>
       <section
-        className="modal-panel"
+        className={`modal-panel ${panelClassName}`.trim()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
@@ -53,7 +64,8 @@ const Modal = ({ isOpen, title, children, onClose }: ModalProps) => {
 
         <div className="modal-content">{children}</div>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 };
 

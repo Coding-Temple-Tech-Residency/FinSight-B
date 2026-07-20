@@ -1,20 +1,44 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
-import { useAIInsights } from "../../insights/hooks/useAIInsights";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faTrashCan } from "@fortawesome/free-solid-svg-icons";
 
-const formatDate = (value: string): string => {
-  const date = new Date(value);
+import Modal from "../../../components/ui/Modal";
+import DeleteInsightModal from "../../insights/components/DeleteInsightModal";
 
-  if (Number.isNaN(date.getTime())) {
-    return "Unknown date";
+import {
+  useAIInsights,
+  useDeleteAIInsight,
+  useGeneratePortfolioAIInsight,
+} from "../../insights/hooks/useAIInsights";
+
+import {
+  formatInsightDate,
+  getInsightTypeLabel,
+  getSentimentLabel,
+} from "../../insights/utils/insightFormatting";
+
+interface AIInsightCardProps {
+  portfolioId?: number;
+  portfolioLoading?: boolean;
+}
+
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
   }
 
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-  }).format(date);
+  return "Unable to complete the AI insight request.";
 };
 
-const AIInsightCard = () => {
+const AIInsightCard = ({
+  portfolioId,
+  portfolioLoading = false,
+}: AIInsightCardProps) => {
+  const [isInsightModalOpen, setIsInsightModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
   const {
     data: insights = [],
     isLoading,
@@ -23,69 +47,266 @@ const AIInsightCard = () => {
     error,
   } = useAIInsights();
 
-  const latestInsight = insights[0];
+  const generateMutation = useGeneratePortfolioAIInsight();
+  const deleteMutation = useDeleteAIInsight();
+
+  const latestInsight = insights.find(
+    (insight) =>
+      insight.insight_type === "portfolio" &&
+      insight.portfolio_id === portfolioId,
+  );
+
+  const hasValidPortfolio = typeof portfolioId === "number" && portfolioId > 0;
+
+  const isGenerating = generateMutation.isPending;
+  const isDeleting = deleteMutation.isPending;
+
+  const handleGenerateInsight = async () => {
+    if (!hasValidPortfolio || isGenerating || isDeleting) {
+      return;
+    }
+
+    try {
+      await generateMutation.mutateAsync({
+        portfolioId,
+      });
+    } catch (generationError) {
+      console.error("Failed to generate portfolio insight:", generationError);
+    }
+  };
+
+  const openInsightModal = () => {
+    if (!latestInsight) {
+      return;
+    }
+
+    setIsInsightModalOpen(true);
+  };
+
+  const closeInsightModal = () => {
+    setIsInsightModalOpen(false);
+  };
+
+  const openDeleteModal = () => {
+    if (!latestInsight || isDeleting) {
+      return;
+    }
+
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    if (isDeleting) {
+      return;
+    }
+
+    setIsDeleteModalOpen(false);
+  };
+
+  const openDeleteModalFromInsightModal = () => {
+    if (!latestInsight || isDeleting) {
+      return;
+    }
+
+    setIsInsightModalOpen(false);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteInsight = async () => {
+    if (!latestInsight || isDeleting) {
+      return;
+    }
+
+    try {
+      await deleteMutation.mutateAsync(latestInsight.id);
+
+      setIsDeleteModalOpen(false);
+      setIsInsightModalOpen(false);
+    } catch (deleteError) {
+      console.error("Failed to delete AI insight:", deleteError);
+    }
+  };
 
   return (
-    <article className="insight-card">
-      <div className="card-header">
-        <div>
-          <h2>AI Insights</h2>
+    <>
+      <article className="insight-card">
+        <div className="card-header">
+          <div>
+            <h2>Portfolio AI Insight</h2>
 
-          {isFetching && !isLoading && (
-            <p className="metric-label">Updating...</p>
-          )}
-        </div>
-
-        {latestInsight?.sentiment && (
-          <span className="badge">{latestInsight.sentiment}</span>
-        )}
-      </div>
-
-      {isLoading && <p role="status">Loading AI insights...</p>}
-
-      {!isLoading && isError && (
-        <p className="negative" role="alert">
-          {error instanceof Error
-            ? error.message
-            : "Unable to load AI insights."}
-        </p>
-      )}
-
-      {!isLoading && !isError && !latestInsight && (
-        <div>
-          <p>No AI insights have been created yet.</p>
-        </div>
-      )}
-
-      {!isLoading && !isError && latestInsight && (
-        <>
-          <p>{latestInsight.summary}</p>
-
-          <div className="mt-3 flex flex-wrap gap-3 text-sm">
-            <span className="metric-label">
-              Type: <strong>{latestInsight.insight_type}</strong>
-            </span>
-
-            <span className="metric-label">
-              {formatDate(latestInsight.created_at)}
-            </span>
+            {isFetching && !isLoading && (
+              <p className="metric-label">Updating...</p>
+            )}
           </div>
 
-          {latestInsight.source && (
-            <p className="metric-label mt-2">Source: {latestInsight.source}</p>
-          )}
-        </>
-      )}
+          <div className="insight-header-actions">
+            {latestInsight?.sentiment && (
+              <span
+                className={`insight-sentiment insight-sentiment-${latestInsight.sentiment}`}
+              >
+                {getSentimentLabel(latestInsight.sentiment)}
+              </span>
+            )}
 
-      <div className="insight-actions">
-        <Link to="/dashboard/insights">View all insights</Link>
-      </div>
+            {latestInsight && (
+              <button
+                type="button"
+                className="insight-delete-icon-button"
+                onClick={openDeleteModal}
+                disabled={isDeleting}
+                aria-label="Delete current portfolio insight"
+                title="Delete insight"
+              >
+                <FontAwesomeIcon icon={faTrashCan} />
+              </button>
+            )}
+          </div>
+        </div>
 
-      <p className="ai-disclaimer">
-        AI-generated information is for educational purposes and is not
-        financial advice.
-      </p>
-    </article>
+        {isLoading && <p role="status">Loading portfolio insight...</p>}
+
+        {!isLoading && isError && (
+          <p className="negative" role="alert">
+            {error instanceof Error
+              ? error.message
+              : "Unable to load AI insights."}
+          </p>
+        )}
+
+        {!isLoading && !isError && !latestInsight && (
+          <p>
+            Generate an AI analysis for the selected portfolio to see its latest
+            insight.
+          </p>
+        )}
+
+        {!isLoading && !isError && latestInsight && (
+          <>
+            <div className="insight-preview">
+              <p>{latestInsight.summary}</p>
+            </div>
+
+            <button
+              type="button"
+              className="insight-read-more"
+              onClick={openInsightModal}
+              aria-haspopup="dialog"
+            >
+              Read full insight
+            </button>
+
+            <div className="insight-meta">
+              <span className="metric-label">
+                Type:{" "}
+                <strong>
+                  {getInsightTypeLabel(latestInsight.insight_type)}
+                </strong>
+              </span>
+
+              <span className="metric-label">
+                {formatInsightDate(latestInsight.created_at)}
+              </span>
+            </div>
+
+            {latestInsight.source && (
+              <p className="metric-label insight-source">
+                Source: {latestInsight.source}
+              </p>
+            )}
+          </>
+        )}
+
+        {generateMutation.isError && (
+          <p className="negative insight-generation-error" role="alert">
+            {getErrorMessage(generateMutation.error)}
+          </p>
+        )}
+
+        {deleteMutation.isError && (
+          <p className="negative insight-generation-error" role="alert">
+            {getErrorMessage(deleteMutation.error)}
+          </p>
+        )}
+
+        <div className="insight-actions">
+          <button
+            type="button"
+            onClick={handleGenerateInsight}
+            disabled={
+              !hasValidPortfolio ||
+              portfolioLoading ||
+              isGenerating ||
+              isDeleting
+            }
+          >
+            {isGenerating
+              ? "Generating insight..."
+              : latestInsight
+                ? "Generate new insight"
+                : "Generate portfolio insight"}
+          </button>
+
+          <Link to="/dashboard/insights">View saved insights</Link>
+        </div>
+      </article>
+
+      <Modal
+        isOpen={isInsightModalOpen}
+        title="Portfolio AI Insight"
+        onClose={closeInsightModal}
+        panelClassName="insight-modal-panel"
+      >
+        {latestInsight && (
+          <article className="insight-modal-body">
+            <div className="insight-modal-meta">
+              {latestInsight.sentiment && (
+                <span
+                  className={`insight-sentiment insight-sentiment-${latestInsight.sentiment}`}
+                >
+                  {getSentimentLabel(latestInsight.sentiment)}
+                </span>
+              )}
+
+              <span className="metric-label">
+                {getInsightTypeLabel(latestInsight.insight_type)}
+              </span>
+
+              <span className="metric-label">
+                {formatInsightDate(latestInsight.created_at)}
+              </span>
+            </div>
+
+            <div className="insight-modal-summary">
+              <p>{latestInsight.summary}</p>
+            </div>
+
+            {latestInsight.source && (
+              <p className="metric-label">Source: {latestInsight.source}</p>
+            )}
+
+            <div className="insight-modal-actions">
+              <button
+                type="button"
+                className="insight-delete-button"
+                onClick={openDeleteModalFromInsightModal}
+                disabled={isDeleting}
+              >
+                <FontAwesomeIcon icon={faTrashCan} />
+
+                {isDeleting ? "Deleting..." : "Delete insight"}
+              </button>
+            </div>
+          </article>
+        )}
+      </Modal>
+
+      <DeleteInsightModal
+        isOpen={isDeleteModalOpen}
+        isDeleting={isDeleting}
+        onClose={closeDeleteModal}
+        onConfirm={handleDeleteInsight}
+      />
+    </>
   );
 };
 
