@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import "./ModalPanel.css";
+import "../Modal/Modal.css";
 
 type ModalPanelProps = {
   title: string;

@@ -8,9 +8,16 @@ type ModalProps = {
   title: string;
   children: ReactNode;
   onClose: () => void;
+  panelClassName?: string;
 };
 
-const Modal = ({ isOpen, title, children, onClose }: ModalProps) => {
+const Modal = ({
+  isOpen,
+  title,
+  children,
+  onClose,
+  panelClassName = "",
+}: ModalProps) => {
   useEffect(() => {
     if (!isOpen) return;
 
@@ -36,7 +43,7 @@ const Modal = ({ isOpen, title, children, onClose }: ModalProps) => {
   return createPortal(
     <div className="modal-overlay" role="presentation" onMouseDown={onClose}>
       <section
-        className="modal-panel"
+        className={`modal-panel ${panelClassName}`.trim()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"

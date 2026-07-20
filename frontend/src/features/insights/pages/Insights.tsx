@@ -1,11 +1,15 @@
+import { useState } from "react";
+
 import EmptyCard from "../../../components/ui/EmptyCard";
 import ErrorCard from "../../../components/ui/ErrorCard";
 import LoadingCard from "../../../components/ui/LoadingCard";
-import "../styles/Insights.css";
 
+import DeleteInsightModal from "../components/DeleteInsightModal";
 import InsightCard from "../components/InsightCard";
 
 import { useAIInsights, useDeleteAIInsight } from "../hooks/useAIInsights";
+
+import "../styles/insights.css";
 
 const getErrorMessage = (error: unknown): string => {
   if (error instanceof Error) {
@@ -16,6 +20,10 @@ const getErrorMessage = (error: unknown): string => {
 };
 
 const Insights = () => {
+  const [insightIdToDelete, setInsightIdToDelete] = useState<number | null>(
+    null,
+  );
+
   const {
     data: insights = [],
     isLoading,
@@ -27,17 +35,33 @@ const Insights = () => {
 
   const deleteMutation = useDeleteAIInsight();
 
-  const handleDelete = async (insightId: number) => {
-    const confirmed = window.confirm("Delete this AI insight?");
+  const handleDeleteRequest = (insightId: number) => {
+    if (deleteMutation.isPending) {
+      return;
+    }
 
-    if (!confirmed) {
+    setInsightIdToDelete(insightId);
+  };
+
+  const handleCloseDeleteModal = () => {
+    if (deleteMutation.isPending) {
+      return;
+    }
+
+    setInsightIdToDelete(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (insightIdToDelete === null || deleteMutation.isPending) {
       return;
     }
 
     try {
-      await deleteMutation.mutateAsync(insightId);
-    } catch (error) {
-      console.error("Failed to delete AI insight:", error);
+      await deleteMutation.mutateAsync(insightIdToDelete);
+
+      setInsightIdToDelete(null);
+    } catch (deleteError) {
+      console.error("Failed to delete AI insight:", deleteError);
     }
   };
 
@@ -50,8 +74,8 @@ const Insights = () => {
           <h1>AI Insights</h1>
 
           <p className="insights-description">
-            Review saved market, stock, portfolio, watchlist, news, and earnings
-            insights.
+            Review saved general, market, stock, portfolio, watchlist, news, and
+            earnings insights.
           </p>
         </div>
 
@@ -101,7 +125,7 @@ const Insights = () => {
                 key={insight.id}
                 insight={insight}
                 isDeleting={isDeleting}
-                onDelete={handleDelete}
+                onDelete={handleDeleteRequest}
               />
             );
           })}
@@ -112,6 +136,13 @@ const Insights = () => {
         AI-generated information is for educational purposes only and is not
         financial advice.
       </p>
+
+      <DeleteInsightModal
+        isOpen={insightIdToDelete !== null}
+        isDeleting={deleteMutation.isPending}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleConfirmDelete}
+      />
     </section>
   );
 };
