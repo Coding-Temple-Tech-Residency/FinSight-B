@@ -1,4 +1,5 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useId, type MouseEvent, type ReactNode } from "react";
+
 import { createPortal } from "react-dom";
 
 import "./Modal.css";
@@ -9,6 +10,8 @@ type ModalProps = {
   children: ReactNode;
   onClose: () => void;
   panelClassName?: string;
+  closeOnOverlayClick?: boolean;
+  closeOnEscape?: boolean;
 };
 
 const Modal = ({
@@ -17,40 +20,63 @@ const Modal = ({
   children,
   onClose,
   panelClassName = "",
+  closeOnOverlayClick = true,
+  closeOnEscape = true,
 }: ModalProps) => {
+  const titleId = useId();
+
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      return;
+    }
 
     const previousOverflow = document.body.style.overflow;
 
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (closeOnEscape && event.key === "Escape") {
         onClose();
       }
     };
 
     document.body.style.overflow = "hidden";
+
     document.addEventListener("keydown", handleEscape);
 
     return () => {
       document.body.style.overflow = previousOverflow;
+
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, closeOnEscape]);
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
-  return createPortal(
-    <div className="modal-overlay" role="presentation" onMouseDown={onClose}>
+  const handleOverlayMouseDown = (event: MouseEvent<HTMLDivElement>) => {
+    if (!closeOnOverlayClick) {
+      return;
+    }
+
+    if (event.target === event.currentTarget) {
+      onClose();
+    }
+  };
+
+  const modalContent = (
+    <div
+      className="modal-overlay"
+      role="presentation"
+      onMouseDown={handleOverlayMouseDown}
+    >
       <section
-        className={`modal-panel ${panelClassName}`.trim()}
+        className={["modal-panel", panelClassName].filter(Boolean).join(" ")}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="modal-title"
-        onMouseDown={(event) => event.stopPropagation()}
+        aria-labelledby={titleId}
       >
         <header className="modal-header">
-          <h2 id="modal-title">{title}</h2>
+          <h2 id={titleId}>{title}</h2>
 
           <button
             type="button"
@@ -64,9 +90,10 @@ const Modal = ({
 
         <div className="modal-content">{children}</div>
       </section>
-    </div>,
-    document.body,
+    </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default Modal;

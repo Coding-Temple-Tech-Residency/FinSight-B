@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 
+import DashboardProvider from "../features/dashboard/providers/DashboardProvider";
+import ModalProvider from "./ModalProvider";
 import QueryProvider from "./QueryProvider";
 import ThemeProvider from "./ThemeProvider";
-import ModalProvider from "./ModalProvider";
-import DashboardProvider from "../features/dashboard/providers/DashboardProvider";
 
 type AppProvidersProps = {
   children: ReactNode;

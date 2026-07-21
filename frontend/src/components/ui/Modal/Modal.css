@@ -1,40 +1,50 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 9999;
 
-  display: flex;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+
+  display: grid;
+  place-items: center;
 
   padding: 1rem;
 
-  background-color: rgba(0, 0, 0, 0.68);
+  background: rgba(0, 0, 0, 0.72);
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
 
+  overflow-x: hidden;
   overflow-y: auto;
+
   overscroll-behavior: contain;
+  pointer-events: auto;
 
   animation: modal-overlay-fade 0.18s ease;
 }
 
 .modal-panel {
+  position: relative;
+  z-index: 1;
+
   width: min(100%, 540px);
-  max-height: calc(100svh - 2rem);
+  max-height: calc(100dvh - 2rem);
 
   display: flex;
   flex-direction: column;
 
-  margin: auto;
-
   background-color: var(--bg-primary);
   color: var(--text-primary);
 
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(128, 128, 128, 0.25);
   border-radius: 18px;
 
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
 
   overflow: hidden;
+  pointer-events: auto;
 
   animation: modal-panel-enter 0.2s ease;
 }
@@ -53,7 +63,7 @@
   padding: 1rem 1.25rem;
 
   background-color: var(--bg-primary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(128, 128, 128, 0.2);
 }
 
 .modal-header h2 {
@@ -113,9 +123,12 @@
   overscroll-behavior: contain;
 }
 
-/* Wider version used by the AI insight modal */
 .insight-modal-panel {
   width: min(100%, 760px);
+}
+
+.delete-portfolio-modal-panel {
+  width: min(100%, 480px);
 }
 
 @keyframes modal-overlay-fade {
@@ -146,7 +159,7 @@
   }
 
   .modal-panel {
-    max-height: calc(100svh - 1.5rem);
+    max-height: calc(100dvh - 1.5rem);
     border-radius: 14px;
   }
 

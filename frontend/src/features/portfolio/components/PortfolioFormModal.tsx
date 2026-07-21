@@ -1,4 +1,4 @@
-import ModalPanel from "../../../components/ui/ModalPanel";
+import Modal from "../../../components/ui/Modal";
 
 import { useModal } from "../../../hooks/useModal";
 
@@ -23,10 +23,7 @@ const PortfolioFormModal = ({
 }: PortfolioFormModalProps) => {
   const { closeModal, isModalOpen } = useModal();
 
-  if (!isModalOpen("portfolio-form")) {
-    return null;
-  }
-
+  const isOpen = isModalOpen("portfolio-form");
   const isCreating = mode === "create";
 
   const handleClose = () => {
@@ -38,9 +35,12 @@ const PortfolioFormModal = ({
   };
 
   return (
-    <ModalPanel
+    <Modal
+      isOpen={isOpen}
       title={isCreating ? "Create Portfolio" : "Edit Portfolio"}
       onClose={handleClose}
+      closeOnOverlayClick={!isSubmitting}
+      closeOnEscape={!isSubmitting}
     >
       <PortfolioForm
         key={[mode, initialName, initialDescription ?? ""].join("-")}
@@ -52,7 +52,7 @@ const PortfolioFormModal = ({
         onSubmit={onSubmit}
         onCancel={handleClose}
       />
-    </ModalPanel>
+    </Modal>
   );
 };
 
