@@ -1,36 +1,56 @@
 import Modal from "../../../components/ui/Modal";
+
 import { useModal } from "../../../hooks/useModal";
 
-import PortfolioForm from "./PortfolioForm";
+import PortfolioForm, { type PortfolioFormValues } from "./PortfolioForm";
 
 type PortfolioFormModalProps = {
   mode: "create" | "edit";
   initialName?: string;
+  initialDescription?: string | null;
   isSubmitting: boolean;
-  onSubmit: (name: string) => void;
+  mutationError?: string;
+  onSubmit: (values: PortfolioFormValues) => void;
 };
 
 const PortfolioFormModal = ({
   mode,
   initialName = "",
+  initialDescription = "",
   isSubmitting,
+  mutationError,
   onSubmit,
 }: PortfolioFormModalProps) => {
   const { closeModal, isModalOpen } = useModal();
 
+  const isOpen = isModalOpen("portfolio-form");
+  const isCreating = mode === "create";
+
+  const handleClose = () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    closeModal();
+  };
+
   return (
     <Modal
-      isOpen={isModalOpen("portfolio-form")}
-      title={mode === "create" ? "Create Portfolio" : "Rename Portfolio"}
-      onClose={closeModal}
+      isOpen={isOpen}
+      title={isCreating ? "Create Portfolio" : "Edit Portfolio"}
+      onClose={handleClose}
+      closeOnOverlayClick={!isSubmitting}
+      closeOnEscape={!isSubmitting}
     >
       <PortfolioForm
-        key={`${mode}-${initialName}`}
+        key={[mode, initialName, initialDescription ?? ""].join("-")}
         initialName={initialName}
-        submitLabel={mode === "create" ? "Create Portfolio" : "Save Changes"}
+        initialDescription={initialDescription}
+        submitLabel={isCreating ? "Create Portfolio" : "Save Changes"}
         isSubmitting={isSubmitting}
+        mutationError={mutationError}
         onSubmit={onSubmit}
-        onCancel={closeModal}
+        onCancel={handleClose}
       />
     </Modal>
   );

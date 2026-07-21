@@ -1,5 +1,6 @@
 .portfolio-page {
   width: 100%;
+
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
@@ -10,8 +11,10 @@
 .portfolio-details-card,
 .holdings-section {
   padding: 1rem;
+
   background-color: var(--bg-primary);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  border: 1px solid rgba(128, 128, 128, 0.18);
   border-radius: 18px;
 }
 
@@ -22,14 +25,40 @@
   gap: 1rem;
 }
 
+.portfolio-page-header > div {
+  min-width: 0;
+}
+
 .portfolio-page-header h1 {
+  margin: 0;
+
+  color: var(--text-primary);
+
   font-size: 2rem;
   font-weight: 800;
+  line-height: 1.2;
 }
 
 .portfolio-page-header p {
   margin-top: 0.35rem;
-  opacity: 0.7;
+
+  color: var(--text-secondary);
+
+  line-height: 1.6;
+  opacity: 0.75;
+}
+
+.page-eyebrow {
+  margin: 0 0 0.3rem;
+
+  color: var(--accent-primary);
+
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  opacity: 1;
 }
 
 .portfolio-toolbar {
@@ -40,30 +69,52 @@
 
 .portfolio-selector-group {
   min-width: 0;
+
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
 }
 
 .portfolio-selector-group label {
+  color: var(--text-primary);
+
   font-size: 0.85rem;
   font-weight: 700;
-  opacity: 0.75;
+
+  opacity: 0.8;
 }
 
 .portfolio-selector-group select {
   width: 100%;
   min-height: 44px;
+
   padding: 0.65rem 0.8rem;
+
   background-color: var(--bg-secondary);
   color: var(--text-primary);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  border: 1px solid rgba(128, 128, 128, 0.25);
   border-radius: 10px;
+
+  font: inherit;
+
   outline: none;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .portfolio-selector-group select:focus {
   border-color: var(--accent-primary);
+
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--accent-primary) 18%, transparent);
+}
+
+.portfolio-selector-group select:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .portfolio-toolbar-actions {
@@ -73,7 +124,23 @@
 }
 
 .portfolio-toolbar-actions button {
+  min-height: 42px;
+
   flex: 1;
+
+  padding: 0.65rem 1rem;
+
+  border-radius: 10px;
+
+  font: inherit;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.portfolio-toolbar-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .summary-cards {
@@ -82,57 +149,109 @@
   gap: 1rem;
 }
 
-.card {
+.summary-cards .card {
   min-width: 0;
   min-height: 120px;
+
   padding: 1rem;
+
   background-color: var(--bg-primary);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  border: 1px solid rgba(128, 128, 128, 0.18);
   border-radius: 14px;
+
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.card h3 {
-  margin-bottom: 0.5rem;
+.metric-label {
+  color: var(--text-secondary);
+
+  font-size: 0.8rem;
+  line-height: 1.5;
+
+  opacity: 0.72;
 }
 
-.portfolio-detail-value {
-  margin-top: 0.5rem;
-  font-size: 1.05rem;
-  font-weight: 700;
+.metric-value {
+  margin-top: 0.35rem;
+
+  color: var(--text-primary);
+
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.portfolio-positive {
+  color: var(--positive, #16a34a);
+}
+
+.portfolio-negative {
+  color: var(--negative, #dc2626);
+}
+
+.portfolio-details-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.portfolio-details-card .card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.portfolio-details-card h2 {
+  margin: 0;
+
+  color: var(--text-primary);
+
+  font-size: 1.25rem;
+  font-weight: 800;
 }
 
 .portfolio-details-list {
   display: grid;
-  gap: 1rem;
+  grid-template-columns: 1fr;
+  gap: 0;
 }
 
 .portfolio-details-list > div {
   display: grid;
-  gap: 0.25rem;
+  grid-template-columns: minmax(100px, 0.4fr) 1fr;
+  gap: 1rem;
+
+  padding: 0.85rem 0;
+
+  border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+}
+
+.portfolio-details-list > div:last-child {
+  border-bottom: 0;
 }
 
 .portfolio-details-list dt {
-  font-size: 0.8rem;
+  color: var(--text-secondary);
+
+  font-size: 0.85rem;
   font-weight: 700;
-  opacity: 0.6;
 }
 
 .portfolio-details-list dd {
   margin: 0;
-  line-height: 1.5;
-}
 
-.portfolio-negative {
-  color: var(--danger-color);
-}
+  color: var(--text-primary);
 
-.portfolio-positive {
-  color: var(--accent-primary);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .holdings-section {
-  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .holdings-header {
@@ -140,55 +259,83 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 1rem;
-  margin-bottom: 1rem;
 }
 
 .holdings-header h2 {
+  margin: 0;
+
+  color: var(--text-primary);
+
   font-size: 1.4rem;
   font-weight: 800;
 }
 
 .holdings-header p {
-  margin-top: 0.25rem;
-  opacity: 0.65;
+  margin-top: 0.35rem;
+
+  color: var(--text-secondary);
+
+  line-height: 1.6;
+
+  opacity: 0.75;
 }
 
 .holdings-table-wrapper {
   width: 100%;
+
   overflow-x: auto;
-  overscroll-behavior-inline: contain;
+
+  border: 1px solid rgba(128, 128, 128, 0.18);
+  border-radius: 14px;
 }
 
 .holdings-table {
   width: 100%;
-  min-width: 800px;
-  margin-top: 0.5rem;
+  min-width: 980px;
+
   border-collapse: collapse;
 }
 
 .holdings-table th,
 .holdings-table td {
-  padding: 0.9rem 1rem;
+  padding: 0.85rem 1rem;
+
+  color: var(--text-primary);
+
   text-align: left;
   white-space: nowrap;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+  border-bottom: 1px solid rgba(128, 128, 128, 0.14);
 }
 
 .holdings-table th {
-  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+
   font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-weight: 800;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
-  opacity: 0.65;
 }
 
 .holdings-table tbody tr:last-child td {
-  border-bottom: none;
+  border-bottom: 0;
 }
 
-.holdings-table tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.025);
+.holding-asset-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.holding-asset-cell strong {
+  color: var(--text-primary);
+}
+
+.holding-asset-cell span {
+  color: var(--text-secondary);
+
+  font-size: 0.8rem;
 }
 
 .table-actions {
@@ -199,74 +346,183 @@
 
 .table-actions button {
   min-height: 36px;
-  padding: 0.45rem 0.75rem;
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
+
+  padding: 0.45rem 0.7rem;
+
   border-radius: 8px;
-  font-size: 0.82rem;
+
+  font: inherit;
+  font-size: 0.8rem;
   font-weight: 700;
+
   cursor: pointer;
 }
 
-.portfolio-form,
-.holding-form {
+.table-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.portfolio-form {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.portfolio-form > div,
-.holding-form > div:not(.form-actions) {
+.portfolio-form-field {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.45rem;
 }
 
-.portfolio-form label,
-.holding-form label {
-  font-size: 0.85rem;
+.portfolio-form-field label {
+  color: var(--text-primary);
+
+  font-size: 0.875rem;
   font-weight: 700;
 }
 
-.portfolio-form input,
-.holding-form input,
-.portfolio-form textarea,
-.holding-form textarea {
-  width: 100%;
-  min-height: 46px;
-  padding: 0.7rem 0.85rem;
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
-  outline: none;
+.portfolio-form-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
-.portfolio-form textarea,
-.holding-form textarea {
-  min-height: 100px;
+.portfolio-form-label-row span {
+  color: var(--text-secondary);
+
+  font-size: 0.75rem;
+
+  opacity: 0.7;
+}
+
+.portfolio-form input,
+.portfolio-form textarea {
+  width: 100%;
+
+  padding: 0.75rem 0.85rem;
+
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+
+  border: 1px solid rgba(128, 128, 128, 0.25);
+  border-radius: 10px;
+
+  font: inherit;
+
+  outline: none;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.portfolio-form textarea {
+  min-height: 120px;
+
+  line-height: 1.6;
+
   resize: vertical;
 }
 
+.portfolio-form input::placeholder,
+.portfolio-form textarea::placeholder {
+  color: var(--text-secondary);
+
+  opacity: 0.65;
+}
+
 .portfolio-form input:focus,
-.holding-form input:focus,
-.portfolio-form textarea:focus,
-.holding-form textarea:focus {
+.portfolio-form textarea:focus {
   border-color: var(--accent-primary);
+
   box-shadow: 0 0 0 3px
-    color-mix(in srgb, var(--accent-primary) 16%, transparent);
+    color-mix(in srgb, var(--accent-primary) 18%, transparent);
+}
+
+.portfolio-form input:disabled,
+.portfolio-form textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .form-actions {
   display: flex;
   flex-direction: column-reverse;
   gap: 0.75rem;
-  margin-top: 0.25rem;
+
+  margin-top: 0.5rem;
 }
 
 .form-actions button {
   width: 100%;
   min-height: 44px;
+
+  padding: 0.7rem 1rem;
+
+  border-radius: 10px;
+
+  font: inherit;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.form-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.delete-portfolio-modal-panel {
+  width: min(100%, 480px);
+}
+
+.delete-portfolio-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.delete-portfolio-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.delete-portfolio-warning p {
+  margin: 0;
+
+  line-height: 1.6;
+}
+
+.delete-portfolio-dialog-actions {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.75rem;
+
+  padding-top: 1rem;
+
+  border-top: 1px solid rgba(128, 128, 128, 0.2);
+}
+
+.delete-portfolio-dialog-actions button {
+  width: 100%;
+  min-height: 44px;
+}
+
+@media screen and (min-width: 520px) {
+  .form-actions,
+  .delete-portfolio-dialog-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
+  .form-actions button,
+  .delete-portfolio-dialog-actions button {
+    width: auto;
+    min-width: 120px;
+  }
 }
 
 @media screen and (min-width: 640px) {
@@ -299,14 +555,9 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .form-actions {
-    flex-direction: row;
-    justify-content: flex-end;
-  }
-
-  .form-actions button {
-    width: auto;
-    min-width: 120px;
+  .portfolio-details-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 2rem;
   }
 }
 
