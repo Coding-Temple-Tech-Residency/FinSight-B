@@ -469,21 +469,37 @@ def build_user_portfolios_context(
     current_user: User,
 ) -> str:
     """
-    Builds a compact summary of every portfolio owned by the
-    authenticated user.
+    Builds a trusted portfolio context for the authenticated user.
 
-    The generated context is based only on trusted database records.
-    The frontend does not provide holdings, prices, or ownership data.
+    This function gathers portfolio and holding information directly from
+    the database and converts it into a compact text representation that
+    can safely be provided to the AI model.
 
-    This allows the AI chat to answer questions such as:
-    - Which portfolio is most concentrated?
-    - Am I diversified?
-    - Which holdings have the largest unrealized gains or losses?
-    - What risks should I review?
+    Workflow:
+    1. Retrieve every portfolio owned by the authenticated user.
+    2. Iterate through each portfolio and its holdings.
+    3. Use the cached stock information stored in the database whenever
+       available.
+    4. If a stock does not yet have cached market data, refresh it using
+       Alpha Vantage and persist the result.
+    5. Calculate useful portfolio metrics such as:
+       - current market value;
+       - cost basis;
+       - unrealized gain/loss.
+    6. Format the information into a concise context string suitable for
+       OpenAI prompts.
 
-    The function intentionally avoids sending unnecessary personal
-    information such as the user's password, email, or authentication
-    details to the AI provider.
+    The returned context is intended solely for AI prompt generation and
+    should not be returned directly to API consumers.
+
+    Returns:
+        str:
+            A formatted text summary containing the user's portfolios,
+            holdings, and relevant market information.
+
+    Raises:
+        HTTPException:
+            If portfolio or market data cannot be retrieved when required.
     """
 
     # Load only portfolios owned by the authenticated user.
@@ -531,53 +547,41 @@ def build_user_portfolios_context(
 
         context_lines.append("Holdings:")
 
-        for holding in portfolio.holdings:
-            """
-            This example assumes Holding has a symbol field.
+    for holding in portfolio.holdings:
+        # Access the Stock through the SQLAlchemy relationship.
+        stock = holding.stock
 
-            If your Holding model instead contains stock_id and a
-            relationship named stock, replace:
+        if stock is None:
+            # Skip invalid holdings whose linked stock does not exist.
+            continue
 
-                holding.symbol
-
-            with:
-
-                holding.stock.symbol
-            """
-
-            symbol = holding.stock.symbol.strip().upper()
-
-            # Refresh and cache current market information.
-            # This gives the AI more recent data than the original
-            # purchase values stored on the holding.
+        # Avoid unnecessary Alpha Vantage calls.
+        # Refresh only when no cached price exists in the database.
+        if stock.latest_price is None:
             stock = refresh_market_data(
                 db=db,
-                symbol=symbol,
+                symbol=stock.symbol,
             )
 
-            shares = float(holding.shares)
-            average_buy_price = float(holding.average_buy_price)
-            latest_price = float(stock.latest_price)
+        shares = float(holding.shares)
+        average_buy_price = float(holding.average_buy_price)
+        latest_price = float(stock.latest_price)
 
-            cost_basis = shares * average_buy_price
-            current_value = shares * latest_price
-            unrealized_gain_loss = current_value - cost_basis
+        cost_basis = shares * average_buy_price
+        current_value = shares * latest_price
+        unrealized_gain_loss = current_value - cost_basis
 
-            portfolio_cost_basis += cost_basis
-            portfolio_current_value += current_value
-
-            context_lines.append(
-                (
-                    f"- Symbol: {stock.symbol}; "
-                    f"Shares: {shares}; "
-                    f"Average buy price: {average_buy_price:.2f}; "
-                    f"Latest stored price: {latest_price:.2f}; "
-                    f"Cost basis: {cost_basis:.2f}; "
-                    f"Current value: {current_value:.2f}; "
-                    f"Unrealized gain/loss: "
-                    f"{unrealized_gain_loss:.2f}"
-                )
+        context_lines.append(
+            (
+                f"- {stock.symbol}: "
+                f"{shares} shares, "
+                f"average buy price {average_buy_price:.2f}, "
+                f"latest stored price {latest_price:.2f}, "
+                f"cost basis {cost_basis:.2f}, "
+                f"current value {current_value:.2f}, "
+                f"unrealized gain/loss {unrealized_gain_loss:.2f}"
             )
+        )
 
         total_gain_loss = (
             portfolio_current_value - portfolio_cost_basis
@@ -650,12 +654,20 @@ def generate_portfolio_ai_insight(
     ]
 
     for holding in portfolio.holdings:
-        # Refresh the stock price and daily history before generating
-        # the summary, so the AI receives recent stored information.
-        stock = refresh_market_data(
-            db=db,
-            symbol=holding.stock.symbol,
-        )
+        # Access the Stock through the SQLAlchemy relationship.
+        stock = holding.stock
+
+        if stock is None:
+            # Skip invalid holdings whose linked stock does not exist.
+            continue
+
+        # Avoid unnecessary Alpha Vantage calls.
+        # Refresh only when no cached price exists in the database.
+        if stock.latest_price is None:
+            stock = refresh_market_data(
+                db=db,
+                symbol=stock.symbol,
+            )
 
         shares = float(holding.shares)
         average_buy_price = float(holding.average_buy_price)
@@ -670,7 +682,7 @@ def generate_portfolio_ai_insight(
                 f"- {stock.symbol}: "
                 f"{shares} shares, "
                 f"average buy price {average_buy_price:.2f}, "
-                f"latest price {latest_price:.2f}, "
+                f"latest stored price {latest_price:.2f}, "
                 f"cost basis {cost_basis:.2f}, "
                 f"current value {current_value:.2f}, "
                 f"unrealized gain/loss {unrealized_gain_loss:.2f}"
