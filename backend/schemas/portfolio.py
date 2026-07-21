@@ -13,7 +13,7 @@ class PortfolioCreate(BaseModel):
 class PortfolioUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
-    currency: Optional[str] = None
+    currency: str = "USD"
 
 
 class PortfolioResponse(BaseModel):
