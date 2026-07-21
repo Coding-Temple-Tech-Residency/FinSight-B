@@ -25,7 +25,7 @@ def create_portfolio(
         user_id=current_user.id,
         name=body.name,
         description=body.description,
-        currency=body.currency
+        currency="USD"
     )
 
     db.add(portfolio)
@@ -66,24 +66,47 @@ def update_portfolio(
     portfolio_id: int,
     body: PortfolioUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    portfolio = db.query(Portfolio).filter(
-        Portfolio.id == portfolio_id,
-        Portfolio.user_id == current_user.id
-    ).first()
+    """
+    Updates a portfolio owned by the authenticated user.
 
-    if not portfolio:
-        raise HTTPException(status_code=404, detail="Portfolio not found")
+    Currency is intentionally not editable because FinSight currently
+    supports USD portfolios only.
+    """
 
-    portfolio.name = body.name
-    portfolio.description = body.description
-    portfolio.currency = body.currency
+    portfolio = (
+        db.query(Portfolio)
+        .filter(
+            Portfolio.id == portfolio_id,
+            Portfolio.user_id == current_user.id,
+        )
+        .first()
+    )
 
-    db.commit()
-    db.refresh(portfolio)
+    if portfolio is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Portfolio not found",
+        )
 
-    return portfolio
+    # Update only fields that were actually included in the request.
+    update_data = body.model_dump(exclude_unset=True)
+
+    for field, value in update_data.items():
+        setattr(portfolio, field, value)
+
+    # Currency is fixed for every portfolio.
+    portfolio.currency = "USD"
+
+    try:
+        db.commit()
+        db.refresh(portfolio)
+        return portfolio
+
+    except Exception:
+        db.rollback()
+        raise
 
 @router.delete("/{portfolio_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_portfolio(
