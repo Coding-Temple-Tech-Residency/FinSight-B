@@ -72,11 +72,75 @@ def fetch_daily_history(symbol: str) -> dict:
     return time_series
 
 
+def fetch_company_overview(symbol: str) -> dict:
+    """
+    Retrieves company metadata from Alpha Vantage.
+
+    This endpoint is used to populate descriptive Stock fields such as
+    company name, exchange, sector, and industry. It should not be called
+    repeatedly when those fields are already stored in the database.
+    """
+
+    if not ALPHA_VANTAGE_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Alpha Vantage API key is not configured",
+        )
+
+    params = {
+        "function": "OVERVIEW",
+        "symbol": symbol.strip().upper(),
+        "apikey": ALPHA_VANTAGE_API_KEY,
+    }
+
+    try:
+        response = requests.get(
+            BASE_URL,
+            params=params,
+            timeout=20,
+        )
+        response.raise_for_status()
+        data = response.json()
+
+    except requests.RequestException as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Unable to retrieve company information",
+        ) from error
+
+    if "Note" in data or "Information" in data:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=data.get("Note") or data.get("Information"),
+        )
+
+    if "Error Message" in data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invalid stock symbol",
+        )
+
+    if not data or not data.get("Symbol"):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Company overview not found",
+        )
+
+    return data
+
 def get_or_update_stock(
     db: Session,
     symbol: str,
     time_series: dict | None = None,
 ) -> Stock:
+    """
+    Creates or updates a Stock record.
+
+    Daily time-series data is used for the latest stored price.
+    Company Overview is called only when descriptive company metadata
+    has not already been saved.
+    """
+
     symbol = symbol.strip().upper()
 
     if time_series is None:
@@ -92,23 +156,50 @@ def get_or_update_stock(
         .first()
     )
 
+    # Fetch company metadata only when creating a stock or when existing
+    # metadata is incomplete. This avoids wasting Alpha Vantage requests.
+    needs_overview = (
+        stock is None
+        or stock.company_name in (None, "", symbol)
+        or stock.exchange is None
+        or stock.sector is None
+        or stock.industry is None
+    )
+
+    overview = fetch_company_overview(symbol) if needs_overview else None
+
     if stock:
         stock.latest_price = latest_price
         stock.last_refreshed_at = datetime.now(timezone.utc)
+
+        if overview:
+            stock.company_name = overview.get("Name") or stock.company_name
+            stock.exchange = overview.get("Exchange") or stock.exchange
+            stock.sector = overview.get("Sector") or stock.sector
+            stock.industry = overview.get("Industry") or stock.industry
+
     else:
         stock = Stock(
             symbol=symbol,
-            company_name=symbol,
+            company_name=overview.get("Name") or symbol,
+            exchange=overview.get("Exchange"),
+            sector=overview.get("Sector"),
+            industry=overview.get("Industry"),
+            company_logo_url=None,
             latest_price=latest_price,
             last_refreshed_at=datetime.now(timezone.utc),
         )
+
         db.add(stock)
 
-    db.commit()
-    db.refresh(stock)
+    try:
+        db.commit()
+        db.refresh(stock)
+        return stock
 
-    return stock
-
+    except Exception:
+        db.rollback()
+        raise
 
 def save_daily_history(
     db: Session,
