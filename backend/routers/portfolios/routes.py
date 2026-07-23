@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from services.portfolio_service import get_portfolio_summary
 from database import get_db
 from dependencies import get_current_user
 from models.user import User
@@ -25,7 +26,7 @@ def create_portfolio(
         user_id=current_user.id,
         name=body.name,
         description=body.description,
-        currency="USD"
+        currency=body.currency.value
     )
 
     db.add(portfolio)
@@ -96,8 +97,6 @@ def update_portfolio(
     for field, value in update_data.items():
         setattr(portfolio, field, value)
 
-    # Currency is fixed for every portfolio.
-    portfolio.currency = "USD"
 
     try:
         db.commit()
@@ -126,3 +125,24 @@ def delete_portfolio(
     db.commit()
 
     return {"message": "Portfolio deleted successfully"}
+
+@router.get("/{portfolio_id}/summary")
+def get_summary(
+    portfolio_id: int,
+    target_currency: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Returns a portfolio summary in its stored currency or in a requested target currency.
+
+    Example:
+        GET /api/portfolios/9/summary?target_currency=GBP
+    """
+
+    return get_portfolio_summary(
+        db=db,
+        current_user=current_user,
+        portfolio_id=portfolio_id,
+        target_currency=target_currency,
+    )
