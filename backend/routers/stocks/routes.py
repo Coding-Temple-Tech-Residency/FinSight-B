@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from dependencies import get_current_user
+
+from services.market_data_service import fetch_trending_stocks
 from services.market_data_service import fetch_daily_history, get_or_update_stock, save_daily_history
 
 from models.user import User
@@ -11,6 +13,7 @@ from models.market_data import MarketData
 
 from schemas.stock import  StockResponse
 from schemas.market_data import MarketDataResponse
+from schemas.trending import TrendingStocksResponse
 
 
 router = APIRouter(
@@ -20,7 +23,22 @@ router = APIRouter(
 
 print("Loading stock routes")
 
-@router.get("/{symbol}", response_model=StockResponse)
+@router.get(
+    "/trending",
+    response_model=TrendingStocksResponse,
+)
+def get_trending_stocks(
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Returns top gainers, top losers, and most actively traded stocks.
+
+    The response is cached by the service layer to avoid consuming one
+    Alpha Vantage request every time the frontend loads or rerenders.
+    """
+
+    return fetch_trending_stocks()
+
 @router.get("/{symbol}", response_model=StockResponse)
 def get_stock_by_symbol(
     symbol: str,
@@ -61,3 +79,4 @@ def get_stock_history(
         stock=stock,
         time_series=time_series,
     )
+

@@ -9,6 +9,7 @@ from routers.watchlist.routes import router as watchlist_router
 from routers.holdings.routes import router as holdings_router
 from routers.ai_insights.routes import router as ai_insights_router
 from routers.market_data.routes import router as market_data_router
+from routers.currency.routes import router as currency_router
 
 
 # Create all database tables if they don't exist
@@ -50,6 +51,8 @@ app.include_router(holdings_router)
 app.include_router(ai_insights_router)
 # Register market data routes
 app.include_router(market_data_router)
+# Register currency conversion routes
+app.include_router(currency_router)
 
 # Health check — confirms the server is running
 @app.get("/")
