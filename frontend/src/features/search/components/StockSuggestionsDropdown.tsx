@@ -4,6 +4,7 @@ import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import type { StockSearchResult } from "../../market/types/stock";
 
 import SearchResultItem from "./resultItem/SearchResultItem";
+import { highlightMatch } from "../utils/highlightMatch";
 
 interface StockSuggestionsDropdownProps {
   query: string;
@@ -166,8 +167,8 @@ const StockSuggestionsDropdown = ({
               <SearchResultItem
                 key={stock.id ?? stock.symbol}
                 id={`stock-search-result-${stock.symbol}`}
-                title={stock.symbol}
-                subtitle={stock.company_name}
+                title={highlightMatch(stock.symbol, normalizedQuery)}
+                subtitle={highlightMatch(stock.company_name, normalizedQuery)}
                 badge={stock.exchange}
                 image={stock.company_logo_url}
                 imageAlt={
