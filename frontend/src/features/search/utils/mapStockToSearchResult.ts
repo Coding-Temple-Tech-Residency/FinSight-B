@@ -1,4 +1,5 @@
 import type { StockSearchResult } from "../../market/types/stock";
+
 import type { UniversalSearchResult } from "../types/search";
 
 const formatStockPrice = (
@@ -26,13 +27,14 @@ export const mapStockToSearchResult = (
   const normalizedSymbol = stock.symbol.trim().toUpperCase();
 
   return {
-    id: `stock-search-result-${normalizedSymbol}`,
+    id: `stock-${stock.id ?? normalizedSymbol}`,
     type: "stock",
     title: normalizedSymbol,
     subtitle: stock.company_name,
     badge: stock.exchange ?? undefined,
-    image: stock.company_logo_url,
+    image: stock.company_logo_url ?? null,
     trailing: formatStockPrice(stock.latest_price),
+    href: `/dashboard/search?symbol=${encodeURIComponent(normalizedSymbol)}`,
     data: stock,
   };
 };
