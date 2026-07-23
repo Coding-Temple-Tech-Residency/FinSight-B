@@ -724,19 +724,23 @@ def get_latest_trending_snapshot(
     )
 
 def search_stock_symbols(
+    db: Session,
     keywords: str,
 ) -> list[dict]:
     """
-    Searches for stocks and other supported assets using partial symbols
-    or company names.
+    Searches for stocks and supported assets using a partial ticker
+    symbol or company name.
 
-    Unlike get_or_update_stock(), this function does not treat the input
-    as an exact ticker and does not fetch daily price history.
+    This function:
+    1. Validates the search text.
+    2. Calls Alpha Vantage's SYMBOL_SEARCH endpoint.
+    3. Normalizes the provider response.
+    4. Saves each result as a partial Stock record.
+    5. Returns the normalized matches to the frontend.
 
-    Examples:
-        "app" -> Apple-related matches
-        "microsoft" -> Microsoft Corporation
-        "tesla" -> Tesla, Inc.
+    Search results are saved without requesting price history or a full
+    company overview. A stock is fully populated later when the user
+    selects it.
     """
 
     clean_keywords = keywords.strip()
@@ -745,6 +749,12 @@ def search_stock_symbols(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Enter at least two characters",
+        )
+
+    if not ALPHA_VANTAGE_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Alpha Vantage API key is not configured",
         )
 
     params = {
@@ -759,8 +769,15 @@ def search_stock_symbols(
             params=params,
             timeout=20,
         )
+
         response.raise_for_status()
         data = response.json()
+
+    except requests.Timeout as error:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="The stock search provider took too long to respond",
+        ) from error
 
     except requests.RequestException as error:
         raise HTTPException(
@@ -768,18 +785,30 @@ def search_stock_symbols(
             detail="Unable to search for stocks",
         ) from error
 
+    # Alpha Vantage may return HTTP 200 while including the rate-limit
+    # message inside one of these properties.
     if "Information" in data or "Note" in data:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Stock search is temporarily unavailable due to the provider request limit.",
+            detail=(
+                "Stock search is temporarily unavailable due to the "
+                "provider request limit."
+            ),
         )
 
-    matches = data.get("bestMatches", [])
+    if "Error Message" in data:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="The stock search provider rejected the request",
+        )
 
-    return [
+    # Alpha Vantage stores search matches inside the bestMatches list.
+    raw_matches = data.get("bestMatches", [])
+
+    normalized_matches = [
         {
-            "symbol": item.get("1. symbol", ""),
-            "name": item.get("2. name", ""),
+            "symbol": item.get("1. symbol", "").strip().upper(),
+            "name": item.get("2. name", "").strip(),
             "asset_type": item.get("3. type"),
             "region": item.get("4. region"),
             "market_open": item.get("5. marketOpen"),
@@ -792,6 +821,108 @@ def search_stock_symbols(
                 else None
             ),
         }
-        for item in matches
+        for item in raw_matches
         if item.get("1. symbol")
     ]
+
+    # Save all returned results as partial Stock rows.
+    #
+    # This does not fetch daily history or company overview data.
+    save_stock_search_results(
+        db=db,
+        matches=normalized_matches,
+    )
+
+    return normalized_matches
+
+def save_stock_search_results(
+    db: Session,
+    matches: list[dict],
+) -> list[Stock]:
+    """
+    Saves stock-search matches as partial Stock records.
+
+    A SYMBOL_SEARCH request may return several matching securities.
+    Saving those matches allows future searches to use the local database
+    and gradually populates the stocks table without making one external
+    API request per result.
+
+    Important:
+    - Search results do not contain market prices, sectors, or industries.
+    - Existing complete Stock records are not overwritten with null values.
+    - New records remain partially populated until the user selects them
+      and get_or_update_stock() retrieves their price and overview.
+    """
+
+    saved_stocks: list[Stock] = []
+
+    try:
+        for match in matches:
+            symbol = str(match.get("symbol", "")).strip().upper()
+
+            # Ignore malformed results that have no symbol.
+            if not symbol:
+                continue
+
+            company_name = (
+                str(match.get("name", "")).strip()
+                or symbol
+            )
+
+            currency = (
+                str(match.get("currency", "")).strip().upper()
+                or "USD"
+            )
+
+            stock = (
+                db.query(Stock)
+                .filter(Stock.symbol == symbol)
+                .first()
+            )
+
+            if stock is None:
+                # Create a partial Stock row.
+                #
+                # Price and detailed metadata remain empty because the
+                # SYMBOL_SEARCH endpoint does not provide those fields.
+                stock = Stock(
+                    symbol=symbol,
+                    company_name=company_name,
+                    currency=currency,
+                    latest_price=None,
+                    exchange=None,
+                    sector=None,
+                    industry=None,
+                    company_logo_url=None,
+                    last_refreshed_at=None,
+                )
+
+                db.add(stock)
+                saved_stocks.append(stock)
+
+            else:
+                # Improve incomplete metadata without replacing existing,
+                # more complete values with empty search-result values.
+                if (
+                    not stock.company_name
+                    or stock.company_name == stock.symbol
+                ):
+                    stock.company_name = company_name
+
+                if not stock.currency:
+                    stock.currency = currency
+
+                saved_stocks.append(stock)
+
+        # Commit once after processing all matches instead of committing
+        # once per search result.
+        db.commit()
+
+        for stock in saved_stocks:
+            db.refresh(stock)
+
+        return saved_stocks
+
+    except Exception:
+        db.rollback()
+        raise

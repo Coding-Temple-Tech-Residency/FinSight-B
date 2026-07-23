@@ -68,6 +68,7 @@ def refresh_trending_stocks(
 )
 def search_stocks(
     query: str,
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -77,7 +78,7 @@ def search_stocks(
         GET /api/stocks/search?query=app
     """
 
-    return search_stock_symbols(query)
+    return search_stock_symbols(db=db, keywords=query)
 
 @router.get("/{symbol}", response_model=StockResponse)
 def get_stock_by_symbol(
