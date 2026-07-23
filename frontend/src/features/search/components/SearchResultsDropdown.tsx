@@ -1,17 +1,17 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 
-import type { SearchResult } from "../types/search";
+import type { PlatformSearchResult } from "../types/search";
 
 interface SearchResultsDropdownProps {
   query: string;
-  results: SearchResult[];
+  results: PlatformSearchResult[];
   activeIndex: number;
-  onResultSelect: (result: SearchResult) => void;
+  onResultSelect: (result: PlatformSearchResult) => void;
   onViewAll: () => void;
 }
 
-const formatCategory = (category: SearchResult["category"]) => {
+const formatCategory = (category: PlatformSearchResult["category"]) => {
   return category.charAt(0).toUpperCase() + category.slice(1);
 };
 

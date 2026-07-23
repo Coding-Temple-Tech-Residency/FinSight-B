@@ -3,10 +3,10 @@ import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 
 import { Link } from "react-router-dom";
 
-import type { SearchResult } from "../types/search";
+import type { PlatformSearchResult } from "../types/search";
 
 interface SearchResultCardProps {
-  result: SearchResult;
+  result: PlatformSearchResult;
 }
 
 const SearchResultCard = ({ result }: SearchResultCardProps) => {

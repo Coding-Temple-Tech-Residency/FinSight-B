@@ -3,8 +3,10 @@ import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 
 import type { StockSearchResult } from "../../market/types/stock";
 
-import SearchResultItem from "./resultItem/SearchResultItem";
 import { highlightMatch } from "../utils/highlightMatch";
+import { mapStockToSearchResult } from "../utils/mapStockToSearchResult";
+
+import SearchResultItem from "./resultItem/SearchResultItem";
 
 interface StockSuggestionsDropdownProps {
   query: string;
@@ -17,23 +19,6 @@ interface StockSuggestionsDropdownProps {
   onSelect: (stock: StockSearchResult) => void;
   onActiveIndexChange?: (index: number) => void;
 }
-
-const formatPrice = (value: number | string | null | undefined) => {
-  if (value === null || value === undefined) {
-    return null;
-  }
-
-  const numericValue = Number(value);
-
-  if (!Number.isFinite(numericValue)) {
-    return null;
-  }
-
-  return numericValue.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-  });
-};
 
 const StockSuggestionsDropdown = ({
   query,
@@ -161,20 +146,26 @@ const StockSuggestionsDropdown = ({
           className="flex flex-col gap-1 p-2"
         >
           {results.map((stock, index) => {
-            const formattedPrice = formatPrice(stock.latest_price);
+            const searchResult = mapStockToSearchResult(stock);
 
             return (
               <SearchResultItem
-                key={stock.id ?? stock.symbol}
-                id={`stock-search-result-${stock.symbol}`}
-                title={highlightMatch(stock.symbol, normalizedQuery)}
-                subtitle={highlightMatch(stock.company_name, normalizedQuery)}
-                badge={stock.exchange}
-                image={stock.company_logo_url}
-                imageAlt={
-                  stock.company_logo_url ? `${stock.company_name} logo` : ""
+                key={searchResult.id}
+                id={searchResult.id}
+                title={highlightMatch(searchResult.title, normalizedQuery)}
+                subtitle={
+                  searchResult.subtitle
+                    ? highlightMatch(searchResult.subtitle, normalizedQuery)
+                    : undefined
                 }
-                trailing={formattedPrice}
+                badge={searchResult.badge}
+                image={searchResult.image}
+                imageAlt={
+                  searchResult.image && searchResult.subtitle
+                    ? `${searchResult.subtitle} logo`
+                    : ""
+                }
+                trailing={searchResult.trailing}
                 selected={index === activeIndex}
                 onMouseEnter={() => {
                   onActiveIndexChange?.(index);

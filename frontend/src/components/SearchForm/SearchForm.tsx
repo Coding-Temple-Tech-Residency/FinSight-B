@@ -16,7 +16,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import SearchResultsDropdown from "../../features/search/components/SearchResultsDropdown";
 import { useDebouncedValue } from "../../features/search/hooks/useDebouncedValue";
 import { usePlatformSearch } from "../../features/search/hooks/usePlatformSearch";
-import type { SearchResult } from "../../features/search/types/search";
+import type { PlatformSearchResult } from "../../features/search/types/search";
 
 import "./SearchForm.css";
 
@@ -136,7 +136,7 @@ const SearchForm = ({
     openSearchResultsPage(query);
   };
 
-  const handleResultSelect = (result: SearchResult) => {
+  const handleResultSelect = (result: PlatformSearchResult) => {
     setQuery("");
     setIsDropdownOpen(false);
     setActiveIndex(-1);

@@ -11,7 +11,7 @@ import Portfolio from "../features/portfolio/pages/Portfolio";
 import Insights from "../features/insights/pages/Insights";
 import Chat from "../features/chat/pages/Chat";
 import Settings from "../features/settings/pages/Settings";
-import SearchResults from "../features/search/pages/SearchResults";
+import SearchResults from "../features/search/pages/PlatformSearchResults";
 
 const AppRoutes = () => {
   const [isOpen, setIsOpen] = useState(false);
