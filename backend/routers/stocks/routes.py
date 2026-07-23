@@ -28,16 +28,38 @@ print("Loading stock routes")
     response_model=TrendingStocksResponse,
 )
 def get_trending_stocks(
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
-    Returns top gainers, top losers, and most actively traded stocks.
+    Returns the latest stored trending-market snapshot.
 
-    The response is cached by the service layer to avoid consuming one
-    Alpha Vantage request every time the frontend loads or rerenders.
+    Alpha Vantage is contacted only when no database snapshot exists.
     """
 
-    return fetch_trending_stocks()
+    return fetch_trending_stocks(
+        db=db,
+    )
+
+@router.post(
+    "/trending/refresh",
+    response_model=TrendingStocksResponse,
+)
+def refresh_trending_stocks(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Forces a new provider request and stores a new snapshot.
+
+    This endpoint should eventually be protected as an admin-only action
+    because it consumes an external provider request.
+    """
+
+    return fetch_trending_stocks(
+        db=db,
+        force_refresh=True,
+    )
 
 @router.get("/{symbol}", response_model=StockResponse)
 def get_stock_by_symbol(
