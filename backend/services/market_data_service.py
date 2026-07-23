@@ -722,3 +722,76 @@ def get_latest_trending_snapshot(
         top_losers=top_losers,
         most_actively_traded=most_active,
     )
+
+def search_stock_symbols(
+    keywords: str,
+) -> list[dict]:
+    """
+    Searches for stocks and other supported assets using partial symbols
+    or company names.
+
+    Unlike get_or_update_stock(), this function does not treat the input
+    as an exact ticker and does not fetch daily price history.
+
+    Examples:
+        "app" -> Apple-related matches
+        "microsoft" -> Microsoft Corporation
+        "tesla" -> Tesla, Inc.
+    """
+
+    clean_keywords = keywords.strip()
+
+    if len(clean_keywords) < 2:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Enter at least two characters",
+        )
+
+    params = {
+        "function": "SYMBOL_SEARCH",
+        "keywords": clean_keywords,
+        "apikey": ALPHA_VANTAGE_API_KEY,
+    }
+
+    try:
+        response = requests.get(
+            BASE_URL,
+            params=params,
+            timeout=20,
+        )
+        response.raise_for_status()
+        data = response.json()
+
+    except requests.RequestException as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Unable to search for stocks",
+        ) from error
+
+    if "Information" in data or "Note" in data:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Stock search is temporarily unavailable due to the provider request limit.",
+        )
+
+    matches = data.get("bestMatches", [])
+
+    return [
+        {
+            "symbol": item.get("1. symbol", ""),
+            "name": item.get("2. name", ""),
+            "asset_type": item.get("3. type"),
+            "region": item.get("4. region"),
+            "market_open": item.get("5. marketOpen"),
+            "market_close": item.get("6. marketClose"),
+            "timezone": item.get("7. timezone"),
+            "currency": item.get("8. currency"),
+            "match_score": (
+                float(item["9. matchScore"])
+                if item.get("9. matchScore")
+                else None
+            ),
+        }
+        for item in matches
+        if item.get("1. symbol")
+    ]
