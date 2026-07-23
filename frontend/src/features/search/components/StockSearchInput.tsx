@@ -321,6 +321,7 @@ const StockSearchInput = ({
               onSelect={handleSelect}
               onRemove={removeRecentStock}
               onClear={clearRecentStocks}
+              onActiveIndexChange={setActiveIndex}
             />
           ) : (
             <StockSuggestionsDropdown
@@ -337,6 +338,7 @@ const StockSearchInput = ({
                   : undefined
               }
               onSelect={handleSelect}
+              onActiveIndexChange={setActiveIndex}
               renderContainer={false}
             />
           )}

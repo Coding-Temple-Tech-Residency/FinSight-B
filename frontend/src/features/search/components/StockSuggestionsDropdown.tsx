@@ -1,10 +1,9 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faBuilding,
-  faMagnifyingGlass,
-} from "@fortawesome/free-solid-svg-icons";
+import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 
 import type { StockSearchResult } from "../../market/types/stock";
+
+import SearchResultItem from "./resultItem/SearchResultItem";
 
 interface StockSuggestionsDropdownProps {
   query: string;
@@ -15,6 +14,7 @@ interface StockSuggestionsDropdownProps {
   errorMessage?: string;
   renderContainer?: boolean;
   onSelect: (stock: StockSearchResult) => void;
+  onActiveIndexChange?: (index: number) => void;
 }
 
 const formatPrice = (value: number | string | null | undefined) => {
@@ -43,6 +43,7 @@ const StockSuggestionsDropdown = ({
   errorMessage,
   renderContainer = true,
   onSelect,
+  onActiveIndexChange,
 }: StockSuggestionsDropdownProps) => {
   const normalizedQuery = query.trim();
   const hasResults = results.length > 0;
@@ -136,13 +137,13 @@ const StockSuggestionsDropdown = ({
       {!isLoading && !isError && !hasResults && (
         <div
           className="
-              flex
-              flex-col
-              gap-2
-              px-4
-              py-5
-              text-(--text-primary)
-            "
+            flex
+            flex-col
+            gap-2
+            px-4
+            py-5
+            text-(--text-primary)
+          "
         >
           <strong className="text-sm">No matching stocks found</strong>
 
@@ -159,123 +160,28 @@ const StockSuggestionsDropdown = ({
           className="flex flex-col gap-1 p-2"
         >
           {results.map((stock, index) => {
-            const isActive = index === activeIndex;
-
             const formattedPrice = formatPrice(stock.latest_price);
 
             return (
-              <button
+              <SearchResultItem
                 key={stock.id ?? stock.symbol}
                 id={`stock-search-result-${stock.symbol}`}
-                type="button"
-                role="option"
-                aria-selected={isActive}
-                className={`
-                    flex
-                    w-full
-                    items-center
-                    gap-3
-                    rounded-xl
-                    px-3
-                    py-3
-                    text-left
-                    text-(--text-primary)
-                    transition
-                    duration-150
-                    ${
-                      isActive
-                        ? "bg-(--bg-secondary)"
-                        : "hover:bg-(--bg-secondary)"
-                    }
-                  `}
-                onMouseDown={(event) => {
-                  event.preventDefault();
+                title={stock.symbol}
+                subtitle={stock.company_name}
+                badge={stock.exchange}
+                image={stock.company_logo_url}
+                imageAlt={
+                  stock.company_logo_url ? `${stock.company_name} logo` : ""
+                }
+                trailing={formattedPrice}
+                selected={index === activeIndex}
+                onMouseEnter={() => {
+                  onActiveIndexChange?.(index);
                 }}
                 onClick={() => {
                   onSelect(stock);
                 }}
-              >
-                <div
-                  className="
-                      flex
-                      h-10
-                      w-10
-                      shrink-0
-                      items-center
-                      justify-center
-                      overflow-hidden
-                      rounded-xl
-                      bg-(--bg-secondary)
-                    "
-                >
-                  {stock.company_logo_url ? (
-                    <img
-                      src={stock.company_logo_url}
-                      alt=""
-                      className="
-                          h-full
-                          w-full
-                          object-contain
-                          p-1
-                        "
-                    />
-                  ) : (
-                    <FontAwesomeIcon
-                      icon={faBuilding}
-                      aria-hidden="true"
-                      className="opacity-60"
-                    />
-                  )}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <strong className="text-sm">{stock.symbol}</strong>
-
-                    {stock.exchange && (
-                      <span
-                        className="
-                            rounded-full
-                            bg-(--bg-secondary)
-                            px-2
-                            py-0.5
-                            text-[0.65rem]
-                            font-bold
-                            uppercase
-                            opacity-70
-                          "
-                      >
-                        {stock.exchange}
-                      </span>
-                    )}
-                  </div>
-
-                  <span
-                    className="
-                        mt-0.5
-                        block
-                        truncate
-                        text-xs
-                        opacity-65
-                      "
-                  >
-                    {stock.company_name}
-                  </span>
-                </div>
-
-                {formattedPrice && (
-                  <span
-                    className="
-                        shrink-0
-                        text-xs
-                        font-semibold
-                        opacity-80
-                      "
-                  >
-                    {formattedPrice}
-                  </span>
-                )}
-              </button>
+              />
             );
           })}
         </div>
