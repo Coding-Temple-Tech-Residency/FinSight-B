@@ -11,21 +11,6 @@ def get_exchange_rate(
     from_currency: str,
     to_currency: str,
 ) -> Decimal:
-    """
-    Retrieves the latest available exchange rate for one currency pair.
-
-    Example:
-        from_currency="USD"
-        to_currency="EUR"
-
-    A returned value of Decimal("0.86") means:
-
-        1 USD = 0.86 EUR
-
-    The function immediately returns 1 when the source and destination
-    currencies are identical, avoiding an unnecessary external request.
-    """
-
     source = from_currency.strip().upper()
     destination = to_currency.strip().upper()
 
@@ -37,19 +22,26 @@ def get_exchange_rate(
         f"{source}/{destination}"
     )
 
-    print(
-    "FRANKFURTER REQUEST:",
-    source,
-    destination,
-)
     try:
         response = requests.get(
             url,
             timeout=10,
         )
 
+        if response.status_code in (400, 404, 422):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"Conversion from {source} to {destination} "
+                    "is not supported by the currency provider."
+                ),
+            )
+
         response.raise_for_status()
         data = response.json()
+
+    except HTTPException:
+        raise
 
     except requests.Timeout as error:
         raise HTTPException(
@@ -67,18 +59,15 @@ def get_exchange_rate(
 
     if rate is None:
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="The currency provider returned no exchange rate.",
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"No exchange rate is available from "
+                f"{source} to {destination}."
+            ),
         )
 
-    try:
-        return Decimal(str(rate))
+    return Decimal(str(rate))
 
-    except InvalidOperation as error:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="The currency provider returned an invalid rate.",
-        ) from error
 
 def convert_currency(
     amount: Decimal,

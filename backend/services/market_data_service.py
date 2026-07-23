@@ -1,20 +1,24 @@
 import os
 import time
-from datetime import datetime, timezone
-from decimal import Decimal
-from threading import Lock
-
 import requests
+
+from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
+from threading import Lock
+from uuid import uuid4
+
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from models.market_data import MarketData
 from models.stock import Stock
+from models.trending_stock import TrendingStock
 
 from schemas.trending import (
-    TrendingStock,
+    TrendingStock as TrendingStockSchema,
     TrendingStocksResponse,
 )
+
 
 
 ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
@@ -52,168 +56,83 @@ _trending_cache_lock = Lock()
 TRENDING_CACHE_SECONDS = 60 * 60
 
 def fetch_trending_stocks(
+    db: Session,
     force_refresh: bool = False,
 ) -> TrendingStocksResponse:
     """
-    Retrieves top gainers, top losers, and most actively traded US stocks.
+    Returns trending stocks from PostgreSQL when available.
 
-    Cache behavior:
-    - If a valid cached result exists, it is returned immediately.
-    - If the cache is empty or expired, Alpha Vantage is called once.
-    - force_refresh=True bypasses the cache, but should be used sparingly.
-
-    Args:
-        force_refresh:
-            When True, requests fresh provider data even when a valid
-            cached result exists.
-
-    Returns:
-        TrendingStocksResponse:
-            A normalized response suitable for the frontend.
-
-    Raises:
-        HTTPException:
-            500 if the API key is missing.
-            429 if Alpha Vantage reports a request limit.
-            502 if the provider cannot be contacted or sends invalid data.
+    Alpha Vantage is called only when:
+    - no snapshot exists; or
+    - force_refresh is explicitly requested.
     """
 
-    if not ALPHA_VANTAGE_API_KEY:
+    if not force_refresh:
+        saved_snapshot = get_latest_trending_snapshot(db)
+
+        if saved_snapshot is not None:
+            return saved_snapshot
+
+    params = {
+        "function": "TOP_GAINERS_LOSERS",
+        "apikey": ALPHA_VANTAGE_API_KEY,
+    }
+
+    try:
+        response = requests.get(
+            BASE_URL,
+            params=params,
+            timeout=20,
+        )
+
+        response.raise_for_status()
+        data = response.json()
+
+    except requests.RequestException as error:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Alpha Vantage API key is not configured",
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Unable to retrieve trending market information.",
+        ) from error
+
+    if "Information" in data or "Note" in data:
+        # If the provider is unavailable but a saved snapshot exists,
+        # return the saved data instead of failing the frontend.
+        saved_snapshot = get_latest_trending_snapshot(db)
+
+        if saved_snapshot is not None:
+            return saved_snapshot
+
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=(
+                "Trending market information is temporarily unavailable."
+            ),
         )
 
-    current_time = time.time()
+    save_trending_snapshot(
+        db=db,
+        data=data,
+    )
 
-    cached_data = _trending_cache["data"]
-    cache_expires_at = float(_trending_cache["expires_at"])
-
-    # Return cached data before acquiring the lock whenever possible.
-    if (
-        not force_refresh
-        and cached_data is not None
-        and current_time < cache_expires_at
-    ):
-        return cached_data
-
-    with _trending_cache_lock:
-        # Another request may have populated the cache while this request
-        # was waiting to acquire the lock, so check it again.
-        current_time = time.time()
-        cached_data = _trending_cache["data"]
-        cache_expires_at = float(_trending_cache["expires_at"])
-
-        if (
-            not force_refresh
-            and cached_data is not None
-            and current_time < cache_expires_at
-        ):
-            return cached_data
-
-        params = {
-            "function": "TOP_GAINERS_LOSERS",
-            "apikey": ALPHA_VANTAGE_API_KEY,
-        }
-
-        print(
-            "ALPHA VANTAGE REQUEST:",
-            params["function"],
-        )
-
-        try:
-            response = requests.get(
-                BASE_URL,
-                params=params,
-                timeout=20,
-            )
-
-            response.raise_for_status()
-            data = response.json()
-
-        except requests.Timeout as error:
-            raise HTTPException(
-                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-                detail=(
-                    "The market data provider took too long to respond."
-                ),
-            ) from error
-
-        except requests.RequestException as error:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=(
-                    "Unable to retrieve trending market information."
-                ),
-            ) from error
-
-        # Alpha Vantage may return HTTP 200 while placing the rate-limit
-        # explanation inside an Information or Note property.
-        if "Information" in data or "Note" in data:
-            print(
-                "Alpha Vantage trending limit response:",
-                data.get("Information") or data.get("Note"),
-            )
-
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=(
-                    "Trending market information is temporarily "
-                    "unavailable because the provider request limit "
-                    "was reached."
-                ),
-            )
-
-        if "Error Message" in data:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="The market data provider rejected the request.",
-            )
-
-        # Validate that the response contains at least one expected group.
-        if not any(
-            key in data
-            for key in (
-                "top_gainers",
-                "top_losers",
+    return TrendingStocksResponse(
+        last_updated=data.get("last_updated"),
+        metadata=data.get("metadata"),
+        top_gainers=[
+            TrendingStockSchema(**item)
+            for item in data.get("top_gainers", [])
+        ],
+        top_losers=[
+            TrendingStockSchema(**item)
+            for item in data.get("top_losers", [])
+        ],
+        most_actively_traded=[
+            TrendingStockSchema(**item)
+            for item in data.get(
                 "most_actively_traded",
+                [],
             )
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=(
-                    "The market data provider returned an unexpected "
-                    "trending-market response."
-                ),
-            )
-
-        normalized_response = TrendingStocksResponse(
-            last_updated=data.get("last_updated"),
-            metadata=data.get("metadata"),
-            top_gainers=[
-                TrendingStock(**item)
-                for item in data.get("top_gainers", [])
-            ],
-            top_losers=[
-                TrendingStock(**item)
-                for item in data.get("top_losers", [])
-            ],
-            most_actively_traded=[
-                TrendingStock(**item)
-                for item in data.get(
-                    "most_actively_traded",
-                    [],
-                )
-            ],
-        )
-
-        # Cache the normalized result, not the raw provider dictionary.
-        _trending_cache["data"] = normalized_response
-        _trending_cache["expires_at"] = (
-            time.time() + TRENDING_CACHE_SECONDS
-        )
-
-        return normalized_response
+        ],
+    )
 
 def fetch_daily_history(symbol: str) -> dict:
     if not ALPHA_VANTAGE_API_KEY:
@@ -607,3 +526,272 @@ def get_stock_market_history(
         stock_id=stock.id,
         timeframe=timeframe,
     )
+
+def parse_percentage(value: str) -> Decimal:
+    """
+    Converts a provider percentage string into a Decimal.
+
+    Example:
+        "3.45%" -> Decimal("3.45")
+
+    A controlled exception is raised when the provider returns an
+    unexpected value.
+    """
+
+    cleaned_value = str(value).strip().replace("%", "")
+
+    try:
+        return Decimal(cleaned_value)
+
+    except InvalidOperation as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=(
+                "The market data provider returned an invalid "
+                "percentage value."
+            ),
+        ) from error
+
+
+def parse_provider_timestamp(
+    value: str | None,
+) -> datetime | None:
+    """
+    Attempts to convert the provider's last_updated value into a Python
+    datetime.
+
+    The Alpha Vantage timestamp may include additional timezone text,
+    so this function safely returns None when it cannot parse it.
+
+    The raw provider metadata may still be returned to the frontend.
+    """
+
+    if not value:
+        return None
+
+    formats = (
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+    )
+
+    # Remove common trailing timezone labels before parsing.
+    cleaned_value = (
+        value.replace(" US/Eastern", "")
+        .replace(" UTC", "")
+        .strip()
+    )
+
+    for date_format in formats:
+        try:
+            return datetime.strptime(
+                cleaned_value,
+                date_format,
+            )
+
+        except ValueError:
+            continue
+
+    return None
+
+
+def save_trending_snapshot(
+    db: Session,
+    data: dict,
+) -> str:
+    """
+    Persists one complete trending-market response.
+
+    All gainers, losers, and active stocks receive the same snapshot ID,
+    allowing the application to retrieve the complete latest dataset.
+
+    Args:
+        db:
+            Current SQLAlchemy session.
+
+        data:
+            Raw provider response containing the trending categories.
+
+    Returns:
+        str:
+            The UUID identifying the saved snapshot.
+    """
+
+    snapshot_id = str(uuid4())
+
+    provider_updated_at = parse_provider_timestamp(
+        data.get("last_updated")
+    )
+
+    category_mapping = {
+        "top_gainers": "GAINER",
+        "top_losers": "LOSER",
+        "most_actively_traded": "ACTIVE",
+    }
+
+    try:
+        for provider_key, category in category_mapping.items():
+            provider_items = data.get(provider_key, [])
+
+            for item in provider_items:
+                trending_row = TrendingStock(
+                    ticker=str(item["ticker"]).strip().upper(),
+                    category=category,
+                    price=Decimal(str(item["price"])),
+                    change_amount=Decimal(
+                        str(item["change_amount"])
+                    ),
+                    change_percentage=parse_percentage(
+                        item["change_percentage"]
+                    ),
+                    volume=int(item["volume"]),
+                    provider_updated_at=provider_updated_at,
+                    snapshot_id=snapshot_id,
+                    source="alpha_vantage",
+                )
+
+                db.add(trending_row)
+
+        db.commit()
+
+        return snapshot_id
+
+    except Exception:
+        db.rollback()
+        raise
+
+def get_latest_trending_snapshot(
+    db: Session,
+) -> TrendingStocksResponse | None:
+    """
+    Loads the most recently saved trending snapshot from PostgreSQL.
+
+    Returns None when no saved snapshot exists.
+    """
+
+    latest_row = (
+        db.query(TrendingStock)
+        .order_by(TrendingStock.created_at.desc())
+        .first()
+    )
+
+    if latest_row is None:
+        return None
+
+    snapshot_rows = (
+        db.query(TrendingStock)
+        .filter(
+            TrendingStock.snapshot_id
+            == latest_row.snapshot_id
+        )
+        .order_by(TrendingStock.id.asc())
+        .all()
+    )
+
+    top_gainers: list[TrendingStockSchema] = []
+    top_losers: list[TrendingStockSchema] = []
+    most_active: list[TrendingStockSchema] = []
+
+    for row in snapshot_rows:
+        response_item = TrendingStockSchema(
+            ticker=row.ticker,
+            price=str(row.price),
+            change_amount=str(row.change_amount),
+            change_percentage=(
+                f"{row.change_percentage}%"
+            ),
+            volume=str(row.volume),
+        )
+
+        if row.category == "GAINER":
+            top_gainers.append(response_item)
+
+        elif row.category == "LOSER":
+            top_losers.append(response_item)
+
+        elif row.category == "ACTIVE":
+            most_active.append(response_item)
+
+    return TrendingStocksResponse(
+        last_updated=(
+            latest_row.provider_updated_at.isoformat()
+            if latest_row.provider_updated_at
+            else latest_row.created_at.isoformat()
+        ),
+        metadata="Latest trending-market snapshot stored by FinSight.",
+        top_gainers=top_gainers,
+        top_losers=top_losers,
+        most_actively_traded=most_active,
+    )
+
+def search_stock_symbols(
+    keywords: str,
+) -> list[dict]:
+    """
+    Searches for stocks and other supported assets using partial symbols
+    or company names.
+
+    Unlike get_or_update_stock(), this function does not treat the input
+    as an exact ticker and does not fetch daily price history.
+
+    Examples:
+        "app" -> Apple-related matches
+        "microsoft" -> Microsoft Corporation
+        "tesla" -> Tesla, Inc.
+    """
+
+    clean_keywords = keywords.strip()
+
+    if len(clean_keywords) < 2:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Enter at least two characters",
+        )
+
+    params = {
+        "function": "SYMBOL_SEARCH",
+        "keywords": clean_keywords,
+        "apikey": ALPHA_VANTAGE_API_KEY,
+    }
+
+    try:
+        response = requests.get(
+            BASE_URL,
+            params=params,
+            timeout=20,
+        )
+        response.raise_for_status()
+        data = response.json()
+
+    except requests.RequestException as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Unable to search for stocks",
+        ) from error
+
+    if "Information" in data or "Note" in data:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Stock search is temporarily unavailable due to the provider request limit.",
+        )
+
+    matches = data.get("bestMatches", [])
+
+    return [
+        {
+            "symbol": item.get("1. symbol", ""),
+            "name": item.get("2. name", ""),
+            "asset_type": item.get("3. type"),
+            "region": item.get("4. region"),
+            "market_open": item.get("5. marketOpen"),
+            "market_close": item.get("6. marketClose"),
+            "timezone": item.get("7. timezone"),
+            "currency": item.get("8. currency"),
+            "match_score": (
+                float(item["9. matchScore"])
+                if item.get("9. matchScore")
+                else None
+            ),
+        }
+        for item in matches
+        if item.get("1. symbol")
+    ]

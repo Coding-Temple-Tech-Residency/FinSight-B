@@ -6,3 +6,4 @@ from .holdings import Holding
 from .market_data import MarketData
 from .stock import Stock
 from .ai_insight import AIInsight
+from .trending_stock import TrendingStock
