@@ -1,10 +1,13 @@
 import { Link, useSearchParams } from "react-router-dom";
 
-import SearchResultCard from "../components/SearchResultCard";
-import { usePlatformSearch } from "../hooks/usePlatformSearch";
 import EmptyCard from "../../../components/ui/EmptyCard";
 import SearchForm from "../../../components/SearchForm";
-// import "../styles/search.css";
+
+import SearchResultCard from "../components/SearchResultCard";
+import { usePlatformSearch } from "../hooks/usePlatformSearch";
+
+import "../styles/search.css";
+import "../styles/SearchResults.css";
 
 const SearchResults = () => {
   const [searchParams] = useSearchParams();

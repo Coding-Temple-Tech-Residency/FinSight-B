@@ -1,63 +1,35 @@
-import { useState } from "react";
-
 import { useDashboard } from "../../dashboard/hooks/useDashboard";
+
+import StockSearchInput from "../../search/components/StockSearchInput";
+
+import type { StockSearchResult } from "../types/stock";
 
 const SYMBOL_PATTERN = /^[A-Z][A-Z0-9.-]{0,9}$/;
 
 const StockSearch = () => {
   const { symbol, setSymbol } = useDashboard();
 
-  const [value, setValue] = useState(symbol);
-  const [error, setError] = useState("");
+  const handleStockSelect = (stock: StockSearchResult) => {
+    setSymbol(stock.symbol.trim().toUpperCase());
+  };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSymbolSubmit = (submittedValue: string) => {
+    const normalizedSymbol = submittedValue.split("—")[0].trim().toUpperCase();
 
-    const nextSymbol = value.trim().toUpperCase();
-
-    if (!nextSymbol) {
-      setError("Enter a stock symbol.");
+    if (!SYMBOL_PATTERN.test(normalizedSymbol)) {
       return;
     }
 
-    if (!SYMBOL_PATTERN.test(nextSymbol)) {
-      setError("Enter a valid stock symbol.");
-      return;
-    }
-
-    setError("");
-    setSymbol(nextSymbol);
-    setValue(nextSymbol);
+    setSymbol(normalizedSymbol);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="stock-search">
-      <label htmlFor="stock-symbol-search" className="sr-only">
-        Stock symbol
-      </label>
-
-      <input
-        id="stock-symbol-search"
-        type="text"
-        value={value}
-        maxLength={10}
-        autoComplete="off"
-        spellCheck={false}
-        aria-invalid={Boolean(error)}
-        placeholder="Search stock symbol..."
-        onChange={(event) => {
-          setValue(event.target.value);
-
-          if (error) {
-            setError("");
-          }
-        }}
-      />
-
-      <button type="submit">Search</button>
-
-      {error && <p className="negative stock-search-error">{error}</p>}
-    </form>
+    <StockSearchInput
+      initialValue={symbol}
+      placeholder="Search Apple, Microsoft, AAPL..."
+      onSelect={handleStockSelect}
+      onSymbolSubmit={handleSymbolSubmit}
+    />
   );
 };
 

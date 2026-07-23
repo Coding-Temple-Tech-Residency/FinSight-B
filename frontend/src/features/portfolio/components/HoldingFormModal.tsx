@@ -23,7 +23,9 @@ const HoldingFormModal = ({
   const { closeModal, isModalOpen } = useModal();
 
   const handleClose = () => {
-    if (isSubmitting) return;
+    if (isSubmitting) {
+      return;
+    }
 
     if (onClose) {
       onClose();
@@ -38,6 +40,8 @@ const HoldingFormModal = ({
       isOpen={isModalOpen("holding-form")}
       title={holding ? `Edit ${holding.symbol}` : "Add Holding"}
       onClose={handleClose}
+      closeOnOverlayClick={!isSubmitting}
+      closeOnEscape={!isSubmitting}
     >
       <HoldingForm
         key={holding?.id ?? "new-holding"}
