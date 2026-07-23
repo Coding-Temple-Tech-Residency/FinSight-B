@@ -7,6 +7,9 @@ import { highlightMatch } from "../utils/highlightMatch";
 import { mapStockToSearchResult } from "../utils/mapStockToSearchResult";
 
 import SearchResultItem from "./resultItem/SearchResultItem";
+import SearchEmptyState from "./states/SearchEmptyState";
+import SearchErrorState from "./states/SearchErrorState";
+import SearchLoadingState from "./states/SearchLoadingState";
 
 interface StockSuggestionsDropdownProps {
   query: string;
@@ -64,79 +67,24 @@ const StockSuggestionsDropdown = ({
       </div>
 
       {isLoading && (
-        <div
-          className="
-            flex
-            items-center
-            gap-3
-            px-4
-            py-5
-            text-sm
-            text-(--text-primary)
-          "
-          role="status"
-        >
-          <span
-            className="
-              h-4
-              w-4
-              animate-spin
-              rounded-full
-              border-2
-              border-current
-              border-r-transparent
-              opacity-70
-            "
-            aria-hidden="true"
-          />
-
-          <span>Searching companies and symbols...</span>
-        </div>
+        <SearchLoadingState message="Searching companies and symbols..." />
       )}
 
       {!isLoading && isError && (
-        <div
-          className="
-            flex
-            flex-col
-            gap-2
-            px-4
-            py-5
-            text-(--text-primary)
-          "
-          role="alert"
-        >
-          <strong className="negative text-sm">
-            Stock search is unavailable
-          </strong>
-
-          <span className="text-xs leading-5 opacity-70">
-            {errorMessage ?? "The stock search service could not be reached."}
-          </span>
-
-          <span className="text-xs leading-5 opacity-70">
-            You can still enter a valid ticker and press Search.
-          </span>
-        </div>
+        <SearchErrorState
+          title="Stock search is unavailable"
+          message={
+            errorMessage ?? "The stock search service could not be reached."
+          }
+          fallbackMessage="You can still enter a valid ticker and press Search."
+        />
       )}
 
       {!isLoading && !isError && !hasResults && (
-        <div
-          className="
-            flex
-            flex-col
-            gap-2
-            px-4
-            py-5
-            text-(--text-primary)
-          "
-        >
-          <strong className="text-sm">No matching stocks found</strong>
-
-          <span className="text-xs leading-5 opacity-70">
-            Try a company name such as Apple or a symbol such as AAPL.
-          </span>
-        </div>
+        <SearchEmptyState
+          title="No matching stocks found"
+          description="Try a company name such as Apple or a symbol such as AAPL."
+        />
       )}
 
       {!isLoading && !isError && hasResults && (
