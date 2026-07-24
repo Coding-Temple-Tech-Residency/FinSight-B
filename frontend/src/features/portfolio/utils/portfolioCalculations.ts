@@ -1,6 +1,18 @@
 import type { Holding } from "../types/holdings";
 import type { Portfolio } from "../types/portfolio";
 
+export type HoldingPerformance = {
+  holding: Holding;
+  currency: string;
+  shares: number;
+  averageBuyPrice: number;
+  latestPrice: number;
+  costBasis: number;
+  marketValue: number;
+  gainLoss: number;
+  gainLossPercent: number;
+};
+
 export type PortfolioPerformanceSummary = {
   totalMarketValue: number;
   totalCostBasis: number;
@@ -13,10 +25,19 @@ export type PortfolioPerformanceSummary = {
   unpricedHoldings: number;
 
   currency: string | null;
+  currencies: string[];
   hasMixedCurrencies: boolean;
+
+  largestHolding: HoldingPerformance | null;
+  bestPerformer: HoldingPerformance | null;
+  worstPerformer: HoldingPerformance | null;
+
+  holdingPerformance: HoldingPerformance[];
 };
 
-const toNumber = (value: number | string | null | undefined): number | null => {
+export const toNumber = (
+  value: number | string | null | undefined,
+): number | null => {
   if (value === null || value === undefined || value === "") {
     return null;
   }
@@ -26,12 +47,26 @@ const toNumber = (value: number | string | null | undefined): number | null => {
   return Number.isFinite(parsedValue) ? parsedValue : null;
 };
 
-export const calculateHoldingCostBasis = (holding: Holding): number => {
-  const shares = toNumber(holding.shares);
-  const averageBuyPrice = toNumber(holding.average_buy_price);
+export const normalizeCurrency = (
+  currency: string | null | undefined,
+): string => {
+  return currency?.trim().toUpperCase() || "USD";
+};
 
-  if (shares === null || averageBuyPrice === null) {
-    return 0;
+export const calculateHoldingCostBasis = (holding: Holding): number | null => {
+  const shares = toNumber(holding.shares);
+
+  const averageBuyPrice =
+    toNumber(holding.average_buy_price_native) ??
+    toNumber(holding.average_buy_price);
+
+  if (
+    shares === null ||
+    shares <= 0 ||
+    averageBuyPrice === null ||
+    averageBuyPrice < 0
+  ) {
+    return null;
   }
 
   return shares * averageBuyPrice;
@@ -43,55 +78,169 @@ export const calculateHoldingMarketValue = (
   const shares = toNumber(holding.shares);
   const latestPrice = toNumber(holding.latest_price);
 
-  if (shares === null || latestPrice === null) {
+  if (
+    shares === null ||
+    shares <= 0 ||
+    latestPrice === null ||
+    latestPrice < 0
+  ) {
     return null;
   }
 
   return shares * latestPrice;
 };
 
+export const calculateHoldingPerformance = (
+  holding: Holding,
+): HoldingPerformance | null => {
+  const shares = toNumber(holding.shares);
+
+  const averageBuyPrice =
+    toNumber(holding.average_buy_price_native) ??
+    toNumber(holding.average_buy_price);
+
+  const latestPrice = toNumber(holding.latest_price);
+
+  if (
+    shares === null ||
+    shares <= 0 ||
+    averageBuyPrice === null ||
+    averageBuyPrice < 0 ||
+    latestPrice === null ||
+    latestPrice < 0
+  ) {
+    return null;
+  }
+
+  const costBasis = shares * averageBuyPrice;
+  const marketValue = shares * latestPrice;
+  const gainLoss = marketValue - costBasis;
+
+  const gainLossPercent = costBasis > 0 ? (gainLoss / costBasis) * 100 : 0;
+
+  return {
+    holding,
+    currency: normalizeCurrency(holding.native_currency),
+    shares,
+    averageBuyPrice,
+    latestPrice,
+    costBasis,
+    marketValue,
+    gainLoss,
+    gainLossPercent,
+  };
+};
+
+const getLargestHolding = (
+  holdings: HoldingPerformance[],
+): HoldingPerformance | null => {
+  if (holdings.length === 0) {
+    return null;
+  }
+
+  return holdings.reduce((largest, current) =>
+    current.marketValue > largest.marketValue ? current : largest,
+  );
+};
+
+const getBestPerformer = (
+  holdings: HoldingPerformance[],
+): HoldingPerformance | null => {
+  if (holdings.length === 0) {
+    return null;
+  }
+
+  return holdings.reduce((best, current) =>
+    current.gainLossPercent > best.gainLossPercent ? current : best,
+  );
+};
+
+const getWorstPerformer = (
+  holdings: HoldingPerformance[],
+): HoldingPerformance | null => {
+  if (holdings.length === 0) {
+    return null;
+  }
+
+  return holdings.reduce((worst, current) =>
+    current.gainLossPercent < worst.gainLossPercent ? current : worst,
+  );
+};
+
 export const calculatePortfolioPerformance = (
   portfolios: Portfolio[],
   holdings: Holding[],
 ): PortfolioPerformanceSummary => {
-  const currencies = new Set<string>();
+  const holdingPerformance = holdings.flatMap((holding) => {
+    const performance = calculateHoldingPerformance(holding);
 
-  portfolios.forEach((portfolio) => {
-    const currency = portfolio.currency?.trim().toUpperCase();
-
-    if (currency) {
-      currencies.add(currency);
-    }
+    return performance ? [performance] : [];
   });
 
-  let totalMarketValue = 0;
-  let totalCostBasis = 0;
-  let pricedHoldings = 0;
-  let unpricedHoldings = 0;
+  const holdingCurrencies = new Set(
+    holdingPerformance.map((performance) => performance.currency),
+  );
 
-  holdings.forEach((holding) => {
-    const marketValue = calculateHoldingMarketValue(holding);
+  const fallbackPortfolioCurrencies = new Set(
+    portfolios
+      .map((portfolio) => normalizeCurrency(portfolio.currency))
+      .filter(Boolean),
+  );
 
-    if (marketValue === null) {
-      unpricedHoldings += 1;
-      return;
-    }
+  const currencies =
+    holdingCurrencies.size > 0
+      ? Array.from(holdingCurrencies)
+      : Array.from(fallbackPortfolioCurrencies);
 
-    const costBasis = calculateHoldingCostBasis(holding);
+  const hasMixedCurrencies = currencies.length > 1;
 
-    totalMarketValue += marketValue;
-    totalCostBasis += costBasis;
-    pricedHoldings += 1;
-  });
+  const currency = currencies.length === 1 ? currencies[0] : null;
+
+  const pricedHoldings = holdingPerformance.length;
+  const unpricedHoldings = holdings.length - pricedHoldings;
+
+  const largestHolding = getLargestHolding(holdingPerformance);
+  const bestPerformer = getBestPerformer(holdingPerformance);
+  const worstPerformer = getWorstPerformer(holdingPerformance);
+
+  if (hasMixedCurrencies || currency === null) {
+    return {
+      totalMarketValue: 0,
+      totalCostBasis: 0,
+      totalGainLoss: 0,
+      totalGainLossPercent: 0,
+
+      portfolioCount: portfolios.length,
+      totalHoldings: holdings.length,
+      pricedHoldings,
+      unpricedHoldings,
+
+      currency,
+      currencies,
+      hasMixedCurrencies,
+
+      largestHolding,
+      bestPerformer,
+      worstPerformer,
+
+      holdingPerformance,
+    };
+  }
+
+  const totalMarketValue = holdingPerformance.reduce(
+    (total, performance) => total + performance.marketValue,
+    0,
+  );
+
+  const totalCostBasis = holdingPerformance.reduce(
+    (total, performance) => total + performance.costBasis,
+    0,
+  );
 
   const totalGainLoss = totalMarketValue - totalCostBasis;
 
   const totalGainLossPercent =
     totalCostBasis > 0 ? (totalGainLoss / totalCostBasis) * 100 : 0;
-
-  const hasMixedCurrencies = currencies.size > 1;
-
-  const currency = currencies.size === 1 ? Array.from(currencies)[0] : null;
 
   return {
     totalMarketValue,
@@ -105,6 +254,13 @@ export const calculatePortfolioPerformance = (
     unpricedHoldings,
 
     currency,
+    currencies,
     hasMixedCurrencies,
+
+    largestHolding,
+    bestPerformer,
+    worstPerformer,
+
+    holdingPerformance,
   };
 };

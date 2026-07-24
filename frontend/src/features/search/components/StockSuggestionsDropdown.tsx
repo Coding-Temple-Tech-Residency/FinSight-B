@@ -59,7 +59,7 @@ const StockSuggestionsDropdown = ({
         />
 
         <span className="min-w-0 truncate">
-          Searching stocks for{" "}
+          {isLoading ? "Searching stocks for " : "Stock results for "}
           <strong className="text-(--accent-primary)">
             “{normalizedQuery}”
           </strong>

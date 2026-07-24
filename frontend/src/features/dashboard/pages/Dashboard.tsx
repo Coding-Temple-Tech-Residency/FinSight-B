@@ -1,23 +1,29 @@
-import { usePortfolios } from "../../portfolio/hooks/usePortfolio";
+import { useState, type ChangeEvent } from "react";
+
 import { useMarketHistory } from "../../market/hooks/useMarketHistory";
 import { useStockQuote } from "../../market/hooks/useStockQuote";
 
+import { usePortfolios } from "../../portfolio/hooks/usePortfolio";
+
+import AIInsightCard from "../components/AIInsightCard";
 import DashboardHeader from "../components/DashboardHeader";
 import DashboardMetrics from "../components/DashboardMetrics";
-import PortfolioChart from "../components/PortfolioChart";
-
 import HoldingsAllocation from "../components/HoldingsAllocation";
-
+import PortfolioChart from "../components/PortfolioChart";
+import TopMoversCard from "../components/TopMoversCard";
 import WatchlistPreview from "../components/WatchlistPreview";
 
 import { useDashboard } from "../hooks/useDashboard";
 import { usePortfolioPerformance } from "../hooks/usePortfolioPerformance";
 
 import "../styles/dashboard.css";
-import AIInsightCard from "../components/AIInsightCard";
 
 const Dashboard = () => {
   const { symbol } = useDashboard();
+
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<
+    number | undefined
+  >();
 
   const {
     data: quote,
@@ -44,28 +50,53 @@ const Dashboard = () => {
     isError: performanceError,
   } = usePortfolioPerformance(portfolios);
 
-  const primaryPortfolio = portfolios.length > 0 ? portfolios[0] : undefined;
+  const selectedPortfolioExists = portfolios.some(
+    (portfolio) => portfolio.id === selectedPortfolioId,
+  );
+
+  const activePortfolioId = selectedPortfolioExists
+    ? selectedPortfolioId
+    : portfolios[0]?.id;
+
+  const selectedPortfolio = portfolios.find(
+    (portfolio) => portfolio.id === activePortfolioId,
+  );
 
   const dashboardPerformanceLoading = portfolioLoading || performanceLoading;
 
   const dashboardPerformanceError = portfolioError || performanceError;
 
+  const handlePortfolioChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const portfolioId = Number(event.target.value);
+
+    if (!Number.isInteger(portfolioId) || portfolioId <= 0) {
+      return;
+    }
+
+    setSelectedPortfolioId(portfolioId);
+  };
+
   return (
     <section className="dashboard">
       <DashboardHeader />
 
-      <DashboardMetrics
-        symbol={symbol}
-        quote={quote}
-        quoteLoading={quoteLoading}
-        quoteError={quoteError}
-        portfolios={portfolios}
-        portfolioLoading={portfolioLoading}
-        portfolioError={portfolioError}
-        performance={summary}
-        performanceLoading={dashboardPerformanceLoading}
-        performanceError={dashboardPerformanceError}
-      />
+      <section
+        className="dashboard-metrics-grid"
+        aria-label="Dashboard metrics"
+      >
+        <DashboardMetrics
+          symbol={symbol}
+          quote={quote}
+          quoteLoading={quoteLoading}
+          quoteError={quoteError}
+          portfolios={portfolios}
+          portfolioLoading={portfolioLoading}
+          portfolioError={portfolioError}
+          performance={summary}
+          performanceLoading={dashboardPerformanceLoading}
+          performanceError={dashboardPerformanceError}
+        />
+      </section>
 
       {performanceFetching && !dashboardPerformanceLoading && (
         <p className="dashboard-refresh-status" role="status">
@@ -73,25 +104,71 @@ const Dashboard = () => {
         </p>
       )}
 
-      <PortfolioChart
-        symbol={symbol}
-        history={history}
-        isLoading={historyLoading}
-        isError={historyError}
-      />
+      <section className="dashboard-portfolio-toolbar">
+        <div>
+          <p className="dashboard-section-eyebrow">Portfolio overview</p>
 
-      <AIInsightCard
-        portfolioId={primaryPortfolio?.id}
-        portfolioLoading={portfolioLoading}
-      />
+          <h2>{selectedPortfolio?.name ?? "Portfolio"}</h2>
+        </div>
 
-      <HoldingsAllocation
-        portfolioId={primaryPortfolio?.id}
-        portfolioLoading={portfolioLoading}
-        portfolioError={portfolioError}
-      />
+        {portfolios.length > 0 && (
+          <div className="dashboard-portfolio-selector">
+            <label htmlFor="dashboard-portfolio-select">
+              Selected portfolio
+            </label>
 
-      <WatchlistPreview />
+            <select
+              id="dashboard-portfolio-select"
+              value={activePortfolioId ?? ""}
+              onChange={handlePortfolioChange}
+              disabled={portfolioLoading}
+            >
+              {portfolios.map((portfolio) => (
+                <option key={portfolio.id} value={portfolio.id}>
+                  {portfolio.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </section>
+
+      <section
+        className="dashboard-primary-grid"
+        aria-label="Market performance and portfolio insight"
+      >
+        <PortfolioChart
+          symbol={symbol}
+          history={history}
+          isLoading={historyLoading}
+          isError={historyError}
+        />
+
+        <AIInsightCard
+          portfolioId={activePortfolioId}
+          portfolioLoading={portfolioLoading}
+        />
+      </section>
+
+      <section
+        className="dashboard-secondary-grid"
+        aria-label="Portfolio allocation, movers, and watchlist"
+      >
+        <HoldingsAllocation
+          portfolioId={activePortfolioId}
+          portfolioLoading={portfolioLoading}
+          portfolioError={portfolioError}
+        />
+
+        <TopMoversCard
+          portfolioId={activePortfolioId}
+          portfolioName={selectedPortfolio?.name}
+          portfolioLoading={portfolioLoading}
+          portfolioError={portfolioError}
+        />
+
+        <WatchlistPreview />
+      </section>
     </section>
   );
 };
