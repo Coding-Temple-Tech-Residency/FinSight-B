@@ -7,6 +7,7 @@ import type { CreateHoldingPayload, Holding } from "../types/holdings";
 
 type HoldingFormModalProps = {
   holding?: Holding;
+  defaultCurrency?: string;
   isSubmitting: boolean;
   mutationError?: string;
   onSubmit: (payload: CreateHoldingPayload) => void;
@@ -15,6 +16,7 @@ type HoldingFormModalProps = {
 
 const HoldingFormModal = ({
   holding,
+  defaultCurrency = "USD",
   isSubmitting,
   mutationError,
   onSubmit,
@@ -46,6 +48,7 @@ const HoldingFormModal = ({
       <HoldingForm
         key={holding?.id ?? "new-holding"}
         holding={holding}
+        defaultCurrency={defaultCurrency}
         isSubmitting={isSubmitting}
         mutationError={mutationError}
         onSubmit={onSubmit}

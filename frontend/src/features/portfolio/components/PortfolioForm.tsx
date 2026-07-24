@@ -1,13 +1,19 @@
-import { useState, type FormEvent } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  SUPPORTED_PORTFOLIO_CURRENCIES,
+  type PortfolioCurrency,
+} from "../../../constants/currencies";
 
 export type PortfolioFormValues = {
   name: string;
   description: string | null;
+  currency: PortfolioCurrency;
 };
 
 type PortfolioFormProps = {
   initialName?: string;
   initialDescription?: string | null;
+  initialCurrency?: string;
   submitLabel: string;
   isSubmitting: boolean;
   mutationError?: string;
@@ -15,9 +21,20 @@ type PortfolioFormProps = {
   onCancel?: () => void;
 };
 
+const isPortfolioCurrency = (value: string): value is PortfolioCurrency => {
+  return SUPPORTED_PORTFOLIO_CURRENCIES.some(
+    (currency) => currency.code === value,
+  );
+};
+
+const getInitialCurrency = (value: string): PortfolioCurrency => {
+  return isPortfolioCurrency(value) ? value : "USD";
+};
+
 const PortfolioForm = ({
   initialName = "",
   initialDescription = "",
+  initialCurrency = "USD",
   submitLabel,
   isSubmitting,
   mutationError,
@@ -25,7 +42,12 @@ const PortfolioForm = ({
   onCancel,
 }: PortfolioFormProps) => {
   const [name, setName] = useState(initialName);
+
   const [description, setDescription] = useState(initialDescription ?? "");
+
+  const [currency, setCurrency] = useState<PortfolioCurrency>(
+    getInitialCurrency(initialCurrency),
+  );
 
   const [validationError, setValidationError] = useState("");
 
@@ -45,10 +67,11 @@ const PortfolioForm = ({
     onSubmit({
       name: trimmedName,
       description: trimmedDescription || null,
+      currency,
     });
   };
 
-  const handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     setName(event.target.value);
 
     if (validationError) {
@@ -56,10 +79,16 @@ const PortfolioForm = ({
     }
   };
 
-  const handleDescriptionChange = (
-    event: React.ChangeEvent<HTMLTextAreaElement>,
-  ) => {
+  const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     setDescription(event.target.value);
+  };
+
+  const handleCurrencyChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const selectedCurrency = event.target.value;
+
+    if (isPortfolioCurrency(selectedCurrency)) {
+      setCurrency(selectedCurrency);
+    }
   };
 
   const errorMessage = validationError || mutationError;
@@ -80,6 +109,28 @@ const PortfolioForm = ({
           onChange={handleNameChange}
           placeholder="Growth Portfolio"
         />
+      </div>
+
+      <div className="portfolio-form-field">
+        <label htmlFor="portfolio-currency">Display currency</label>
+
+        <select
+          id="portfolio-currency"
+          name="portfolio-currency"
+          value={currency}
+          disabled={isSubmitting}
+          onChange={handleCurrencyChange}
+        >
+          {SUPPORTED_PORTFOLIO_CURRENCIES.map((supportedCurrency) => (
+            <option key={supportedCurrency.code} value={supportedCurrency.code}>
+              {supportedCurrency.code} — {supportedCurrency.name}
+            </option>
+          ))}
+        </select>
+
+        <p className="metric-label">
+          Portfolio values will be displayed using this currency.
+        </p>
       </div>
 
       <div className="portfolio-form-field">

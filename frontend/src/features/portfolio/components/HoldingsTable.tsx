@@ -24,7 +24,7 @@ const HoldingsTable = ({
           <tr>
             <th>Asset</th>
             <th>Shares</th>
-            <th>Average Price</th>
+            <th>Purchase Price</th>
             <th>Latest Price</th>
             <th>Market Value</th>
             <th>Gain/Loss</th>

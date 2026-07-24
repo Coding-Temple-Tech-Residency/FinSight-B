@@ -229,6 +229,7 @@ const Portfolio = () => {
   const handlePortfolioSubmit = ({
     name,
     description,
+    currency,
   }: PortfolioFormValues) => {
     const trimmedName = name.trim();
 
@@ -241,7 +242,7 @@ const Portfolio = () => {
         {
           name: trimmedName,
           description,
-          currency: "USD",
+          currency,
         },
         {
           onSuccess: (portfolio) => {
@@ -265,6 +266,7 @@ const Portfolio = () => {
         payload: {
           name: trimmedName,
           description,
+          currency,
         },
       },
       {
@@ -274,7 +276,6 @@ const Portfolio = () => {
       },
     );
   };
-
   const handleDeletePortfolio = () => {
     if (!selectedPortfolio) return;
 
@@ -334,6 +335,7 @@ const Portfolio = () => {
           payload: {
             shares: payload.shares,
             average_buy_price: payload.average_buy_price,
+            purchase_currency: payload.purchase_currency,
             purchased_at: payload.purchased_at,
           },
         },
@@ -712,6 +714,9 @@ const Portfolio = () => {
         initialDescription={
           portfolioFormMode === "edit" ? selectedPortfolio?.description : ""
         }
+        initialCurrency={
+          portfolioFormMode === "edit" ? selectedPortfolio?.currency : "USD"
+        }
         isSubmitting={
           createPortfolioMutation.isPending || updatePortfolioMutation.isPending
         }
@@ -729,6 +734,7 @@ const Portfolio = () => {
 
       <HoldingFormModal
         holding={editingHolding}
+        defaultCurrency={selectedPortfolio?.currency ?? "USD"}
         isSubmitting={
           createHoldingMutation.isPending || updateHoldingMutation.isPending
         }

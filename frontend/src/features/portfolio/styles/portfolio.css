@@ -375,6 +375,26 @@
   gap: 0.45rem;
 }
 
+.portfolio-form-field select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.75rem;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.portfolio-form-field select:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.portfolio-form-field select:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .portfolio-form-field label {
   color: var(--text-primary);
 
@@ -509,6 +529,21 @@
 .delete-portfolio-dialog-actions button {
   width: 100%;
   min-height: 44px;
+}
+
+.holding-price-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.holding-price-cell .metric-label {
+  white-space: nowrap;
+}
+
+.holding-asset-cell .metric-label {
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
 }
 
 @media screen and (min-width: 520px) {

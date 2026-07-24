@@ -8,6 +8,7 @@ type PortfolioFormModalProps = {
   mode: "create" | "edit";
   initialName?: string;
   initialDescription?: string | null;
+  initialCurrency?: string;
   isSubmitting: boolean;
   mutationError?: string;
   onSubmit: (values: PortfolioFormValues) => void;
@@ -17,6 +18,7 @@ const PortfolioFormModal = ({
   mode,
   initialName = "",
   initialDescription = "",
+  initialCurrency = "USD",
   isSubmitting,
   mutationError,
   onSubmit,
@@ -43,9 +45,15 @@ const PortfolioFormModal = ({
       closeOnEscape={!isSubmitting}
     >
       <PortfolioForm
-        key={[mode, initialName, initialDescription ?? ""].join("-")}
+        key={[
+          mode,
+          initialName,
+          initialDescription ?? "",
+          initialCurrency,
+        ].join("-")}
         initialName={initialName}
         initialDescription={initialDescription}
+        initialCurrency={initialCurrency}
         submitLabel={isCreating ? "Create Portfolio" : "Save Changes"}
         isSubmitting={isSubmitting}
         mutationError={mutationError}
