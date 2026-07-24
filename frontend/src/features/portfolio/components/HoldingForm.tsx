@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 
 import type { CreateHoldingPayload, Holding } from "../types/holdings";
+
+import "../styles/holding-form.css";
 
 type HoldingFormProps = {
   holding?: Holding;
@@ -29,7 +31,7 @@ const HoldingForm = ({
 
   const [validationError, setValidationError] = useState("");
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const normalizedSymbol = symbol.trim().toUpperCase();
@@ -62,6 +64,14 @@ const HoldingForm = ({
     });
   };
 
+  const handleSymbolChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSymbol(event.target.value.toUpperCase());
+
+    if (validationError) {
+      setValidationError("");
+    }
+  };
+
   return (
     <form className="holding-form" onSubmit={handleSubmit}>
       <div>
@@ -69,13 +79,14 @@ const HoldingForm = ({
 
         <input
           id="holding-symbol"
+          name="holding-symbol"
           type="text"
           value={symbol}
           disabled={Boolean(holding) || isSubmitting}
           maxLength={10}
           autoComplete="off"
           placeholder="AAPL"
-          onChange={(event) => setSymbol(event.target.value)}
+          onChange={handleSymbolChange}
         />
       </div>
 
@@ -84,13 +95,20 @@ const HoldingForm = ({
 
         <input
           id="holding-shares"
+          name="holding-shares"
           type="number"
           min="0.0001"
           step="0.0001"
           value={shares}
           disabled={isSubmitting}
           placeholder="10"
-          onChange={(event) => setShares(event.target.value)}
+          onChange={(event) => {
+            setShares(event.target.value);
+
+            if (validationError) {
+              setValidationError("");
+            }
+          }}
         />
       </div>
 
@@ -99,13 +117,20 @@ const HoldingForm = ({
 
         <input
           id="holding-price"
+          name="holding-price"
           type="number"
           min="0.01"
           step="0.01"
           value={averageBuyPrice}
           disabled={isSubmitting}
           placeholder="185.50"
-          onChange={(event) => setAverageBuyPrice(event.target.value)}
+          onChange={(event) => {
+            setAverageBuyPrice(event.target.value);
+
+            if (validationError) {
+              setValidationError("");
+            }
+          }}
         />
       </div>
 
@@ -114,6 +139,7 @@ const HoldingForm = ({
 
         <input
           id="holding-purchased-at"
+          name="holding-purchased-at"
           type="date"
           value={purchasedAt}
           disabled={isSubmitting}
@@ -121,9 +147,17 @@ const HoldingForm = ({
         />
       </div>
 
-      {validationError && <p className="negative">{validationError}</p>}
+      {validationError && (
+        <p className="negative" role="alert">
+          {validationError}
+        </p>
+      )}
 
-      {mutationError && <p className="negative">{mutationError}</p>}
+      {mutationError && (
+        <p className="negative" role="alert">
+          {mutationError}
+        </p>
+      )}
 
       <div className="form-actions">
         {onCancel && (

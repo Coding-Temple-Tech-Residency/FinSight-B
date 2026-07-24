@@ -1,0 +1,129 @@
+.holding-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.holding-form > div:not(.form-actions) {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.holding-form label {
+  color: var(--text-primary);
+
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.holding-form input {
+  width: 100%;
+  min-height: 46px;
+
+  padding: 0.75rem 0.85rem;
+
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+
+  border: 1px solid rgba(128, 128, 128, 0.25);
+  border-radius: 10px;
+
+  font: inherit;
+
+  outline: none;
+
+  transition:
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.holding-form input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.65;
+}
+
+.holding-form input:focus {
+  border-color: var(--accent-primary);
+
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--accent-primary) 18%, transparent);
+}
+
+.holding-form input:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.holding-form .negative {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.holding-form .form-actions {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.75rem;
+
+  margin-top: 0.5rem;
+}
+
+.holding-form .form-actions button {
+  width: 100%;
+  min-height: 44px;
+
+  padding: 0.7rem 1rem;
+
+  border-radius: 10px;
+
+  font: inherit;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.holding-form .form-actions button:first-child {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+
+  border: 1px solid rgba(128, 128, 128, 0.25);
+}
+
+.holding-form .form-actions button:last-child {
+  background-color: var(--accent-primary);
+  color: var(--bg-primary);
+
+  border: 1px solid transparent;
+}
+
+.holding-form .form-actions button:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.holding-form .form-actions button:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.holding-form .form-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media screen and (min-width: 520px) {
+  .holding-form .form-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
+  .holding-form .form-actions button {
+    width: auto;
+    min-width: 120px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .holding-form input {
+    transition: none;
+  }
+}

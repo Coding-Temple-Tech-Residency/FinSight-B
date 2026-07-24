@@ -39,6 +39,8 @@ const DeletePortfolioDialog = ({
       title="Delete Portfolio"
       onClose={handleClose}
       panelClassName="delete-portfolio-modal-panel"
+      closeOnOverlayClick={!isDeleting}
+      closeOnEscape={!isDeleting}
     >
       <div className="delete-portfolio-dialog">
         <div className="delete-portfolio-warning">

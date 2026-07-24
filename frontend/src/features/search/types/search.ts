@@ -19,6 +19,25 @@ export type SearchItem = {
   icon?: IconDefinition;
 };
 
-export type SearchResult = SearchItem & {
+export type PlatformSearchResult = SearchItem & {
   score: number;
 };
+
+export type SearchResultType =
+  | "stock"
+  | "portfolio"
+  | "watchlist"
+  | "page"
+  | "ai";
+
+export interface UniversalSearchResult {
+  id: string;
+  type: SearchResultType;
+  title: string;
+  subtitle?: string;
+  badge?: string;
+  image?: string | null;
+  trailing?: string;
+  href?: string;
+  data?: unknown;
+}

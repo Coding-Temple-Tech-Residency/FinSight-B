@@ -1,4 +1,4 @@
-import type { SearchItem, SearchResult } from "../types/search";
+import type { PlatformSearchResult, SearchItem } from "../types/search";
 
 const normalizeSearchValue = (value: string): string => {
   return value.toLowerCase().trim().replace(/\s+/g, " ");
@@ -66,7 +66,7 @@ const calculateSearchScore = (item: SearchItem, query: string): number => {
 export const searchPlatform = (
   items: SearchItem[],
   query: string,
-): SearchResult[] => {
+): PlatformSearchResult[] => {
   const normalizedQuery = normalizeSearchValue(query);
 
   if (!normalizedQuery) {

@@ -1,10 +1,13 @@
+import { useSearchParams } from "react-router-dom";
+
+import { useDashboard } from "../../dashboard/hooks/useDashboard";
+
 import QuoteCard from "../components/QuoteCard";
 import StockLineChart from "../components/StockLineChart";
 import StockSearch from "../components/StockSearch";
 
 import { useMarketHistory } from "../hooks/useMarketHistory";
 import { useStockQuote } from "../hooks/useStockQuote";
-import { useDashboard } from "../../dashboard/hooks/useDashboard";
 
 import "../styles/market.css";
 
@@ -17,9 +20,12 @@ const getErrorMessage = (error: unknown) => {
 };
 
 const Market = () => {
+  const [searchParams] = useSearchParams();
   const { symbol } = useDashboard();
 
-  const normalizedSymbol = symbol.trim().toUpperCase();
+  const symbolFromUrl = searchParams.get("symbol")?.trim() ?? "";
+
+  const normalizedSymbol = (symbolFromUrl || symbol).trim().toUpperCase();
 
   const quoteQuery = useStockQuote(normalizedSymbol);
   const historyQuery = useMarketHistory(normalizedSymbol, "daily");
@@ -42,7 +48,10 @@ const Market = () => {
         </div>
 
         <div className="market-search-container">
-          <StockSearch />
+          <StockSearch
+            key={normalizedSymbol}
+            initialSymbol={normalizedSymbol}
+          />
         </div>
       </header>
 

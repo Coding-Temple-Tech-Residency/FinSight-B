@@ -1,3 +1,7 @@
 .login-form {
   background-color: var(--bg-secondary);
 }
+
+.close-btn {
+  color: var(--text-primary);
+}

@@ -1,22 +1,33 @@
-import { type ChangeEvent, type FormEvent, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  type FormEvent,
+  useId,
+  useRef,
+  useState,
+} from "react";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faXmark } from "@fortawesome/free-solid-svg-icons";
 
 import { useLocation, useNavigate } from "react-router-dom";
 
+import "../styles/search.css";
+
 interface SearchFormProps {
   closeSearch?: () => void;
   placeholder?: string;
+  autoFocus?: boolean;
 }
 
 const SearchForm = ({
   closeSearch,
-  placeholder = "Search FinSight...",
+  placeholder = "Search portfolios, watchlists, stocks, and dashboard pages...",
+  autoFocus = false,
 }: SearchFormProps) => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const searchParams = new URLSearchParams(location.search);
@@ -60,33 +71,41 @@ const SearchForm = ({
 
   return (
     <form className="search-form" role="search" onSubmit={handleSubmit}>
-      <FontAwesomeIcon icon={faMagnifyingGlass} aria-hidden="true" />
+      <div className="search-input-wrapper">
+        <FontAwesomeIcon
+          icon={faMagnifyingGlass}
+          className="search-form-icon"
+          aria-hidden="true"
+        />
 
-      <label htmlFor="platform-search" className="sr-only">
-        Search the FinSight platform
-      </label>
+        <label htmlFor={inputId} className="sr-only">
+          Search the FinSight platform
+        </label>
 
-      <input
-        ref={inputRef}
-        id="platform-search"
-        name="platform-search"
-        type="search"
-        value={query}
-        placeholder={placeholder}
-        autoComplete="off"
-        onChange={handleChange}
-      />
+        <input
+          ref={inputRef}
+          id={inputId}
+          name="platform-search"
+          type="search"
+          value={query}
+          placeholder={placeholder}
+          autoComplete="off"
+          autoFocus={autoFocus}
+          spellCheck={false}
+          onChange={handleChange}
+        />
 
-      {query && (
-        <button
-          type="button"
-          className="search-clear-button"
-          aria-label="Clear search"
-          onClick={handleClear}
-        >
-          <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
-        </button>
-      )}
+        {query && (
+          <button
+            type="button"
+            className="search-clear-button"
+            aria-label="Clear search"
+            onClick={handleClear}
+          >
+            <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
+          </button>
+        )}
+      </div>
 
       <button
         type="submit"
@@ -94,7 +113,13 @@ const SearchForm = ({
         aria-label="Submit search"
         disabled={!query.trim()}
       >
-        Search
+        <FontAwesomeIcon
+          icon={faMagnifyingGlass}
+          className="search-submit-icon"
+          aria-hidden="true"
+        />
+
+        <span className="search-submit-text">Search</span>
       </button>
     </form>
   );
