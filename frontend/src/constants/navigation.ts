@@ -1,8 +1,8 @@
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+
 import {
   faChartLine,
   faComments,
-  faGear,
   faHouse,
   faStar,
 } from "@fortawesome/free-solid-svg-icons";
@@ -44,12 +44,6 @@ export const navigation: NavigationItem[] = [
     name: "Chat",
     path: "/dashboard/chat",
     icon: faComments,
-  },
-  {
-    id: 6,
-    name: "Settings",
-    path: "/dashboard/settings",
-    icon: faGear,
   },
 ];
 
