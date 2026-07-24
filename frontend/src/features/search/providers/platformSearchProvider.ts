@@ -1,9 +1,26 @@
-import { searchItems } from "../data/searchItems";
+import { searchData } from "../data/searchData";
 
+import type {
+  PlatformSearchResult,
+  UniversalSearchResult,
+} from "../types/search";
 import type { SearchProvider } from "../types/searchProvider";
-import type { UniversalSearchResult } from "../types/search";
 
 import { searchPlatform } from "../utils/searchPlatform";
+
+const mapPlatformResult = (
+  result: PlatformSearchResult,
+): UniversalSearchResult => {
+  return {
+    id: `platform-${result.id}`,
+    type: "page",
+    title: result.title,
+    subtitle: result.description,
+    badge: result.category,
+    href: result.path,
+    data: result,
+  };
+};
 
 export const platformSearchProvider: SearchProvider = {
   id: "platform",
@@ -16,16 +33,6 @@ export const platformSearchProvider: SearchProvider = {
       return [];
     }
 
-    const results = searchPlatform(searchItems, normalizedQuery);
-
-    return results.map((result) => ({
-      id: `platform-${result.id}`,
-      type: "page",
-      title: result.title,
-      subtitle: result.description,
-      badge: result.category,
-      href: result.path,
-      data: result,
-    }));
+    return searchPlatform(searchData, normalizedQuery).map(mapPlatformResult);
   },
 };

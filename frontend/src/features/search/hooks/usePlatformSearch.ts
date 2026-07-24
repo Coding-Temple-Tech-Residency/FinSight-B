@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 
-import { searchIndex } from "../data/searchIndex";
+import { searchData } from "../data/searchData";
 import { searchPlatform } from "../utils/searchPlatform";
 
 export const usePlatformSearch = (query: string) => {
   const results = useMemo(() => {
-    return searchPlatform(searchIndex, query);
+    return searchPlatform(searchData, query);
   }, [query]);
 
   return {
