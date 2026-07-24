@@ -8,9 +8,13 @@ import { usePortfolios } from "../../portfolio/hooks/usePortfolio";
 import AIInsightCard from "../components/AIInsightCard";
 import DashboardHeader from "../components/DashboardHeader";
 import DashboardMetrics from "../components/DashboardMetrics";
+import DashboardModeToggle, {
+  type DashboardMode,
+} from "../components/DashboardModeToggle";
 import HoldingsAllocation from "../components/HoldingsAllocation";
 import PortfolioChart from "../components/PortfolioChart";
 import TopMoversCard from "../components/TopMoversCard";
+import TrendingMarketView from "../components/TrendingMarketView";
 import WatchlistPreview from "../components/WatchlistPreview";
 
 import { useDashboard } from "../hooks/useDashboard";
@@ -20,6 +24,9 @@ import "../styles/dashboard.css";
 
 const Dashboard = () => {
   const { symbol } = useDashboard();
+
+  const [dashboardMode, setDashboardMode] =
+    useState<DashboardMode>("portfolio");
 
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<
     number | undefined
@@ -80,95 +87,103 @@ const Dashboard = () => {
     <section className="dashboard">
       <DashboardHeader />
 
-      <section
-        className="dashboard-metrics-grid"
-        aria-label="Dashboard metrics"
-      >
-        <DashboardMetrics
-          symbol={symbol}
-          quote={quote}
-          quoteLoading={quoteLoading}
-          quoteError={quoteError}
-          portfolios={portfolios}
-          portfolioLoading={portfolioLoading}
-          portfolioError={portfolioError}
-          performance={summary}
-          performanceLoading={dashboardPerformanceLoading}
-          performanceError={dashboardPerformanceError}
-        />
-      </section>
+      <DashboardModeToggle mode={dashboardMode} onChange={setDashboardMode} />
 
-      {performanceFetching && !dashboardPerformanceLoading && (
-        <p className="dashboard-refresh-status" role="status">
-          Updating portfolio data...
-        </p>
+      {dashboardMode === "portfolio" ? (
+        <>
+          <section
+            className="dashboard-metrics-grid"
+            aria-label="Dashboard metrics"
+          >
+            <DashboardMetrics
+              symbol={symbol}
+              quote={quote}
+              quoteLoading={quoteLoading}
+              quoteError={quoteError}
+              portfolios={portfolios}
+              portfolioLoading={portfolioLoading}
+              portfolioError={portfolioError}
+              performance={summary}
+              performanceLoading={dashboardPerformanceLoading}
+              performanceError={dashboardPerformanceError}
+            />
+          </section>
+
+          {performanceFetching && !dashboardPerformanceLoading && (
+            <p className="dashboard-refresh-status" role="status">
+              Updating portfolio data...
+            </p>
+          )}
+
+          <section className="dashboard-portfolio-toolbar">
+            <div>
+              <p className="dashboard-section-eyebrow">Portfolio overview</p>
+
+              <h2>{selectedPortfolio?.name ?? "Portfolio"}</h2>
+            </div>
+
+            {portfolios.length > 0 && (
+              <div className="dashboard-portfolio-selector">
+                <label htmlFor="dashboard-portfolio-select">
+                  Selected portfolio
+                </label>
+
+                <select
+                  id="dashboard-portfolio-select"
+                  value={activePortfolioId ?? ""}
+                  onChange={handlePortfolioChange}
+                  disabled={portfolioLoading}
+                >
+                  {portfolios.map((portfolio) => (
+                    <option key={portfolio.id} value={portfolio.id}>
+                      {portfolio.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </section>
+
+          <section
+            className="dashboard-primary-grid"
+            aria-label="Market performance and portfolio insight"
+          >
+            <PortfolioChart
+              symbol={symbol}
+              history={history}
+              isLoading={historyLoading}
+              isError={historyError}
+            />
+
+            <AIInsightCard
+              portfolioId={activePortfolioId}
+              portfolioLoading={portfolioLoading}
+            />
+          </section>
+
+          <section
+            className="dashboard-secondary-grid"
+            aria-label="Portfolio allocation, movers, and watchlist"
+          >
+            <HoldingsAllocation
+              portfolioId={activePortfolioId}
+              portfolioLoading={portfolioLoading}
+              portfolioError={portfolioError}
+            />
+
+            <TopMoversCard
+              portfolioId={activePortfolioId}
+              portfolioName={selectedPortfolio?.name}
+              portfolioLoading={portfolioLoading}
+              portfolioError={portfolioError}
+            />
+
+            <WatchlistPreview />
+          </section>
+        </>
+      ) : (
+        <TrendingMarketView />
       )}
-
-      <section className="dashboard-portfolio-toolbar">
-        <div>
-          <p className="dashboard-section-eyebrow">Portfolio overview</p>
-
-          <h2>{selectedPortfolio?.name ?? "Portfolio"}</h2>
-        </div>
-
-        {portfolios.length > 0 && (
-          <div className="dashboard-portfolio-selector">
-            <label htmlFor="dashboard-portfolio-select">
-              Selected portfolio
-            </label>
-
-            <select
-              id="dashboard-portfolio-select"
-              value={activePortfolioId ?? ""}
-              onChange={handlePortfolioChange}
-              disabled={portfolioLoading}
-            >
-              {portfolios.map((portfolio) => (
-                <option key={portfolio.id} value={portfolio.id}>
-                  {portfolio.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-      </section>
-
-      <section
-        className="dashboard-primary-grid"
-        aria-label="Market performance and portfolio insight"
-      >
-        <PortfolioChart
-          symbol={symbol}
-          history={history}
-          isLoading={historyLoading}
-          isError={historyError}
-        />
-
-        <AIInsightCard
-          portfolioId={activePortfolioId}
-          portfolioLoading={portfolioLoading}
-        />
-      </section>
-
-      <section
-        className="dashboard-secondary-grid"
-        aria-label="Portfolio allocation, movers, and watchlist"
-      >
-        <HoldingsAllocation
-          portfolioId={activePortfolioId}
-          portfolioLoading={portfolioLoading}
-          portfolioError={portfolioError}
-        />
-
-        <TopMoversCard
-          portfolioId={activePortfolioId}
-          portfolioName={selectedPortfolio?.name}
-          portfolioLoading={portfolioLoading}
-          portfolioError={portfolioError}
-        />
-
-        <WatchlistPreview />
-      </section>
     </section>
   );
 };
