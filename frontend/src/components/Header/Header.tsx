@@ -24,7 +24,7 @@ const Header = ({ showSearch, setShowSearch, closeMenu }: HeaderProps) => {
     <header className="header">
       <div className="header-container">
         <div className="header-left">
-          <Link to="/" onClick={closeMenu}>
+          <Link to="/dashboard" onClick={closeMenu}>
             <Logo />
           </Link>
 
