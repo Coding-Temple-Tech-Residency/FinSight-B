@@ -1,6 +1,11 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
 import { useHoldings } from "../../portfolio/hooks/useHoldings";
+import {
+  formatCurrency,
+  normalizeCurrencyCode,
+  toFiniteNumber,
+} from "../../portfolio/utils/currencyFormatting";
 
 type HoldingsAllocationProps = {
   portfolioId?: number;
@@ -9,8 +14,10 @@ type HoldingsAllocationProps = {
 };
 
 type AllocationItem = {
+  id: number;
   name: string;
   symbol: string;
+  currency: string;
   value: number;
   percentage: number;
 };
@@ -25,13 +32,6 @@ const colors = [
   "#14b8a6",
   "#6b7280",
 ];
-
-const formatCurrency = (value: number) => {
-  return value.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-  });
-};
 
 const HoldingsAllocation = ({
   portfolioId,
@@ -48,67 +48,71 @@ const HoldingsAllocation = ({
   const isLoading = portfolioLoading || holdingsLoading;
   const isError = portfolioError || holdingsError;
 
-  const allocationData = holdings
-    .map((holding) => {
-      const shares = Number(holding.shares);
+  const allocationData = holdings.flatMap((holding) => {
+    const shares = toFiniteNumber(holding.shares);
+    const latestPrice = toFiniteNumber(holding.latest_price);
 
-      const latestPrice =
-        holding.latest_price === null ? null : Number(holding.latest_price);
+    if (
+      shares === null ||
+      shares <= 0 ||
+      latestPrice === null ||
+      latestPrice <= 0
+    ) {
+      return [];
+    }
 
-      const marketValue =
-        Number.isFinite(shares) &&
-        latestPrice !== null &&
-        Number.isFinite(latestPrice)
-          ? shares * latestPrice
-          : null;
-
-      if (marketValue === null || marketValue <= 0) {
-        return null;
-      }
-
-      return {
+    return [
+      {
+        id: holding.id,
         name: holding.company_name || holding.symbol,
         symbol: holding.symbol,
-        value: marketValue,
-      };
-    })
-    .filter(
-      (
-        item,
-      ): item is {
-        name: string;
-        symbol: string;
-        value: number;
-      } => item !== null,
-    );
+        currency: normalizeCurrencyCode(holding.native_currency),
+        value: shares * latestPrice,
+      },
+    ];
+  });
 
-  const totalMarketValue = allocationData.reduce(
-    (total, item) => total + item.value,
-    0,
-  );
+  const currencies = new Set(allocationData.map((item) => item.currency));
 
-  const allocationWithPercentages: AllocationItem[] = allocationData.map(
-    (item) => ({
-      ...item,
-      percentage:
-        totalMarketValue > 0 ? (item.value / totalMarketValue) * 100 : 0,
-    }),
-  );
+  const hasMixedCurrencies = currencies.size > 1;
+
+  const displayCurrency =
+    currencies.size === 1 ? Array.from(currencies)[0] : undefined;
+
+  const totalMarketValue = hasMixedCurrencies
+    ? 0
+    : allocationData.reduce((total, item) => total + item.value, 0);
+
+  const allocationWithPercentages: AllocationItem[] =
+    hasMixedCurrencies || totalMarketValue <= 0
+      ? []
+      : allocationData.map((item) => ({
+          ...item,
+          percentage: (item.value / totalMarketValue) * 100,
+        }));
 
   return (
     <article className="hold-card">
       <div className="card-header">
-        <h2>Holdings Allocation</h2>
+        <div>
+          <h2>Holdings Allocation</h2>
 
-        {totalMarketValue > 0 && (
+          {!isLoading && holdings.length > 0 && (
+            <p className="metric-label">
+              {holdings.length} {holdings.length === 1 ? "holding" : "holdings"}
+            </p>
+          )}
+        </div>
+
+        {displayCurrency && totalMarketValue > 0 && (
           <span className="metric-label">
-            {formatCurrency(totalMarketValue)}
+            {formatCurrency(totalMarketValue, displayCurrency)}
           </span>
         )}
       </div>
 
       {isLoading && (
-        <div className="dashboard-unavailable-state">
+        <div className="dashboard-unavailable-state" role="status">
           <p>Loading holdings allocation...</p>
         </div>
       )}
@@ -146,8 +150,23 @@ const HoldingsAllocation = ({
 
       {!isLoading &&
         !isError &&
+        allocationData.length > 0 &&
+        hasMixedCurrencies && (
+          <div className="dashboard-unavailable-state">
+            <h3>Currency conversion required</h3>
+
+            <p>
+              This portfolio contains holdings priced in different currencies.
+              Combined allocation requires current exchange-rate conversion from
+              the backend.
+            </p>
+          </div>
+        )}
+
+      {!isLoading &&
+        !isError &&
         holdings.length > 0 &&
-        allocationWithPercentages.length === 0 && (
+        allocationData.length === 0 && (
           <div className="dashboard-unavailable-state">
             <h3>Allocation unavailable</h3>
 
@@ -155,70 +174,81 @@ const HoldingsAllocation = ({
           </div>
         )}
 
-      {!isLoading && !isError && allocationWithPercentages.length > 0 && (
-        <>
-          <div className="holdings-allocation-chart">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={allocationWithPercentages}
-                  dataKey="value"
-                  nameKey="symbol"
-                  innerRadius={55}
-                  outerRadius={85}
-                  paddingAngle={3}
-                >
-                  {allocationWithPercentages.map((item, index) => (
-                    <Cell
-                      key={`${item.symbol}-${index}`}
-                      fill={colors[index % colors.length]}
-                    />
-                  ))}
-                </Pie>
+      {!isLoading &&
+        !isError &&
+        allocationWithPercentages.length > 0 &&
+        displayCurrency && (
+          <>
+            <div className="holdings-allocation-chart">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={allocationWithPercentages}
+                    dataKey="value"
+                    nameKey="symbol"
+                    innerRadius={55}
+                    outerRadius={85}
+                    paddingAngle={3}
+                  >
+                    {allocationWithPercentages.map((item, index) => (
+                      <Cell
+                        key={item.id}
+                        fill={colors[index % colors.length]}
+                      />
+                    ))}
+                  </Pie>
 
-                <Tooltip
-                  formatter={(value, _name, context) => {
-                    const payload = context.payload as AllocationItem;
+                  <Tooltip
+                    formatter={(value, _name, context) => {
+                      const payload = context.payload as AllocationItem;
 
-                    return [
-                      `${formatCurrency(
-                        Number(value),
-                      )} (${payload.percentage.toFixed(1)}%)`,
-                      payload.symbol,
-                    ];
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+                      const rawValue = Array.isArray(value) ? value[0] : value;
+                      const numericValue =
+                        typeof rawValue === "number" ||
+                        typeof rawValue === "string"
+                          ? toFiniteNumber(rawValue)
+                          : null;
 
-          <div className="allocation-legend">
-            {allocationWithPercentages.map((item, index) => (
-              <div
-                key={`${item.symbol}-${index}`}
-                className="allocation-legend-item"
-              >
-                <span
-                  className="allocation-dot"
-                  style={{
-                    backgroundColor: colors[index % colors.length],
-                  }}
-                />
+                      return [
+                        numericValue === null
+                          ? "Unavailable"
+                          : `${formatCurrency(
+                              numericValue,
+                              payload.currency,
+                            )} (${payload.percentage.toFixed(1)}%)`,
+                        payload.symbol,
+                      ];
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
 
-                <div className="allocation-legend-label">
-                  <strong>{item.symbol}</strong>
-                  <span>{item.name}</span>
+            <div className="allocation-legend">
+              {allocationWithPercentages.map((item, index) => (
+                <div key={item.id} className="allocation-legend-item">
+                  <span
+                    className="allocation-dot"
+                    style={{
+                      backgroundColor: colors[index % colors.length],
+                    }}
+                  />
+
+                  <div className="allocation-legend-label">
+                    <strong>{item.symbol}</strong>
+                    <span>{item.name}</span>
+                  </div>
+
+                  <div className="allocation-legend-value">
+                    <strong>{item.percentage.toFixed(1)}%</strong>
+
+                    <span>{formatCurrency(item.value, item.currency)}</span>
+                  </div>
                 </div>
-
-                <div className="allocation-legend-value">
-                  <strong>{item.percentage.toFixed(1)}%</strong>
-                  <span>{formatCurrency(item.value)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+              ))}
+            </div>
+          </>
+        )}
     </article>
   );
 };

@@ -2,6 +2,8 @@ import type { StockQuote } from "../../market/types/stock";
 import type { Portfolio } from "../../portfolio/types/portfolio";
 import type { PortfolioPerformanceSummary } from "../../portfolio/utils/portfolioCalculations";
 
+import { formatCurrency } from "../../portfolio/utils/currencyFormatting";
+
 import MetricCard from "./MetricCard";
 
 type DashboardMetricsProps = {
@@ -17,18 +19,6 @@ type DashboardMetricsProps = {
   performance: PortfolioPerformanceSummary;
   performanceLoading: boolean;
   performanceError: boolean;
-};
-
-const formatCurrency = (value: number, currency: string): string => {
-  try {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 2,
-    }).format(value);
-  } catch {
-    return value.toFixed(2);
-  }
 };
 
 const formatPercent = (value: number): string => {
@@ -64,7 +54,7 @@ const DashboardMetrics = ({
     : quoteError
       ? "Unavailable"
       : quote?.latest_price !== undefined && quote.latest_price !== null
-        ? `$${Number(quote.latest_price).toFixed(2)}`
+        ? formatCurrency(quote.latest_price, "USD")
         : "Unavailable";
 
   const getPerformanceCurrencyValue = (value: number): string => {
@@ -123,7 +113,11 @@ const DashboardMetrics = ({
         label="Total Profit / Loss"
         value={totalGainLoss}
         change={gainLossChange}
-        positive={performance.totalGainLoss >= 0}
+        positive={
+          !performance.hasMixedCurrencies &&
+          performance.currency !== null &&
+          performance.totalGainLoss >= 0
+        }
       />
 
       <MetricCard label="Total Holdings" value={holdingsValue} />
