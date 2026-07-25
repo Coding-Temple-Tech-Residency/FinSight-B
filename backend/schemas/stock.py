@@ -15,7 +15,6 @@ class StockResponse(BaseModel):
 
     company_logo_url: str | None = None
     exchange: str | None = None
-    sector: str | None = None
     industry: str | None = None
     currency: str | None = None
 

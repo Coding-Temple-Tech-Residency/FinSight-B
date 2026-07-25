@@ -54,11 +54,6 @@ class Stock(Base):
         nullable=True,
     )
 
-    sector = Column(
-        String(100),
-        nullable=True,
-    )
-
     industry = Column(
         String(100),
         nullable=True,
