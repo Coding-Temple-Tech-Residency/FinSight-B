@@ -366,7 +366,6 @@ def get_or_create_stock_row(
         symbol=clean_symbol,
         company_name=clean_symbol,
         exchange=None,
-        sector=None,
         industry=None,
         currency=None,
         company_logo_url=None,
@@ -530,7 +529,6 @@ def build_full_stock_search_result(
             "asset_type"
         ),
         "exchange": stock.exchange,
-        "sector": stock.sector,
         "industry": stock.industry,
         "currency": stock.currency,
         "logo_url": stock.company_logo_url,
