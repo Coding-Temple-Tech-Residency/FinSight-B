@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type FormEvent,
@@ -9,11 +10,15 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRotateRight,
+  faCheck,
+  faCopy,
   faPaperPlane,
   faTrashCan,
 } from "@fortawesome/free-solid-svg-icons";
 
 import Modal from "../../../components/ui/Modal";
+import ChatFollowUpSuggestions from "../components/ChatFollowUpSuggestions";
+import ChatMessageContent from "../components/ChatMessageContent";
 
 import { useDashboard } from "../../dashboard/hooks/useDashboard";
 import { useAIChat } from "../hooks/useAIChat";
@@ -21,6 +26,7 @@ import { useAIChat } from "../hooks/useAIChat";
 import type { AIChatMessage } from "../types/chat";
 
 import "../styles/chat.css";
+import "../styles/chat-enhancements.css";
 
 const CHAT_STORAGE_KEY = "finsight-ai-chat";
 
@@ -66,21 +72,71 @@ const loadStoredMessages = (): AIChatMessage[] => {
   }
 };
 
+const formatMessageTime = (createdAt?: string): string => {
+  if (!createdAt) {
+    return "";
+  }
+
+  const date = new Date(createdAt);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+};
+
+const copyToClipboard = async (content: string): Promise<void> => {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(content);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+
+  textarea.value = content;
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+
+  document.body.appendChild(textarea);
+
+  textarea.focus();
+  textarea.select();
+
+  document.execCommand("copy");
+  document.body.removeChild(textarea);
+};
+
 const Chat = () => {
   const { symbol } = useDashboard();
 
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<AIChatMessage[]>(loadStoredMessages);
+
   const [failedMessage, setFailedMessage] = useState<string | null>(null);
+
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const copyTimeoutRef = useRef<number | null>(null);
 
   const { mutate: sendMessage, isPending, isError, error, reset } = useAIChat();
 
   const hasMessages = messages.length > 0;
   const characterCount = message.length;
+  const lastMessage = messages.at(-1);
+
+  const lastAssistantMessageId = useMemo(() => {
+    return [...messages]
+      .reverse()
+      .find((chatMessage) => chatMessage.role === "assistant")?.id;
+  }, [messages]);
 
   const suggestedPrompts = [
     "Analyze all of my portfolios.",
@@ -93,7 +149,7 @@ const Chat = () => {
     try {
       window.localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
     } catch {
-      // Local storage may be unavailable in private browsing environments.
+      // Local storage may be unavailable.
     }
   }, [messages]);
 
@@ -117,6 +173,14 @@ const Chat = () => {
 
     textarea.style.height = `${nextHeight}px`;
   }, [message]);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current !== null) {
+        window.clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const submitMessage = (content: string, appendUserMessage = true) => {
     const trimmedMessage = content.trim();
@@ -168,6 +232,7 @@ const Chat = () => {
 
           setFailedMessage(null);
         },
+
         onError: () => {
           setFailedMessage(trimmedMessage);
         },
@@ -203,6 +268,55 @@ const Chat = () => {
     submitMessage(failedMessage, false);
   };
 
+  const handleCopyMessage = async (chatMessage: AIChatMessage) => {
+    try {
+      await copyToClipboard(chatMessage.content);
+
+      setCopiedMessageId(chatMessage.id);
+
+      if (copyTimeoutRef.current !== null) {
+        window.clearTimeout(copyTimeoutRef.current);
+      }
+
+      copyTimeoutRef.current = window.setTimeout(() => {
+        setCopiedMessageId(null);
+      }, 2000);
+    } catch (copyError) {
+      console.error("Unable to copy chat response:", copyError);
+    }
+  };
+
+  const handleRegenerateResponse = (assistantMessageId: string) => {
+    if (isPending) {
+      return;
+    }
+
+    const assistantMessageIndex = messages.findIndex(
+      (chatMessage) => chatMessage.id === assistantMessageId,
+    );
+
+    if (assistantMessageIndex <= 0) {
+      return;
+    }
+
+    const previousUserMessage = [...messages]
+      .slice(0, assistantMessageIndex)
+      .reverse()
+      .find((chatMessage) => chatMessage.role === "user");
+
+    if (!previousUserMessage) {
+      return;
+    }
+
+    setMessages((currentMessages) =>
+      currentMessages.filter(
+        (chatMessage) => chatMessage.id !== assistantMessageId,
+      ),
+    );
+
+    submitMessage(previousUserMessage.content, false);
+  };
+
   const openClearModal = () => {
     if (!hasMessages || isPending) {
       return;
@@ -223,7 +337,9 @@ const Chat = () => {
     setMessages([]);
     setMessage("");
     setFailedMessage(null);
+    setCopiedMessageId(null);
     reset();
+
     setIsClearModalOpen(false);
 
     try {
@@ -291,18 +407,85 @@ const Chat = () => {
             </div>
           )}
 
-          {messages.map((chatMessage) => (
-            <article
-              key={chatMessage.id}
-              className={`chat-message ${chatMessage.role}`}
-            >
-              <span className="chat-message-role">
-                {chatMessage.role === "user" ? "You" : "FinSight AI"}
-              </span>
+          {messages.map((chatMessage) => {
+            const messageTime = formatMessageTime(chatMessage.created_at);
 
-              <p>{chatMessage.content}</p>
-            </article>
-          ))}
+            const isCopied = copiedMessageId === chatMessage.id;
+
+            const canRegenerate =
+              chatMessage.role === "assistant" &&
+              chatMessage.id === lastAssistantMessageId;
+
+            return (
+              <article
+                key={chatMessage.id}
+                className={`chat-message ${chatMessage.role}`}
+              >
+                <div className="chat-message-header">
+                  <span className="chat-message-role">
+                    {chatMessage.role === "user" ? "You" : "FinSight AI"}
+                  </span>
+
+                  {messageTime && (
+                    <time
+                      className="chat-message-time"
+                      dateTime={chatMessage.created_at}
+                    >
+                      {messageTime}
+                    </time>
+                  )}
+                </div>
+
+                {chatMessage.role === "assistant" ? (
+                  <ChatMessageContent content={chatMessage.content} />
+                ) : (
+                  <p>{chatMessage.content}</p>
+                )}
+
+                {chatMessage.role === "assistant" && (
+                  <div
+                    className="chat-message-actions"
+                    aria-label="AI response actions"
+                  >
+                    <button
+                      type="button"
+                      className="chat-message-action"
+                      onClick={() => handleCopyMessage(chatMessage)}
+                      aria-label={
+                        isCopied ? "Response copied" : "Copy response"
+                      }
+                      title={isCopied ? "Copied" : "Copy response"}
+                    >
+                      <FontAwesomeIcon
+                        icon={isCopied ? faCheck : faCopy}
+                        aria-hidden="true"
+                      />
+
+                      <span>{isCopied ? "Copied" : "Copy"}</span>
+                    </button>
+
+                    {canRegenerate && (
+                      <button
+                        type="button"
+                        className="chat-message-action"
+                        onClick={() => handleRegenerateResponse(chatMessage.id)}
+                        disabled={isPending}
+                        aria-label="Regenerate response"
+                        title="Regenerate response"
+                      >
+                        <FontAwesomeIcon
+                          icon={faArrowRotateRight}
+                          aria-hidden="true"
+                        />
+
+                        <span>Regenerate</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </article>
+            );
+          })}
 
           {isPending && (
             <article
@@ -346,6 +529,17 @@ const Chat = () => {
               </button>
             </div>
           )}
+
+          {hasMessages &&
+            !isPending &&
+            !isError &&
+            lastMessage?.role === "assistant" && (
+              <ChatFollowUpSuggestions
+                symbol={symbol}
+                disabled={isPending}
+                onSelect={handleSuggestedPrompt}
+              />
+            )}
 
           <div ref={messagesEndRef} aria-hidden="true" />
         </div>
