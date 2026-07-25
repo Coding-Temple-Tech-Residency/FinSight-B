@@ -43,34 +43,62 @@ const parsePercentage = (value: string | null | undefined): number | null => {
   return Number.isFinite(numericValue) ? numericValue : null;
 };
 
+type StockSearchApiItem = Partial<StockSearchResult> & {
+  name?: string | null;
+  logo_url?: string | null;
+};
+
 type StockSearchApiResponse =
-  | StockSearchResult[]
+  | StockSearchApiItem[]
   | {
-      results?: StockSearchResult[];
-      stocks?: StockSearchResult[];
-      items?: StockSearchResult[];
+      results?: StockSearchApiItem[];
+      stocks?: StockSearchApiItem[];
+      items?: StockSearchApiItem[];
     };
+
+const normalizeStockSearchItem = (
+  item: StockSearchApiItem,
+): StockSearchResult | null => {
+  const symbol = normalizeSymbol(item.symbol ?? item.display_symbol ?? "");
+  const companyName = (item.company_name ?? item.name ?? "").trim();
+
+  if (!symbol || !companyName) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    symbol,
+    display_symbol: item.display_symbol?.trim() || symbol,
+    company_name: companyName,
+    asset_type: item.asset_type ?? null,
+    exchange: item.exchange ?? null,
+    // sector: item.sector ?? null,
+    industry: item.industry ?? null,
+    currency: item.currency?.trim().toUpperCase() || null,
+    latest_price: item.latest_price ?? null,
+    company_logo_url: item.company_logo_url ?? item.logo_url ?? null,
+    last_refreshed_at: item.last_refreshed_at ?? null,
+    is_enriched: item.is_enriched ?? false,
+  };
+};
 
 const normalizeStockSearchResponse = (
   response: StockSearchApiResponse,
 ): StockSearchResult[] => {
-  if (Array.isArray(response)) {
-    return response;
-  }
+  const items = Array.isArray(response)
+    ? response
+    : Array.isArray(response.results)
+      ? response.results
+      : Array.isArray(response.stocks)
+        ? response.stocks
+        : Array.isArray(response.items)
+          ? response.items
+          : [];
 
-  if (Array.isArray(response.results)) {
-    return response.results;
-  }
-
-  if (Array.isArray(response.stocks)) {
-    return response.stocks;
-  }
-
-  if (Array.isArray(response.items)) {
-    return response.items;
-  }
-
-  return [];
+  return items
+    .map(normalizeStockSearchItem)
+    .filter((item): item is StockSearchResult => item !== null);
 };
 
 const normalizeTrendingItem = (
