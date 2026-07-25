@@ -14,10 +14,6 @@ router = APIRouter(
     tags=["Portfolios"]
 )
 
-<<<<<<< HEAD
-=======
-
->>>>>>> b3a503b8b465a0b84c9ced7d4b8c161b7ec6987f
 
 @router.post("", response_model=PortfolioResponse, status_code=status.HTTP_201_CREATED)
 def create_portfolio(
