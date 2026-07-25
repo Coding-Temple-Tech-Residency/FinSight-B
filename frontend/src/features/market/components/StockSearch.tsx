@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { useDashboard } from "../../dashboard/hooks/useDashboard";
+import type { StockSearchResult } from "../types/stock";
 
-const SYMBOL_PATTERN = /^[A-Z][A-Z0-9.-]{0,9}$/;
+import { useDashboard } from "../../dashboard/hooks/useDashboard";
+import StockSearchInput from "../../search/components/StockSearchInput";
+import StockDetailsModal from "./StockDetailsModal";
 
 type StockSearchProps = {
   initialSymbol?: string;
@@ -12,71 +14,45 @@ type StockSearchProps = {
 const StockSearch = ({ initialSymbol }: StockSearchProps) => {
   const navigate = useNavigate();
   const { symbol, setSymbol } = useDashboard();
+  const [selectedStock, setSelectedStock] =
+    useState<StockSearchResult | null>(null);
 
   const startingSymbol = initialSymbol?.trim().toUpperCase() || symbol;
 
-  const [value, setValue] = useState(startingSymbol);
-  const [error, setError] = useState("");
+  const openMarketPage = (nextSymbol: string) => {
+    const normalizedSymbol = nextSymbol.trim().toUpperCase();
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const nextSymbol = value.trim().toUpperCase();
-
-    if (!nextSymbol) {
-      setError("Enter a stock symbol.");
+    if (!normalizedSymbol) {
       return;
     }
 
-    if (!SYMBOL_PATTERN.test(nextSymbol)) {
-      setError("Enter a valid stock symbol.");
-      return;
-    }
+    setSelectedStock(null);
+    setSymbol(normalizedSymbol);
+    navigate(
+      `/dashboard/market?symbol=${encodeURIComponent(normalizedSymbol)}`,
+    );
+  };
 
-    setError("");
-    setSymbol(nextSymbol);
-    setValue(nextSymbol);
-
-    navigate(`/dashboard/market?symbol=${encodeURIComponent(nextSymbol)}`);
+  const handleSelect = (stock: StockSearchResult) => {
+    setSelectedStock(stock);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="stock-search">
-      <label htmlFor="stock-symbol-search" className="sr-only">
-        Stock symbol
-      </label>
-
-      <input
-        id="stock-symbol-search"
-        type="text"
-        value={value}
-        maxLength={10}
-        autoComplete="off"
-        spellCheck={false}
-        aria-invalid={Boolean(error)}
-        aria-describedby={error ? "stock-symbol-search-error" : undefined}
+    <>
+      <StockSearchInput
+        initialValue={startingSymbol}
         placeholder="Search company name or stock symbol..."
-        onChange={(event) => {
-          setValue(event.target.value);
-
-          if (error) {
-            setError("");
-          }
-        }}
+        onSelect={handleSelect}
+        onSymbolSubmit={openMarketPage}
       />
 
-      <button type="submit">Search</button>
-
-      {error && (
-        <p
-          id="stock-symbol-search-error"
-          className="negative stock-search-error"
-          role="alert"
-        >
-          {error}
-        </p>
-      )}
-    </form>
+      <StockDetailsModal
+        stock={selectedStock}
+        isOpen={Boolean(selectedStock)}
+        onClose={() => setSelectedStock(null)}
+        onViewMarket={openMarketPage}
+      />
+    </>
   );
 };
 
