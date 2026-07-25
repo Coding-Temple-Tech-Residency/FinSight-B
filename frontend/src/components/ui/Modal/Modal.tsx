@@ -1,4 +1,11 @@
-import { useEffect, useId, type MouseEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 
 import { createPortal } from "react-dom";
 
@@ -14,6 +21,20 @@ type ModalProps = {
   closeOnEscape?: boolean;
 };
 
+const focusableSelector = [
+  "a[href]",
+  "area[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "iframe",
+  "object",
+  "embed",
+  "[contenteditable]",
+  '[tabindex]:not([tabindex="-1"])',
+].join(",");
+
 const Modal = ({
   isOpen,
   title,
@@ -25,29 +46,58 @@ const Modal = ({
 }: ModalProps) => {
   const titleId = useId();
 
+  const panelRef = useRef<HTMLElement>(null);
+  const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
     if (!isOpen) {
       return;
     }
 
-    const previousOverflow = document.body.style.overflow;
+    previouslyFocusedElementRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
 
-    const handleEscape = (event: KeyboardEvent) => {
-      if (closeOnEscape && event.key === "Escape") {
-        onClose();
-      }
-    };
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyPaddingRight = document.body.style.paddingRight;
+
+    const scrollbarWidth =
+      window.innerWidth - document.documentElement.clientWidth;
 
     document.body.style.overflow = "hidden";
 
-    document.addEventListener("keydown", handleEscape);
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    const focusTimer = window.setTimeout(() => {
+      const panel = panelRef.current;
+
+      if (!panel) {
+        return;
+      }
+
+      const firstFocusableElement =
+        panel.querySelector<HTMLElement>(focusableSelector);
+
+      if (firstFocusableElement) {
+        firstFocusableElement.focus();
+        return;
+      }
+
+      panel.focus();
+    }, 0);
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      window.clearTimeout(focusTimer);
 
-      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.paddingRight = previousBodyPaddingRight;
+
+      previouslyFocusedElementRef.current?.focus();
     };
-  }, [isOpen, onClose, closeOnEscape]);
+  }, [isOpen]);
 
   if (!isOpen) {
     return null;
@@ -63,6 +113,58 @@ const Modal = ({
     }
   };
 
+  const handlePanelKeyDown = (event: ReactKeyboardEvent<HTMLElement>): void => {
+    if (event.key === "Escape") {
+      event.stopPropagation();
+
+      if (closeOnEscape) {
+        onClose();
+      }
+
+      return;
+    }
+
+    if (event.key !== "Tab") {
+      return;
+    }
+
+    const panel = panelRef.current;
+
+    if (!panel) {
+      return;
+    }
+
+    const focusableElements = Array.from(
+      panel.querySelectorAll<HTMLElement>(focusableSelector),
+    ).filter((element) => {
+      return (
+        !element.hasAttribute("disabled") &&
+        element.getAttribute("aria-hidden") !== "true"
+      );
+    });
+
+    if (focusableElements.length === 0) {
+      event.preventDefault();
+      panel.focus();
+      return;
+    }
+
+    const firstFocusableElement = focusableElements[0];
+    const lastFocusableElement =
+      focusableElements[focusableElements.length - 1];
+
+    if (event.shiftKey && document.activeElement === firstFocusableElement) {
+      event.preventDefault();
+      lastFocusableElement.focus();
+      return;
+    }
+
+    if (!event.shiftKey && document.activeElement === lastFocusableElement) {
+      event.preventDefault();
+      firstFocusableElement.focus();
+    }
+  };
+
   const modalContent = (
     <div
       className="modal-overlay"
@@ -70,10 +172,13 @@ const Modal = ({
       onMouseDown={handleOverlayMouseDown}
     >
       <section
+        ref={panelRef}
         className={["modal-panel", panelClassName].filter(Boolean).join(" ")}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        tabIndex={-1}
+        onKeyDown={handlePanelKeyDown}
       >
         <header className="modal-header">
           <h2 id={titleId}>{title}</h2>
@@ -81,10 +186,10 @@ const Modal = ({
           <button
             type="button"
             className="modal-close-button"
-            aria-label="Close modal"
+            aria-label={`Close ${title}`}
             onClick={onClose}
           >
-            ×
+            <span aria-hidden="true">×</span>
           </button>
         </header>
 

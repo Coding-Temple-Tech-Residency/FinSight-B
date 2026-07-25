@@ -14,3 +14,12 @@ export type StockQuote = {
   created_at: string;
   updated_at: string;
 };
+
+export type StockSearchResult = {
+  id?: number;
+  symbol: string;
+  company_name: string;
+  exchange?: string | null;
+  latest_price?: number | string | null;
+  company_logo_url?: string | null;
+};

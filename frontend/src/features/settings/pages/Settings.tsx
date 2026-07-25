@@ -2,6 +2,8 @@ import AccountSettings from "../components/AccountSettings";
 import ProfileCard from "../components/ProfileCard";
 import ThemeSettings from "../components/ThemeSettings";
 
+import "../styles/settings.css";
+
 const Settings = () => {
   return (
     <section className="settings-page">
