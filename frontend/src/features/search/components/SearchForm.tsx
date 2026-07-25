@@ -4,6 +4,7 @@ import {
   type KeyboardEvent,
   useEffect,
   useId,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -13,12 +14,17 @@ import { faMagnifyingGlass, faXmark } from "@fortawesome/free-solid-svg-icons";
 
 import { useLocation, useNavigate } from "react-router-dom";
 
-import type { StockSearchResult } from "../../market/types/stock";
-
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
-import { useStockSearch } from "../hooks/useStockSearch";
+import { useUniversalSearch } from "../hooks/useUniversalSearch";
 
-import StockSuggestionsDropdown from "./StockSuggestionsDropdown";
+import type { SearchResultType, UniversalSearchResult } from "../types/search";
+
+import SearchResultGroup, {
+  type IndexedSearchResult,
+} from "./SearchResultGroup";
+import SearchEmptyState from "./states/SearchEmptyState";
+import SearchErrorState from "./states/SearchErrorState";
+import SearchLoadingState from "./states/SearchLoadingState";
 
 import "../styles/search.css";
 
@@ -28,16 +34,48 @@ interface SearchFormProps {
   autoFocus?: boolean;
 }
 
-const MINIMUM_QUERY_LENGTH = 2;
-const DEFAULT_RESULT_LIMIT = 6;
-const EMPTY_RESULTS: StockSearchResult[] = [];
+interface SearchResultGroupData {
+  type: SearchResultType;
+  label: string;
+  results: IndexedSearchResult[];
+}
 
-const getErrorMessage = (error: unknown) => {
+const MINIMUM_QUERY_LENGTH = 2;
+
+const RESULT_GROUPS: Array<{
+  type: SearchResultType;
+  label: string;
+}> = [
+  {
+    type: "stock",
+    label: "Stocks",
+  },
+  {
+    type: "portfolio",
+    label: "Portfolios",
+  },
+  {
+    type: "watchlist",
+    label: "Watchlists",
+  },
+  {
+    type: "page",
+    label: "Pages and Features",
+  },
+  {
+    type: "ai",
+    label: "AI",
+  },
+];
+
+const EMPTY_RESULTS: UniversalSearchResult[] = [];
+
+const getErrorMessage = (error: unknown): string => {
   if (error instanceof Error) {
     return error.message;
   }
 
-  return "Unable to search stocks.";
+  return "Unable to search the FinSight platform.";
 };
 
 const SearchForm = ({
@@ -49,6 +87,7 @@ const SearchForm = ({
   const location = useLocation();
 
   const inputId = useId();
+  const listboxId = useId();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -65,17 +104,27 @@ const SearchForm = ({
   const [activeIndex, setActiveIndex] = useState(-1);
 
   const debouncedQuery = useDebouncedValue(query, 300);
+
   const normalizedQuery = query.trim();
   const normalizedDebouncedQuery = debouncedQuery.trim();
 
   const hasValidQuery = normalizedQuery.length >= MINIMUM_QUERY_LENGTH;
 
-  const stockSearchQuery = useStockSearch(
-    normalizedDebouncedQuery,
-    DEFAULT_RESULT_LIMIT,
-  );
+  const universalSearchQuery = useUniversalSearch(normalizedDebouncedQuery);
 
-  const results = stockSearchQuery.data ?? EMPTY_RESULTS;
+  const results = universalSearchQuery.data ?? EMPTY_RESULTS;
+
+  const groupedResults = useMemo<SearchResultGroupData[]>(() => {
+    return RESULT_GROUPS.map((group) => ({
+      ...group,
+      results: results
+        .map((result, index) => ({
+          result,
+          index,
+        }))
+        .filter(({ result }) => result.type === group.type),
+    })).filter((group) => group.results.length > 0);
+  }, [results]);
 
   const shouldShowDropdown = isDropdownOpen && hasValidQuery;
 
@@ -96,6 +145,11 @@ const SearchForm = ({
     };
   }, []);
 
+  const closeDropdown = () => {
+    setIsDropdownOpen(false);
+    setActiveIndex(-1);
+  };
+
   const navigateToSearchResults = (searchQuery: string) => {
     const normalizedSearchQuery = searchQuery.trim();
 
@@ -107,9 +161,7 @@ const SearchForm = ({
       `/dashboard/search?q=${encodeURIComponent(normalizedSearchQuery)}`,
     );
 
-    setIsDropdownOpen(false);
-    setActiveIndex(-1);
-
+    closeDropdown();
     closeSearch?.();
   };
 
@@ -127,23 +179,25 @@ const SearchForm = ({
     }
   };
 
-  const handleSelect = (stock: StockSearchResult) => {
-    const normalizedSymbol = stock.symbol.trim().toUpperCase();
+  const handleResultSelect = (result: UniversalSearchResult) => {
+    closeDropdown();
+    closeSearch?.();
 
-    setQuery(
-      stock.company_name
-        ? `${normalizedSymbol} — ${stock.company_name}`
-        : normalizedSymbol,
-    );
+    if (result.href) {
+      navigate(result.href);
+      return;
+    }
 
-    navigateToSearchResults(normalizedSymbol);
+    navigateToSearchResults(result.title);
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (activeIndex >= 0 && activeIndex < results.length) {
-      handleSelect(results[activeIndex]);
+    const activeResult = results[activeIndex];
+
+    if (activeResult) {
+      handleResultSelect(activeResult);
       return;
     }
 
@@ -157,8 +211,7 @@ const SearchForm = ({
 
   const handleClear = () => {
     setQuery("");
-    setIsDropdownOpen(false);
-    setActiveIndex(-1);
+    closeDropdown();
 
     inputRef.current?.focus();
 
@@ -172,10 +225,7 @@ const SearchForm = ({
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape") {
       event.preventDefault();
-
-      setIsDropdownOpen(false);
-      setActiveIndex(-1);
-
+      closeDropdown();
       return;
     }
 
@@ -186,13 +236,9 @@ const SearchForm = ({
     if (event.key === "ArrowDown") {
       event.preventDefault();
 
-      setActiveIndex((currentIndex) => {
-        if (currentIndex >= results.length - 1) {
-          return 0;
-        }
-
-        return currentIndex + 1;
-      });
+      setActiveIndex((currentIndex) =>
+        currentIndex >= results.length - 1 ? 0 : currentIndex + 1,
+      );
 
       return;
     }
@@ -200,13 +246,9 @@ const SearchForm = ({
     if (event.key === "ArrowUp") {
       event.preventDefault();
 
-      setActiveIndex((currentIndex) => {
-        if (currentIndex <= 0) {
-          return results.length - 1;
-        }
-
-        return currentIndex - 1;
-      });
+      setActiveIndex((currentIndex) =>
+        currentIndex <= 0 ? results.length - 1 : currentIndex - 1,
+      );
 
       return;
     }
@@ -225,14 +267,27 @@ const SearchForm = ({
 
     if (event.key === "Enter" && activeIndex >= 0) {
       event.preventDefault();
-      handleSelect(results[activeIndex]);
+
+      const activeResult = results[activeIndex];
+
+      if (activeResult) {
+        handleResultSelect(activeResult);
+      }
     }
   };
 
-  const activeDescendant =
-    activeIndex >= 0 && results[activeIndex]
-      ? `stock-search-result-${results[activeIndex].symbol}`
-      : undefined;
+  const activeResult = results[activeIndex];
+
+  const activeDescendant = activeResult
+    ? `universal-search-result-${activeResult.id}`
+    : undefined;
+
+  const isLoading =
+    universalSearchQuery.isLoading || universalSearchQuery.isFetching;
+
+  const isError = universalSearchQuery.isError;
+
+  const hasResults = results.length > 0;
 
   return (
     <div ref={containerRef} className="search-autocomplete-container">
@@ -260,9 +315,7 @@ const SearchForm = ({
             spellCheck={false}
             aria-autocomplete="list"
             aria-expanded={shouldShowDropdown}
-            aria-controls={
-              shouldShowDropdown ? "stock-search-suggestions" : undefined
-            }
+            aria-controls={shouldShowDropdown ? listboxId : undefined}
             aria-activedescendant={activeDescendant}
             onChange={handleChange}
             onFocus={handleFocus}
@@ -281,22 +334,65 @@ const SearchForm = ({
           )}
 
           {shouldShowDropdown && (
-            <StockSuggestionsDropdown
-              query={normalizedDebouncedQuery}
-              results={results}
-              activeIndex={activeIndex}
-              isLoading={
-                stockSearchQuery.isLoading || stockSearchQuery.isFetching
-              }
-              isError={stockSearchQuery.isError}
-              errorMessage={
-                stockSearchQuery.isError
-                  ? getErrorMessage(stockSearchQuery.error)
-                  : undefined
-              }
-              onSelect={handleSelect}
-              onActiveIndexChange={setActiveIndex}
-            />
+            <div
+              id={listboxId}
+              role="listbox"
+              aria-label="FinSight search results"
+              className="
+                search-suggestions-dropdown
+                absolute
+                top-[calc(100%+0.5rem)]
+                left-0
+                z-200
+                max-h-[min(420px,calc(100vh-180px))]
+                w-full
+                overflow-y-auto
+                rounded-2xl
+                border
+                border-white/10
+                bg-(--bg-primary)
+                shadow-2xl
+              "
+            >
+              {isLoading && (
+                <SearchLoadingState
+                  message={`Searching FinSight for “${normalizedDebouncedQuery}”...`}
+                />
+              )}
+
+              {!isLoading && isError && (
+                <SearchErrorState
+                  title="Search is unavailable"
+                  message={getErrorMessage(universalSearchQuery.error)}
+                  fallbackMessage="Please try your search again."
+                />
+              )}
+
+              {!isLoading &&
+                !isError &&
+                normalizedDebouncedQuery.length >= MINIMUM_QUERY_LENGTH &&
+                !hasResults && (
+                  <SearchEmptyState
+                    title="No results found"
+                    description={`No FinSight results matched “${normalizedDebouncedQuery}”.`}
+                  />
+                )}
+
+              {!isLoading &&
+                !isError &&
+                hasResults &&
+                groupedResults.map((group) => (
+                  <SearchResultGroup
+                    key={group.type}
+                    label={group.label}
+                    query={normalizedDebouncedQuery}
+                    results={group.results}
+                    activeIndex={activeIndex}
+                    onResultSelect={handleResultSelect}
+                    onActiveIndexChange={setActiveIndex}
+                  />
+                ))}
+            </div>
           )}
         </div>
 
