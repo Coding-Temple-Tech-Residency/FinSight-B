@@ -15,7 +15,7 @@ import {
 
 import type { SearchItem } from "../types/search";
 
-export const searchIndex: SearchItem[] = [
+export const searchData: SearchItem[] = [
   {
     id: "dashboard",
     title: "Dashboard",

@@ -1,13 +1,21 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { useDashboard } from "../../dashboard/hooks/useDashboard";
 
 const SYMBOL_PATTERN = /^[A-Z][A-Z0-9.-]{0,9}$/;
 
-const StockSearch = () => {
+type StockSearchProps = {
+  initialSymbol?: string;
+};
+
+const StockSearch = ({ initialSymbol }: StockSearchProps) => {
+  const navigate = useNavigate();
   const { symbol, setSymbol } = useDashboard();
 
-  const [value, setValue] = useState(symbol);
+  const startingSymbol = initialSymbol?.trim().toUpperCase() || symbol;
+
+  const [value, setValue] = useState(startingSymbol);
   const [error, setError] = useState("");
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -28,6 +36,8 @@ const StockSearch = () => {
     setError("");
     setSymbol(nextSymbol);
     setValue(nextSymbol);
+
+    navigate(`/dashboard/market?symbol=${encodeURIComponent(nextSymbol)}`);
   };
 
   return (
@@ -44,7 +54,8 @@ const StockSearch = () => {
         autoComplete="off"
         spellCheck={false}
         aria-invalid={Boolean(error)}
-        placeholder="Search stock symbol..."
+        aria-describedby={error ? "stock-symbol-search-error" : undefined}
+        placeholder="Search company name or stock symbol..."
         onChange={(event) => {
           setValue(event.target.value);
 
@@ -56,7 +67,15 @@ const StockSearch = () => {
 
       <button type="submit">Search</button>
 
-      {error && <p className="negative stock-search-error">{error}</p>}
+      {error && (
+        <p
+          id="stock-symbol-search-error"
+          className="negative stock-search-error"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
     </form>
   );
 };

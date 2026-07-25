@@ -1,17 +1,42 @@
-import { useState } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 
 import type { CreateHoldingPayload, Holding } from "../types/holdings";
 
+import "../styles/holding-form.css";
+import {
+  SUPPORTED_PORTFOLIO_CURRENCIES,
+  type PortfolioCurrency,
+} from "../../../constants/currencies";
+
 type HoldingFormProps = {
   holding?: Holding;
+  defaultCurrency?: string;
   isSubmitting: boolean;
   mutationError?: string;
   onSubmit: (payload: CreateHoldingPayload) => void;
   onCancel?: () => void;
 };
 
+const isSupportedCurrency = (value: string): value is PortfolioCurrency => {
+  return SUPPORTED_PORTFOLIO_CURRENCIES.some(
+    (currency) => currency.code === value,
+  );
+};
+
+const getInitialCurrency = (
+  holding: Holding | undefined,
+  defaultCurrency: string,
+): PortfolioCurrency => {
+  const currency =
+    holding?.purchase_currency?.trim().toUpperCase() ||
+    defaultCurrency.trim().toUpperCase();
+
+  return isSupportedCurrency(currency) ? currency : "USD";
+};
+
 const HoldingForm = ({
   holding,
+  defaultCurrency = "USD",
   isSubmitting,
   mutationError,
   onSubmit,
@@ -25,15 +50,26 @@ const HoldingForm = ({
     holding ? String(holding.average_buy_price) : "",
   );
 
-  const [purchasedAt, setPurchasedAt] = useState(holding?.purchased_at ?? "");
+  const [purchaseCurrency, setPurchaseCurrency] = useState<PortfolioCurrency>(
+    () => getInitialCurrency(holding, defaultCurrency),
+  );
+
+  const [purchasedAt, setPurchasedAt] = useState(
+    holding?.purchased_at ? holding.purchased_at.slice(0, 10) : "",
+  );
 
   const [validationError, setValidationError] = useState("");
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const clearValidationError = () => {
+    if (validationError) {
+      setValidationError("");
+    }
+  };
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const normalizedSymbol = symbol.trim().toUpperCase();
-
     const parsedShares = Number(shares);
     const parsedAverageBuyPrice = Number(averageBuyPrice);
 
@@ -58,8 +94,42 @@ const HoldingForm = ({
       symbol: normalizedSymbol,
       shares: parsedShares,
       average_buy_price: parsedAverageBuyPrice,
+      purchase_currency: purchaseCurrency,
       purchased_at: purchasedAt || null,
     });
+  };
+
+  const handleSymbolChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setSymbol(event.target.value.toUpperCase());
+    clearValidationError();
+  };
+
+  const handleSharesChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setShares(event.target.value);
+    clearValidationError();
+  };
+
+  const handleAverageBuyPriceChange = (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    setAverageBuyPrice(event.target.value);
+    clearValidationError();
+  };
+
+  const handlePurchaseCurrencyChange = (
+    event: ChangeEvent<HTMLSelectElement>,
+  ) => {
+    const currency = event.target.value;
+
+    if (isSupportedCurrency(currency)) {
+      setPurchaseCurrency(currency);
+    }
+
+    clearValidationError();
+  };
+
+  const handlePurchaseDateChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setPurchasedAt(event.target.value);
   };
 
   return (
@@ -69,13 +139,14 @@ const HoldingForm = ({
 
         <input
           id="holding-symbol"
+          name="holding-symbol"
           type="text"
           value={symbol}
           disabled={Boolean(holding) || isSubmitting}
-          maxLength={10}
+          maxLength={20}
           autoComplete="off"
           placeholder="AAPL"
-          onChange={(event) => setSymbol(event.target.value)}
+          onChange={handleSymbolChange}
         />
       </div>
 
@@ -84,13 +155,14 @@ const HoldingForm = ({
 
         <input
           id="holding-shares"
+          name="holding-shares"
           type="number"
           min="0.0001"
           step="0.0001"
           value={shares}
           disabled={isSubmitting}
           placeholder="10"
-          onChange={(event) => setShares(event.target.value)}
+          onChange={handleSharesChange}
         />
       </div>
 
@@ -99,31 +171,79 @@ const HoldingForm = ({
 
         <input
           id="holding-price"
+          name="holding-price"
           type="number"
           min="0.01"
           step="0.01"
           value={averageBuyPrice}
           disabled={isSubmitting}
           placeholder="185.50"
-          onChange={(event) => setAverageBuyPrice(event.target.value)}
+          onChange={handleAverageBuyPriceChange}
         />
       </div>
+
+      <div>
+        <label htmlFor="holding-purchase-currency">Purchase currency</label>
+
+        <select
+          id="holding-purchase-currency"
+          name="holding-purchase-currency"
+          value={purchaseCurrency}
+          disabled={isSubmitting}
+          onChange={handlePurchaseCurrencyChange}
+        >
+          {SUPPORTED_PORTFOLIO_CURRENCIES.map((currency) => (
+            <option key={currency.code} value={currency.code}>
+              {currency.code} — {currency.name}
+            </option>
+          ))}
+        </select>
+
+        <p className="metric-label">
+          Select the currency used when you purchased the stock.
+        </p>
+      </div>
+
+      {holding && (
+        <div className="holding-currency-summary">
+          <p>
+            <span>Stock market currency:</span>{" "}
+            <strong>{holding.native_currency}</strong>
+          </p>
+
+          {holding.purchase_currency !== holding.native_currency && (
+            <p className="metric-label">
+              FinSight will convert the purchase price from {purchaseCurrency}{" "}
+              to {holding.native_currency}.
+            </p>
+          )}
+        </div>
+      )}
 
       <div>
         <label htmlFor="holding-purchased-at">Purchase date</label>
 
         <input
           id="holding-purchased-at"
+          name="holding-purchased-at"
           type="date"
           value={purchasedAt}
           disabled={isSubmitting}
-          onChange={(event) => setPurchasedAt(event.target.value)}
+          onChange={handlePurchaseDateChange}
         />
       </div>
 
-      {validationError && <p className="negative">{validationError}</p>}
+      {validationError && (
+        <p className="negative" role="alert">
+          {validationError}
+        </p>
+      )}
 
-      {mutationError && <p className="negative">{mutationError}</p>}
+      {mutationError && (
+        <p className="negative" role="alert">
+          {mutationError}
+        </p>
+      )}
 
       <div className="form-actions">
         {onCancel && (

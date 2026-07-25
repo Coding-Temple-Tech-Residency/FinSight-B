@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import Logo from "../../../components/Logo";
@@ -34,6 +34,12 @@ const Home = ({ isOpen, openMenu, closeMenu }: HomeProps) => {
   const { user, isAuthenticated, loading, logout } = useAuth();
   const { isModalOpen, openModal } = useModal();
   const { isDesktop } = useBreakpoint();
+
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [isAuthenticated, loading, navigate]);
 
   const handleLoginClick = () => {
     setAuthMode("login");

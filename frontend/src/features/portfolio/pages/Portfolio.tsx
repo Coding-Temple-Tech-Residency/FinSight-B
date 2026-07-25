@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import EmptyCard from "../../../components/ui/EmptyCard";
 import ErrorCard from "../../../components/ui/ErrorCard";
@@ -6,15 +7,13 @@ import LoadingCard from "../../../components/ui/LoadingCard";
 
 import { useModal } from "../../../hooks/useModal";
 
-import DeletePortfolioDialog from "../components/DeletePortfolioDialog";
 import HoldingFormModal from "../components/HoldingFormModal";
 import HoldingsTable from "../components/HoldingsTable";
+import PortfolioAllocation from "../components/PortfolioAllocation";
+import PortfolioAnalytics from "../components/PortfolioAnalytics";
 import PortfolioFormModal from "../components/PortfolioFormModal";
-import PortfolioHeader from "../components/PortfolioHeader";
-import PortfolioSelector from "../components/PortfolioSelector";
-import PortfolioSummary from "../components/PortfolioSummary";
-
 import type { PortfolioFormValues } from "../components/PortfolioForm";
+import PortfolioSummary from "../components/PortfolioSummary";
 
 import {
   useCreateHolding,
@@ -32,30 +31,47 @@ import {
 
 import type { CreateHoldingPayload, Holding } from "../types/holdings";
 
+import AIInsightCard from "../../dashboard/components/AIInsightCard";
+
 import "../styles/portfolio.css";
 
 type PortfolioFormMode = "create" | "edit";
 
-const getMutationError = (error: unknown): string => {
+const getMutationError = (error: unknown) => {
   return error instanceof Error
     ? error.message
     : "Unable to complete the request.";
 };
 
+const getValidPortfolioId = (value: string | null): number | undefined => {
+  if (!value) {
+    return undefined;
+  }
+
+  const portfolioId = Number(value);
+
+  if (!Number.isInteger(portfolioId) || portfolioId <= 0) {
+    return undefined;
+  }
+
+  return portfolioId;
+};
+
 const Portfolio = () => {
   const { openModal, closeModal } = useModal();
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const portfolioIdFromUrl = getValidPortfolioId(searchParams.get("portfolio"));
+
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<
     number | undefined
-  >();
+  >(portfolioIdFromUrl);
 
   const [portfolioFormMode, setPortfolioFormMode] =
     useState<PortfolioFormMode>("create");
 
   const [editingHolding, setEditingHolding] = useState<Holding | undefined>();
-
-  const [isDeletePortfolioDialogOpen, setIsDeletePortfolioDialogOpen] =
-    useState(false);
 
   const {
     data: portfolios = [],
@@ -64,7 +80,19 @@ const Portfolio = () => {
     error: portfoliosErrorData,
   } = usePortfolios();
 
-  const activePortfolioId = selectedPortfolioId ?? portfolios[0]?.id;
+  const requestedPortfolioExists = portfolios.some(
+    (portfolio) => portfolio.id === portfolioIdFromUrl,
+  );
+
+  const selectedPortfolioExists = portfolios.some(
+    (portfolio) => portfolio.id === selectedPortfolioId,
+  );
+
+  const activePortfolioId = requestedPortfolioExists
+    ? portfolioIdFromUrl
+    : selectedPortfolioExists
+      ? selectedPortfolioId
+      : portfolios[0]?.id;
 
   const selectedPortfolio = portfolios.find(
     (portfolio) => portfolio.id === activePortfolioId,
@@ -89,31 +117,45 @@ const Portfolio = () => {
 
   const deleteHoldingMutation = useDeleteHolding(activePortfolioId);
 
+  const updatePortfolioUrl = (portfolioId?: number) => {
+    setSearchParams(
+      (currentParams) => {
+        const nextParams = new URLSearchParams(currentParams);
+
+        if (portfolioId) {
+          nextParams.set("portfolio", String(portfolioId));
+        } else {
+          nextParams.delete("portfolio");
+        }
+
+        return nextParams;
+      },
+      {
+        replace: true,
+      },
+    );
+  };
+
   const openCreatePortfolioModal = () => {
     createPortfolioMutation.reset();
-    updatePortfolioMutation.reset();
-
     setPortfolioFormMode("create");
-
     openModal("portfolio-form");
   };
 
-  const openEditPortfolioModal = () => {
+  const openRenamePortfolioModal = () => {
     if (!selectedPortfolio) {
       return;
     }
 
-    createPortfolioMutation.reset();
     updatePortfolioMutation.reset();
-
     setPortfolioFormMode("edit");
-
     openModal("portfolio-form");
   };
 
   const handlePortfolioSubmit = ({
     name,
     description,
+    currency,
   }: PortfolioFormValues) => {
     const trimmedName = name.trim();
 
@@ -126,12 +168,12 @@ const Portfolio = () => {
         {
           name: trimmedName,
           description,
-          currency: "USD",
+          currency,
         },
         {
           onSuccess: (portfolio) => {
             setSelectedPortfolioId(portfolio.id);
-
+            updatePortfolioUrl(portfolio.id);
             closeModal();
           },
         },
@@ -147,10 +189,10 @@ const Portfolio = () => {
     updatePortfolioMutation.mutate(
       {
         portfolioId: selectedPortfolio.id,
-
         payload: {
           name: trimmedName,
           description,
+          currency,
         },
       },
       {
@@ -161,48 +203,39 @@ const Portfolio = () => {
     );
   };
 
-  const handlePortfolioSelect = (portfolioId: number) => {
-    setSelectedPortfolioId(portfolioId);
-    setEditingHolding(undefined);
-
-    createHoldingMutation.reset();
-    updateHoldingMutation.reset();
-    deleteHoldingMutation.reset();
-  };
-
-  const openDeletePortfolioDialog = () => {
+  const handleDeletePortfolio = () => {
     if (!selectedPortfolio) {
       return;
     }
 
-    deletePortfolioMutation.reset();
+    const confirmed = window.confirm(
+      `Delete "${selectedPortfolio.name}" and all of its holdings?`,
+    );
 
-    setIsDeletePortfolioDialogOpen(true);
-  };
-
-  const closeDeletePortfolioDialog = () => {
-    if (deletePortfolioMutation.isPending) {
-      return;
-    }
-
-    deletePortfolioMutation.reset();
-
-    setIsDeletePortfolioDialogOpen(false);
-  };
-
-  const handleDeletePortfolio = () => {
-    if (!selectedPortfolio || deletePortfolioMutation.isPending) {
+    if (!confirmed) {
       return;
     }
 
     deletePortfolioMutation.mutate(selectedPortfolio.id, {
       onSuccess: () => {
         setSelectedPortfolioId(undefined);
-        setEditingHolding(undefined);
-
-        setIsDeletePortfolioDialogOpen(false);
+        updatePortfolioUrl();
       },
     });
+  };
+
+  const handlePortfolioChange = (
+    event: React.ChangeEvent<HTMLSelectElement>,
+  ) => {
+    const portfolioId = Number(event.target.value);
+
+    if (!Number.isInteger(portfolioId) || portfolioId <= 0) {
+      return;
+    }
+
+    setSelectedPortfolioId(portfolioId);
+    setEditingHolding(undefined);
+    updatePortfolioUrl(portfolioId);
   };
 
   const openAddHoldingModal = () => {
@@ -212,9 +245,7 @@ const Portfolio = () => {
 
     createHoldingMutation.reset();
     updateHoldingMutation.reset();
-
     setEditingHolding(undefined);
-
     openModal("holding-form");
   };
 
@@ -225,9 +256,7 @@ const Portfolio = () => {
 
     createHoldingMutation.reset();
     updateHoldingMutation.reset();
-
     setEditingHolding(holding);
-
     openModal("holding-form");
   };
 
@@ -240,12 +269,10 @@ const Portfolio = () => {
       updateHoldingMutation.mutate(
         {
           holdingId: editingHolding.id,
-
           payload: {
             shares: payload.shares,
-
             average_buy_price: payload.average_buy_price,
-
+            purchase_currency: payload.purchase_currency,
             purchased_at: payload.purchased_at,
           },
         },
@@ -274,15 +301,13 @@ const Portfolio = () => {
     }
 
     setEditingHolding(undefined);
-
     createHoldingMutation.reset();
     updateHoldingMutation.reset();
-
     closeModal();
   };
 
   const handleDeleteHolding = (holding: Holding) => {
-    if (!activePortfolioId || deleteHoldingMutation.isPending) {
+    if (!activePortfolioId) {
       return;
     }
 
@@ -304,15 +329,6 @@ const Portfolio = () => {
     : createHoldingMutation.isError
       ? getMutationError(createHoldingMutation.error)
       : undefined;
-
-  const portfolioFormMutationError =
-    portfolioFormMode === "create"
-      ? createPortfolioMutation.isError
-        ? getMutationError(createPortfolioMutation.error)
-        : undefined
-      : updatePortfolioMutation.isError
-        ? getMutationError(updatePortfolioMutation.error)
-        : undefined;
 
   const updatingHoldingId = updateHoldingMutation.isPending
     ? updateHoldingMutation.variables?.holdingId
@@ -341,12 +357,25 @@ const Portfolio = () => {
   return (
     <>
       <section className="portfolio-page">
-        <PortfolioHeader
-          isCreating={createPortfolioMutation.isPending}
-          onCreatePortfolio={openCreatePortfolioModal}
-        />
+        <header className="portfolio-page-header">
+          <div>
+            <h1>Portfolio</h1>
 
-        {createPortfolioMutation.isError && portfolioFormMode !== "create" && (
+            <p>Create and manage your investment portfolios and holdings.</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={openCreatePortfolioModal}
+            disabled={createPortfolioMutation.isPending}
+          >
+            {createPortfolioMutation.isPending
+              ? "Creating..."
+              : "Create Portfolio"}
+          </button>
+        </header>
+
+        {createPortfolioMutation.isError && (
           <ErrorCard
             message={getMutationError(createPortfolioMutation.error)}
           />
@@ -368,15 +397,58 @@ const Portfolio = () => {
           />
         ) : (
           <>
-            <PortfolioSelector
-              portfolios={portfolios}
-              selectedPortfolioId={activePortfolioId}
-              isUpdating={updatePortfolioMutation.isPending}
-              isDeleting={deletePortfolioMutation.isPending}
-              onSelect={handlePortfolioSelect}
-              onEdit={openEditPortfolioModal}
-              onDelete={openDeletePortfolioDialog}
-            />
+            <section className="portfolio-toolbar">
+              <div className="portfolio-selector-group">
+                <label htmlFor="portfolio-selector">Portfolio</label>
+
+                <select
+                  id="portfolio-selector"
+                  value={activePortfolioId ?? ""}
+                  onChange={handlePortfolioChange}
+                >
+                  {portfolios.map((portfolio) => (
+                    <option key={portfolio.id} value={portfolio.id}>
+                      {portfolio.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="portfolio-toolbar-actions">
+                <button
+                  type="button"
+                  onClick={openRenamePortfolioModal}
+                  disabled={
+                    !selectedPortfolio || updatePortfolioMutation.isPending
+                  }
+                >
+                  {updatePortfolioMutation.isPending ? "Saving..." : "Rename"}
+                </button>
+
+                <button
+                  type="button"
+                  className="danger-button"
+                  onClick={handleDeletePortfolio}
+                  disabled={
+                    !selectedPortfolio || deletePortfolioMutation.isPending
+                  }
+                >
+                  {deletePortfolioMutation.isPending ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </section>
+
+            {updatePortfolioMutation.isError && (
+              <ErrorCard
+                message={getMutationError(updatePortfolioMutation.error)}
+              />
+            )}
+
+            {deletePortfolioMutation.isError && (
+              <ErrorCard
+                message={getMutationError(deletePortfolioMutation.error)}
+              />
+            )}
 
             {selectedPortfolio && (
               <>
@@ -386,11 +458,30 @@ const Portfolio = () => {
                   isLoading={holdingsLoading}
                 />
 
+                <PortfolioAnalytics
+                  holdings={holdings}
+                  isLoading={holdingsLoading}
+                />
+
+                <section
+                  className="portfolio-overview-grid"
+                  aria-label={`${selectedPortfolio.name} portfolio overview`}
+                >
+                  <PortfolioAllocation
+                    holdings={holdings}
+                    portfolioCurrency={selectedPortfolio.currency}
+                    isLoading={holdingsLoading}
+                  />
+
+                  <AIInsightCard
+                    portfolioId={selectedPortfolio.id}
+                    portfolioLoading={holdingsLoading}
+                  />
+                </section>
+
                 <section className="holdings-section">
                   <div className="holdings-header">
                     <div>
-                      <p className="page-eyebrow">Assets</p>
-
                       <h2>Holdings</h2>
 
                       <p>Track the stocks held in {selectedPortfolio.name}.</p>
@@ -473,34 +564,33 @@ const Portfolio = () => {
         initialDescription={
           portfolioFormMode === "edit" ? selectedPortfolio?.description : ""
         }
+        initialCurrency={
+          portfolioFormMode === "edit" ? selectedPortfolio?.currency : "USD"
+        }
         isSubmitting={
           createPortfolioMutation.isPending || updatePortfolioMutation.isPending
         }
-        mutationError={portfolioFormMutationError}
+        mutationError={
+          portfolioFormMode === "create"
+            ? createPortfolioMutation.isError
+              ? getMutationError(createPortfolioMutation.error)
+              : undefined
+            : updatePortfolioMutation.isError
+              ? getMutationError(updatePortfolioMutation.error)
+              : undefined
+        }
         onSubmit={handlePortfolioSubmit}
       />
 
       <HoldingFormModal
         holding={editingHolding}
+        defaultCurrency={selectedPortfolio?.currency ?? "USD"}
         isSubmitting={
           createHoldingMutation.isPending || updateHoldingMutation.isPending
         }
         mutationError={holdingMutationError}
         onSubmit={handleHoldingSubmit}
         onClose={handleCloseHoldingModal}
-      />
-
-      <DeletePortfolioDialog
-        isOpen={isDeletePortfolioDialogOpen}
-        portfolioName={selectedPortfolio?.name}
-        isDeleting={deletePortfolioMutation.isPending}
-        errorMessage={
-          deletePortfolioMutation.isError
-            ? getMutationError(deletePortfolioMutation.error)
-            : undefined
-        }
-        onClose={closeDeletePortfolioDialog}
-        onConfirm={handleDeletePortfolio}
       />
     </>
   );

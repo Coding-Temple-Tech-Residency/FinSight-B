@@ -3,10 +3,11 @@ import { Outlet } from "react-router-dom";
 
 import Header from "../components/Header";
 import MobileDashboardNav from "../components/MobileDashboardNav";
-import SearchForm from "../components/SearchForm";
+
 import { useBreakpoint } from "../hooks/useBreakingPoint";
 
 import "./DashboardLayout.css";
+import SearchForm from "../features/search/components/SearchForm";
 
 interface DashboardLayoutProps {
   closeMenu: () => void;
