@@ -1,4 +1,3 @@
-
 import { apiClient } from "./apiClient";
 
 import type { MarketHistory } from "../features/market/types/market";
@@ -74,7 +73,7 @@ const normalizeStockSearchItem = (
     company_name: companyName,
     asset_type: item.asset_type ?? null,
     exchange: item.exchange ?? null,
-    sector: item.sector ?? null,
+    // sector: item.sector ?? null,
     industry: item.industry ?? null,
     currency: item.currency?.trim().toUpperCase() || null,
     latest_price: item.latest_price ?? null,
