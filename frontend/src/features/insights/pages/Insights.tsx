@@ -272,9 +272,8 @@ const Insights = () => {
             gap-2
             rounded-xl
             bg-(--bg-secondary)
-            p-1
             sm:w-fit
-            sm:min-w-80
+            sm:min-w-80 overflow-auto
           "
           role="tablist"
           aria-label="AI insight type"
@@ -285,8 +284,8 @@ const Insights = () => {
             aria-selected={generationMode === "portfolio"}
             className={
               generationMode === "portfolio"
-                ? "bg-(--accent-primary) text-white"
-                : "bg-transparent text-(--text-secondary)"
+                ? "bg-(--accent-primary) text-white py-1 px-4"
+                : "bg-transparent text-(--text-secondary) py-1 px-4"
             }
             disabled={isGenerating}
             onClick={() => handleGenerationModeChange("portfolio")}
@@ -300,8 +299,8 @@ const Insights = () => {
             aria-selected={generationMode === "stock"}
             className={
               generationMode === "stock"
-                ? "bg-(--accent-primary) text-white"
-                : "bg-transparent text-(--text-secondary)"
+                ? "bg-(--accent-primary) text-white py-1 px-4"
+                : "bg-transparent text-(--text-secondary) py-1 px-4"
             }
             disabled={isGenerating}
             onClick={() => handleGenerationModeChange("stock")}
