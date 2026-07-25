@@ -23,7 +23,6 @@ router = APIRouter(
 )
 
 
-
 @router.get(
     "/trending",
     response_model=TrendingStocksResponse,

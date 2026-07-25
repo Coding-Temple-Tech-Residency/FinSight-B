@@ -1,14 +1,15 @@
 import os
 import time
-import requests
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
-from threading import Lock
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
+import requests
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from models.market_data import MarketData
 from models.stock import Stock
@@ -19,159 +20,730 @@ from schemas.trending import (
     TrendingStocksResponse,
 )
 
+from services.finnhub_service import (
+    fetch_finnhub_company_profile,
+    fetch_finnhub_quote,
+    search_finnhub_symbols,
+)
 
 
+# =========================================================================
+# EXTERNAL PROVIDER CONFIGURATION
+# =========================================================================
+
+# Alpha Vantage remains responsible only for:
+#
+# - historical daily stock candles;
+# - top gainers;
+# - top losers;
+# - most actively traded stocks.
+#
+# Company search, company metadata, logos, native currency, exchange,
+# industry, and current quotes are now retrieved from Finnhub.
 ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
-BASE_URL = "https://www.alphavantage.co/query"
 
-# -------------------------------------------------------------------------
-# TRENDING-MARKET CACHE
-# -------------------------------------------------------------------------
-#
-# Alpha Vantage's free plan has a very small daily request allowance.
-# The trending response should therefore not be fetched every time the
-# frontend refreshes, rerenders, changes routes, or opens a new browser tab.
-#
-# This in-memory cache is suitable for local development and a single
-# backend process.
-#
-# Important production note:
-# - It is cleared whenever Uvicorn reloads.
-# - It is not shared between multiple backend containers.
-#
-# For production, this can later be replaced by Redis or a database table.
-_trending_cache: dict[str, object] = {
-    "data": None,
-    "expires_at": 0.0,
-}
+ALPHA_VANTAGE_BASE_URL = (
+    "https://www.alphavantage.co/query"
+)
 
-# Prevent two simultaneous requests from both calling Alpha Vantage before
-# the first one has had time to populate the cache.
-_trending_cache_lock = Lock()
 
-# The default Alpha Vantage response is generally end-of-day information,
-# so a one-hour cache is already conservative.
+# =========================================================================
+# CACHE AND REFRESH CONFIGURATION
+# =========================================================================
+
+# A Finnhub quote is considered fresh for this amount of time.
 #
-# You could safely increase this to several hours if necessary.
-TRENDING_CACHE_SECONDS = 60 * 60
+# Reopening the same stock during this period will use the stored price
+# instead of making another Finnhub request.
+STOCK_QUOTE_CACHE_DURATION = timedelta(minutes=15)
 
-def fetch_trending_stocks(
-    db: Session,
-    force_refresh: bool = False,
-) -> TrendingStocksResponse:
+
+# Maximum number of complete stocks returned and saved during one search.
+#
+# A complete search result normally requires:
+#
+#     1 Finnhub search request
+#     1 Finnhub company-profile request per result
+#     1 Finnhub quote request per result
+#
+# Therefore, a search returning ten complete results may require:
+#
+#     1 + 10 + 10 = 21 Finnhub requests
+#
+# Limiting the result count prevents one broad search from producing
+# hundreds of provider calls.
+FULL_SEARCH_RESULT_LIMIT = 10
+
+
+# Small pause between processing Finnhub search matches.
+#
+# This is intentionally conservative. If your Finnhub request helper
+# already enforces rate limiting globally, this delay may be reduced or
+# removed.
+FINNHUB_SEARCH_REQUEST_DELAY_SECONDS = 1.05
+
+
+# =========================================================================
+# GENERAL STOCK HELPERS
+# =========================================================================
+
+
+def normalize_symbol(symbol: str) -> str:
     """
-    Returns trending stocks from PostgreSQL when available.
+    Cleans and normalizes a stock symbol.
 
-    Alpha Vantage is called only when:
-    - no snapshot exists; or
-    - force_refresh is explicitly requested.
+    Examples:
+        " aapl " -> "AAPL"
+        "msft"   -> "MSFT"
+
+    Raises:
+        HTTPException:
+            When the symbol is empty after trimming whitespace.
     """
 
-    if not force_refresh:
-        saved_snapshot = get_latest_trending_snapshot(db)
+    clean_symbol = symbol.strip().upper()
 
-        if saved_snapshot is not None:
-            return saved_snapshot
-
-    params = {
-        "function": "TOP_GAINERS_LOSERS",
-        "apikey": ALPHA_VANTAGE_API_KEY,
-    }
-
-    try:
-        response = requests.get(
-            BASE_URL,
-            params=params,
-            timeout=20,
+    if not clean_symbol:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Stock symbol cannot be empty",
         )
 
-        response.raise_for_status()
-        data = response.json()
+    return clean_symbol
 
-    except requests.RequestException as error:
+
+def decimal_or_none(value) -> Decimal | None:
+    """
+    Safely converts a provider value into Decimal.
+
+    Returns None when:
+    - the value is missing;
+    - the value is empty;
+    - the value cannot be converted;
+    - the numeric value is zero or negative.
+
+    Finnhub commonly returns zero-valued quote fields when no usable
+    quote is available for a symbol.
+    """
+
+    if value in (None, ""):
+        return None
+
+    try:
+        decimal_value = Decimal(str(value))
+
+    except (InvalidOperation, ValueError, TypeError):
+        return None
+
+    if decimal_value <= 0:
+        return None
+
+    return decimal_value
+
+
+def stock_profile_is_complete(
+    stock: Stock,
+) -> bool:
+    """
+    Determines whether the important Finnhub profile fields are stored.
+
+    Finnhub Company Profile 2 provides:
+    - company name;
+    - exchange;
+    - native currency;
+    - Finnhub industry;
+    - company logo.
+
+    Finnhub does not provide a separate sector field through Profile 2.
+    For that reason, `sector` is not required for Finnhub profile
+    completeness.
+    """
+
+    return all(
+        (
+            stock.company_name,
+            stock.company_name != stock.symbol,
+            stock.exchange,
+            stock.currency,
+            stock.industry,
+        )
+    )
+
+
+def stock_quote_is_fresh(
+    stock: Stock,
+) -> bool:
+    """
+    Returns True when the stock has a valid recently refreshed quote.
+    """
+
+    if stock.latest_price is None:
+        return False
+
+    if stock.last_refreshed_at is None:
+        return False
+
+    refreshed_at = stock.last_refreshed_at
+
+    # PostgreSQL timezone-aware columns should normally return aware
+    # datetimes. This safeguard handles older naive rows.
+    if refreshed_at.tzinfo is None:
+        refreshed_at = refreshed_at.replace(
+            tzinfo=timezone.utc
+        )
+
+    expiration_time = (
+        datetime.now(timezone.utc)
+        - STOCK_QUOTE_CACHE_DURATION
+    )
+
+    return refreshed_at >= expiration_time
+
+
+def apply_finnhub_profile_to_stock(
+    stock: Stock,
+    profile: dict,
+) -> None:
+    """
+    Maps Finnhub Company Profile 2 data into the correct Stock columns.
+
+    Finnhub-to-database field mapping:
+
+        profile["name"]
+            -> stock.company_name
+
+        profile["exchange"]
+            -> stock.exchange
+
+        profile["currency"]
+            -> stock.currency
+
+        profile["finnhubIndustry"]
+            -> stock.industry
+
+        profile["logo"]
+            -> stock.company_logo_url
+
+    Important:
+        Finnhub Profile 2 does not provide a separate sector field.
+        Existing sector information is therefore preserved rather than
+        replaced with an inaccurate value.
+    """
+
+    company_name = str(
+        profile.get("name") or ""
+    ).strip()
+
+    exchange = str(
+        profile.get("exchange") or ""
+    ).strip()
+
+    currency = str(
+        profile.get("currency") or ""
+    ).strip().upper()
+
+    industry = str(
+        profile.get("finnhubIndustry") or ""
+    ).strip()
+
+    logo_url = str(
+        profile.get("logo") or ""
+    ).strip()
+
+    if company_name:
+        stock.company_name = company_name
+
+    if exchange:
+        stock.exchange = exchange
+
+    if currency:
+        stock.currency = currency
+
+    if industry:
+        stock.industry = industry
+
+    if logo_url:
+        stock.company_logo_url = logo_url
+
+
+def apply_finnhub_quote_to_stock(
+    stock: Stock,
+    quote: dict,
+) -> None:
+    """
+    Maps a Finnhub quote into the Stock price fields.
+
+    Finnhub quote fields:
+
+        c
+            Current price.
+
+        t
+            Provider Unix timestamp.
+
+    When Finnhub does not provide a usable timestamp, the current UTC
+    time is used as the refresh timestamp.
+    """
+
+    latest_price = decimal_or_none(
+        quote.get("c")
+    )
+
+    if latest_price is None:
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Unable to retrieve trending market information.",
-        ) from error
-
-    if "Information" in data or "Note" in data:
-        # If the provider is unavailable but a saved snapshot exists,
-        # return the saved data instead of failing the frontend.
-        saved_snapshot = get_latest_trending_snapshot(db)
-
-        if saved_snapshot is not None:
-            return saved_snapshot
-
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=(
-                "Trending market information is temporarily unavailable."
+                f"A current market quote is not available for "
+                f"{stock.symbol}"
             ),
         )
 
-    save_trending_snapshot(
-        db=db,
-        data=data,
-    )
+    provider_timestamp = quote.get("t")
 
-    return TrendingStocksResponse(
-        last_updated=data.get("last_updated"),
-        metadata=data.get("metadata"),
-        top_gainers=[
-            TrendingStockSchema(**item)
-            for item in data.get("top_gainers", [])
-        ],
-        top_losers=[
-            TrendingStockSchema(**item)
-            for item in data.get("top_losers", [])
-        ],
-        most_actively_traded=[
-            TrendingStockSchema(**item)
-            for item in data.get(
-                "most_actively_traded",
-                [],
+    if provider_timestamp:
+        try:
+            refreshed_at = datetime.fromtimestamp(
+                int(provider_timestamp),
+                tz=timezone.utc,
             )
-        ],
+
+        except (TypeError, ValueError, OSError):
+            refreshed_at = datetime.now(timezone.utc)
+
+    else:
+        refreshed_at = datetime.now(timezone.utc)
+
+    stock.latest_price = latest_price
+    stock.last_refreshed_at = refreshed_at
+
+
+def get_stock_from_database(
+    db: Session,
+    symbol: str,
+) -> Stock | None:
+    """
+    Retrieves one stock without contacting any external provider.
+    """
+
+    clean_symbol = normalize_symbol(symbol)
+
+    return (
+        db.query(Stock)
+        .filter(Stock.symbol == clean_symbol)
+        .first()
     )
 
-def fetch_daily_history(symbol: str) -> dict:
+def get_or_create_stock_row(
+    db: Session,
+    symbol: str,
+) -> Stock:
+    """
+    Returns the existing Stock row or safely creates it.
+
+    This helper handles concurrent requests such as:
+
+        GET /api/stocks/AAPL
+        GET /api/stocks/AAPL/history
+
+    Both requests may arrive before either transaction commits. The
+    database unique constraint decides which request creates the row.
+    The losing request catches the duplicate error and reloads the
+    already-created row.
+    """
+
+    clean_symbol = normalize_symbol(symbol)
+
+    existing_stock = (
+        db.query(Stock)
+        .filter(Stock.symbol == clean_symbol)
+        .first()
+    )
+
+    if existing_stock is not None:
+        return existing_stock
+
+    candidate_stock = Stock(
+        symbol=clean_symbol,
+        company_name=clean_symbol,
+        exchange=None,
+        sector=None,
+        industry=None,
+        currency=None,
+        company_logo_url=None,
+        latest_price=None,
+        last_refreshed_at=None,
+    )
+
+    try:
+        # A nested transaction creates a savepoint.
+        #
+        # If another request inserts the same symbol first, only this
+        # savepoint is rolled back instead of invalidating the entire
+        # SQLAlchemy session.
+        with db.begin_nested():
+            db.add(candidate_stock)
+            db.flush()
+
+        return candidate_stock
+
+    except IntegrityError:
+        # Another request inserted the same symbol between our SELECT
+        # and INSERT.
+        db.expire_all()
+
+        existing_stock = (
+            db.query(Stock)
+            .filter(Stock.symbol == clean_symbol)
+            .first()
+        )
+
+        if existing_stock is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"{clean_symbol} was created by another request, "
+                    "but the record could not be loaded."
+                ),
+            )
+
+        return existing_stock
+
+# =========================================================================
+# FINNHUB COMPANY AND QUOTE INTEGRATION
+# =========================================================================
+
+def get_or_update_stock(
+    db: Session,
+    symbol: str,
+    time_series: dict | None = None,
+    force_quote_refresh: bool = False,
+) -> Stock:
+    """
+    Retrieves, creates, or enriches one stock safely, even when multiple
+    requests for the same symbol arrive simultaneously.
+    """
+
+    clean_symbol = normalize_symbol(symbol)
+
+    stock = get_or_create_stock_row(
+        db=db,
+        symbol=clean_symbol,
+    )
+
+    needs_profile = not stock_profile_is_complete(stock)
+
+    needs_quote = (
+        force_quote_refresh
+        or not stock_quote_is_fresh(stock)
+    )
+
+    try:
+        if needs_profile:
+            profile = fetch_finnhub_company_profile(
+                clean_symbol
+            )
+
+            apply_finnhub_profile_to_stock(
+                stock=stock,
+                profile=profile,
+            )
+
+        if time_series:
+            latest_timestamp = max(time_series.keys())
+            latest_values = time_series[latest_timestamp]
+
+            latest_close = decimal_or_none(
+                latest_values.get("4. close")
+            )
+
+            if latest_close is not None:
+                stock.latest_price = latest_close
+                stock.last_refreshed_at = datetime.now(
+                    timezone.utc
+                )
+
+        elif needs_quote:
+            quote = fetch_finnhub_quote(
+                clean_symbol
+            )
+
+            apply_finnhub_quote_to_stock(
+                stock=stock,
+                quote=quote,
+            )
+
+        if not stock_profile_is_complete(stock):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(
+                    f"Complete company information is not "
+                    f"available for {clean_symbol}"
+                ),
+            )
+
+        if stock.latest_price is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(
+                    f"Current price information is not "
+                    f"available for {clean_symbol}"
+                ),
+            )
+
+        db.commit()
+        db.refresh(stock)
+
+        return stock
+
+    except Exception:
+        db.rollback()
+        raise
+
+def build_full_stock_search_result(
+    stock: Stock,
+    original_match: dict,
+) -> dict:
+    """
+    Builds one complete search response using the saved Stock record.
+
+    All returned rows have:
+    - a real company name;
+    - exchange;
+    - native currency;
+    - industry;
+    - latest price.
+
+    Sector may remain null because Finnhub Profile 2 does not expose a
+    distinct sector field.
+    """
+
+    return {
+        "id": stock.id,
+        "symbol": stock.symbol,
+        "display_symbol": (
+            original_match.get("display_symbol")
+            or stock.symbol
+        ),
+        "name": stock.company_name,
+        "company_name": stock.company_name,
+        "asset_type": original_match.get(
+            "asset_type"
+        ),
+        "exchange": stock.exchange,
+        "sector": stock.sector,
+        "industry": stock.industry,
+        "currency": stock.currency,
+        "logo_url": stock.company_logo_url,
+        "company_logo_url": stock.company_logo_url,
+        "latest_price": (
+            str(stock.latest_price)
+            if stock.latest_price is not None
+            else None
+        ),
+        "last_refreshed_at": (
+            stock.last_refreshed_at.isoformat()
+            if stock.last_refreshed_at
+            else None
+        ),
+        "is_enriched": True,
+    }
+
+
+def search_stock_symbols(
+    db: Session,
+    keywords: str,
+) -> list[dict]:
+    """
+    Searches Finnhub and saves only fully enriched Stock records.
+
+    Workflow:
+        1. Make one Finnhub symbol-search request.
+        2. Deduplicate results by complete provider symbol.
+        3. Limit processing to the first ten matches.
+        4. Retrieve the Finnhub company profile for each result.
+        5. Retrieve the Finnhub current quote for each result.
+        6. Save or update the complete Stock row.
+        7. Return only results that were successfully enriched.
+
+    No partial Stock rows are created by this function.
+
+    A symbol is omitted from the response when Finnhub cannot provide:
+        - a complete company profile; or
+        - a usable current quote.
+    """
+
+    clean_keywords = keywords.strip()
+
+    if len(clean_keywords) < 2:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Enter at least two characters",
+        )
+
+    raw_matches = search_finnhub_symbols(
+        keywords=clean_keywords,
+    )
+
+    # Deduplicate by Finnhub's complete provider symbol.
+    #
+    # The complete symbol may include an exchange suffix, allowing
+    # listings from different markets to coexist.
+    unique_matches: dict[str, dict] = {}
+
+    for match in raw_matches:
+        symbol = str(
+            match.get("symbol") or ""
+        ).strip().upper()
+
+        if not symbol:
+            continue
+
+        if symbol not in unique_matches:
+            unique_matches[symbol] = match
+
+    selected_matches = list(
+        unique_matches.values()
+    )[:FULL_SEARCH_RESULT_LIMIT]
+
+    completed_results: list[dict] = []
+
+    for index, match in enumerate(
+        selected_matches
+    ):
+        symbol = str(
+            match.get("symbol") or ""
+        ).strip().upper()
+
+        if not symbol:
+            continue
+
+        try:
+            # Search results must be complete. Therefore, force a current
+            # Finnhub quote rather than returning a stale or empty value.
+            stock = get_or_update_stock(
+                db=db,
+                symbol=symbol,
+                force_quote_refresh=True,
+            )
+
+        except HTTPException as error:
+            # Do not create or return partial results.
+            #
+            # Certain symbols returned by search may be:
+            # - warrants;
+            # - funds;
+            # - indexes;
+            # - inactive instruments;
+            # - foreign instruments without free quote access.
+            print(
+                "Skipping incomplete Finnhub search result:",
+                symbol,
+                error.detail,
+            )
+
+            continue
+
+        completed_results.append(
+            build_full_stock_search_result(
+                stock=stock,
+                original_match=match,
+            )
+        )
+
+        # Spread calls during multi-result search enrichment.
+        if index < len(selected_matches) - 1:
+            time.sleep(
+                FINNHUB_SEARCH_REQUEST_DELAY_SECONDS
+            )
+
+    if not completed_results:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=(
+                "No complete stock results were available "
+                "for this search"
+            ),
+        )
+
+    return completed_results
+
+
+# =========================================================================
+# ALPHA VANTAGE DAILY MARKET HISTORY
+# =========================================================================
+
+
+def fetch_daily_history(
+    symbol: str,
+) -> dict:
+    """
+    Fetches compact daily candle history from Alpha Vantage.
+
+    This is the only regular stock-history operation in this service that
+    still consumes an Alpha Vantage request.
+    """
+
+    clean_symbol = normalize_symbol(symbol)
+
     if not ALPHA_VANTAGE_API_KEY:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Alpha Vantage API key is not configured",
+            status_code=(
+                status.HTTP_500_INTERNAL_SERVER_ERROR
+            ),
+            detail=(
+                "Alpha Vantage API key is not configured"
+            ),
         )
 
     params = {
         "function": "TIME_SERIES_DAILY",
-        "symbol": symbol.strip().upper(),
+        "symbol": clean_symbol,
         "outputsize": "compact",
         "apikey": ALPHA_VANTAGE_API_KEY,
     }
 
     for attempt in range(3):
-        print(
-            "ALPHA VANTAGE REQUEST:",
-            params.get("function"),
-            params.get("symbol"),
-        )
+
         try:
             response = requests.get(
-                BASE_URL,
+                ALPHA_VANTAGE_BASE_URL,
                 params=params,
                 timeout=20,
             )
+
             response.raise_for_status()
             data = response.json()
+
             break
+
+        except requests.Timeout as error:
+            if attempt < 2:
+                time.sleep(1.5)
+                continue
+
+            raise HTTPException(
+                status_code=(
+                    status.HTTP_504_GATEWAY_TIMEOUT
+                ),
+                detail=(
+                    "Alpha Vantage took too long to respond"
+                ),
+            ) from error
 
         except requests.RequestException as error:
             if attempt < 2:
                 time.sleep(1.5)
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail="Unable to contact Alpha Vantage after multiple attempts",
-                ) from error
+                continue
+
+            raise HTTPException(
+                status_code=(
+                    status.HTTP_502_BAD_GATEWAY
+                ),
+                detail=(
+                    "Unable to contact Alpha Vantage "
+                    "after multiple attempts"
+                ),
+            ) from error
 
     if "Error Message" in data:
         raise HTTPException(
@@ -180,12 +752,22 @@ def fetch_daily_history(symbol: str) -> dict:
         )
 
     if "Note" in data or "Information" in data:
+
+
         raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=data.get("Note") or data.get("Information"),
+            status_code=(
+                status.HTTP_429_TOO_MANY_REQUESTS
+            ),
+            detail=(
+                "Historical market data is temporarily "
+                "unavailable because the provider request "
+                "limit was reached."
+            ),
         )
 
-    time_series = data.get("Time Series (Daily)")
+    time_series = data.get(
+        "Time Series (Daily)"
+    )
 
     if not time_series:
         raise HTTPException(
@@ -195,227 +777,79 @@ def fetch_daily_history(symbol: str) -> dict:
 
     return time_series
 
-def fetch_company_overview(symbol: str) -> dict:
-    """
-    Fetches descriptive company metadata from Alpha Vantage.
-
-    The response may include:
-    - company name;
-    - exchange;
-    - quote currency;
-    - sector;
-    - industry.
-    """
-
-    if not ALPHA_VANTAGE_API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Alpha Vantage API key is not configured",
-        )
-
-    params = {
-        "function": "OVERVIEW",
-        "symbol": symbol.strip().upper(),
-        "apikey": ALPHA_VANTAGE_API_KEY,
-    }
-
-    try:
-        print(
-    "ALPHA VANTAGE REQUEST:",
-    params.get("function"),
-    params.get("symbol"),
-)   
-
-        response = requests.get(
-            BASE_URL,
-            params=params,
-            timeout=20,
-        )
-        response.raise_for_status()
-        data = response.json()
-
-    except requests.RequestException as error:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Unable to retrieve company information",
-        ) from error
-
-    if "Note" in data or "Information" in data:
-        print(
-            "Alpha Vantage overview rate-limit response:",
-            data.get("Note") or data.get("Information"),
-        )
-
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=(
-                "Company information is temporarily unavailable because "
-                "the market data provider request limit was reached."
-            ),
-        )
-
-    if "Error Message" in data:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Invalid stock symbol",
-        )
-
-    if not data or not data.get("Symbol"):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Company information was not found",
-        )
-
-    return data
-
-def get_or_update_stock(
-    db: Session,
-    symbol: str,
-    time_series: dict | None = None,
-) -> Stock:
-    """
-    Returns cached stock data whenever it is complete.
-
-    Alpha Vantage is called only when:
-    - the stock does not exist;
-    - its price is missing; or
-    - its descriptive metadata is missing.
-    """
-
-    symbol = symbol.strip().upper()
-
-    stock = (
-        db.query(Stock)
-        .filter(Stock.symbol == symbol)
-        .first()
-    )
-
-    needs_price = (
-        stock is None
-        or stock.latest_price is None
-    )
-
-    needs_overview = (
-        stock is None
-        or stock.company_name in (None, "", symbol)
-        or stock.exchange is None
-        or stock.sector is None
-        or stock.industry is None
-        or stock.currency is None
-    )
-
-    # Only fetch daily history when no cached price exists.
-    if needs_price:
-        if time_series is None:
-            time_series = fetch_daily_history(symbol)
-
-        latest_timestamp = max(time_series.keys())
-        latest_values = time_series[latest_timestamp]
-        latest_price = Decimal(latest_values["4. close"])
-    else:
-        latest_price = stock.latest_price
-
-    # Only fetch descriptive metadata when it is missing.
-    if needs_overview:
-        overview = fetch_company_overview(symbol)
-    else:
-        overview = None
-
-    if stock is None:
-        stock = Stock(
-            symbol=symbol,
-            company_name=overview.get("Name") or symbol,
-            exchange=overview.get("Exchange"),
-            sector=overview.get("Sector"),
-            industry=overview.get("Industry"),
-            currency=overview.get("Currency") or "USD",
-            company_logo_url=None,
-            latest_price=latest_price,
-            last_refreshed_at=datetime.now(timezone.utc),
-        )
-
-        db.add(stock)
-
-    else:
-        if needs_price:
-            stock.latest_price = latest_price
-            stock.last_refreshed_at = datetime.now(timezone.utc)
-
-        if overview:
-            stock.company_name = (
-                overview.get("Name")
-                or stock.company_name
-            )
-            stock.exchange = (
-                overview.get("Exchange")
-                or stock.exchange
-            )
-            stock.sector = (
-                overview.get("Sector")
-                or stock.sector
-            )
-            stock.industry = (
-                overview.get("Industry")
-                or stock.industry
-            )
-            stock.currency = (
-                overview.get("Currency")
-                or stock.currency
-                or "USD"
-            )
-
-    try:
-        db.commit()
-        db.refresh(stock)
-        return stock
-
-    except Exception:
-        db.rollback()
-        raise
 
 def save_daily_history(
     db: Session,
     stock: Stock,
     time_series: dict,
 ) -> list[MarketData]:
-    saved_records = []
+    """
+    Saves daily Alpha Vantage candles that do not already exist.
 
-    for timestamp, values in time_series.items():
-        price_timestamp = datetime.fromisoformat(timestamp)
+    Existing rows are preserved, preventing duplicate daily records.
+    """
 
-        existing_record = (
-            db.query(MarketData)
-            .filter(
-                MarketData.stock_id == stock.id,
-                MarketData.timeframe == "daily",
-                MarketData.price_timestamp == price_timestamp,
+    saved_records: list[MarketData] = []
+
+    try:
+        for timestamp, values in (
+            time_series.items()
+        ):
+            price_timestamp = (
+                datetime.fromisoformat(timestamp)
             )
-            .first()
-        )
 
-        if existing_record:
-            continue
+            existing_record = (
+                db.query(MarketData)
+                .filter(
+                    MarketData.stock_id
+                    == stock.id,
+                    MarketData.timeframe
+                    == "daily",
+                    MarketData.price_timestamp
+                    == price_timestamp,
+                )
+                .first()
+            )
 
-        market_data = MarketData(
-            stock_id=stock.id,
-            timeframe="daily",
-            open_price=Decimal(values["1. open"]),
-            high_price=Decimal(values["2. high"]),
-            low_price=Decimal(values["3. low"]),
-            close_price=Decimal(values["4. close"]),
-            volume=int(values["5. volume"]),
-            price_timestamp=price_timestamp,
-        )
+            if existing_record:
+                continue
 
-        db.add(market_data)
-        saved_records.append(market_data)
+            market_data = MarketData(
+                stock_id=stock.id,
+                timeframe="daily",
+                open_price=Decimal(
+                    values["1. open"]
+                ),
+                high_price=Decimal(
+                    values["2. high"]
+                ),
+                low_price=Decimal(
+                    values["3. low"]
+                ),
+                close_price=Decimal(
+                    values["4. close"]
+                ),
+                volume=int(
+                    values["5. volume"]
+                ),
+                price_timestamp=price_timestamp,
+            )
 
-    db.commit()
+            db.add(market_data)
+            saved_records.append(market_data)
 
-    for record in saved_records:
-        db.refresh(record)
+        db.commit()
 
-    return saved_records
+        for record in saved_records:
+            db.refresh(record)
+
+        return saved_records
+
+    except Exception:
+        db.rollback()
+        raise
+
 
 def get_cached_market_history(
     db: Session,
@@ -423,10 +857,7 @@ def get_cached_market_history(
     timeframe: str,
 ) -> list[MarketData]:
     """
-    Returns stored market history for a stock and timeframe.
-
-    Keeping this query in one helper avoids repeating the same
-    filtering and ordering logic throughout the service.
+    Returns stored market history ordered from oldest to newest.
     """
 
     return (
@@ -435,38 +866,39 @@ def get_cached_market_history(
             MarketData.stock_id == stock_id,
             MarketData.timeframe == timeframe,
         )
-        .order_by(MarketData.price_timestamp.asc())
+        .order_by(
+            MarketData.price_timestamp.asc()
+        )
         .all()
     )
+
 
 def refresh_market_data(
     db: Session,
     symbol: str,
 ) -> Stock:
     """
-    Fetches current daily market history from Alpha Vantage,
-    creates or updates the related Stock record, and stores any
-    new MarketData records.
+    Refreshes daily historical data for one symbol.
 
-    This function centralizes the full external refresh workflow so
-    Stocks, Market Data, AI Insights, Holdings, and Watchlist features
-    can reuse the same logic.
+    Workflow:
+        1. Fetch Alpha Vantage daily candles once.
+        2. Use the newest closing price to update the Stock.
+        3. Use Finnhub only when company metadata is missing.
+        4. Save new historical candles.
     """
 
-    clean_symbol = symbol.strip().upper()
+    clean_symbol = normalize_symbol(symbol)
 
-    # Retrieve the most recent daily time series from Alpha Vantage.
-    time_series = fetch_daily_history(clean_symbol)
+    time_series = fetch_daily_history(
+        clean_symbol
+    )
 
-    # Create the Stock if it does not exist, or update its latest
-    # closing price and last-refreshed timestamp if it already exists.
     stock = get_or_update_stock(
         db=db,
         symbol=clean_symbol,
         time_series=time_series,
     )
 
-    # Store only market records that are not already in the database.
     save_daily_history(
         db=db,
         stock=stock,
@@ -475,80 +907,90 @@ def refresh_market_data(
 
     return stock
 
+
 def get_stock_market_history(
     db: Session,
     symbol: str,
     timeframe: str = "daily",
 ) -> list[MarketData]:
     """
-    Returns historical market data for a stock.
+    Returns historical market data from PostgreSQL when available.
 
-    The database is checked first. Alpha Vantage is only called when
-    the stock or its requested market history is missing.
+    Alpha Vantage is contacted only when no saved history exists.
     """
 
-    clean_symbol = symbol.strip().upper()
+    clean_symbol = normalize_symbol(symbol)
 
-    # FinSight currently supports daily market history only.
     if timeframe != "daily":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only the daily timeframe is currently supported",
+            detail=(
+                "Only the daily timeframe is "
+                "currently supported"
+            ),
         )
 
-    # Find an existing stock record without calling the external API.
-    stock = (
-        db.query(Stock)
-        .filter(Stock.symbol == clean_symbol)
-        .first()
+    stock = get_stock_from_database(
+        db=db,
+        symbol=clean_symbol,
     )
 
-    if stock:
-        # Return cached data immediately when available.
-        existing_history = get_cached_market_history(
-            db=db,
-            stock_id=stock.id,
-            timeframe=timeframe,
+    if stock is not None:
+        existing_history = (
+            get_cached_market_history(
+                db=db,
+                stock_id=stock.id,
+                timeframe=timeframe,
+            )
         )
 
         if existing_history:
             return existing_history
 
-    # The stock or its history is missing, so fetch and persist it.
     stock = refresh_market_data(
         db=db,
         symbol=clean_symbol,
     )
 
-    # Return the newly stored data using the same reusable query helper.
     return get_cached_market_history(
         db=db,
         stock_id=stock.id,
         timeframe=timeframe,
     )
 
-def parse_percentage(value: str) -> Decimal:
+
+# =========================================================================
+# TRENDING MARKET DATA
+# =========================================================================
+
+
+def parse_percentage(
+    value: str,
+) -> Decimal:
     """
-    Converts a provider percentage string into a Decimal.
+    Converts an Alpha Vantage percentage string into Decimal.
 
     Example:
         "3.45%" -> Decimal("3.45")
-
-    A controlled exception is raised when the provider returns an
-    unexpected value.
     """
 
-    cleaned_value = str(value).strip().replace("%", "")
+    cleaned_value = (
+        str(value)
+        .strip()
+        .replace("%", "")
+    )
 
     try:
         return Decimal(cleaned_value)
 
     except InvalidOperation as error:
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
+            status_code=(
+                status.HTTP_502_BAD_GATEWAY
+            ),
             detail=(
-                "The market data provider returned an invalid "
-                "percentage value."
+                "The market data provider returned "
+                "an invalid percentage value."
             ),
         ) from error
 
@@ -557,35 +999,54 @@ def parse_provider_timestamp(
     value: str | None,
 ) -> datetime | None:
     """
-    Attempts to convert the provider's last_updated value into a Python
-    datetime.
+    Converts Alpha Vantage's trending timestamp into an aware datetime.
 
-    The Alpha Vantage timestamp may include additional timezone text,
-    so this function safely returns None when it cannot parse it.
-
-    The raw provider metadata may still be returned to the frontend.
+    Examples:
+        2026-07-24 16:15:59 US/Eastern
+        2026-07-24 20:15:59 UTC
     """
 
     if not value:
         return None
+
+    clean_value = value.strip()
+
+    timezone_value = timezone.utc
+
+    if clean_value.endswith(
+        " US/Eastern"
+    ):
+        clean_value = clean_value.replace(
+            " US/Eastern",
+            "",
+        )
+
+        timezone_value = ZoneInfo(
+            "America/New_York"
+        )
+
+    elif clean_value.endswith(" UTC"):
+        clean_value = clean_value.replace(
+            " UTC",
+            "",
+        )
+
+        timezone_value = timezone.utc
 
     formats = (
         "%Y-%m-%d %H:%M:%S",
         "%Y-%m-%d %H:%M",
     )
 
-    # Remove common trailing timezone labels before parsing.
-    cleaned_value = (
-        value.replace(" US/Eastern", "")
-        .replace(" UTC", "")
-        .strip()
-    )
-
     for date_format in formats:
         try:
-            return datetime.strptime(
-                cleaned_value,
+            parsed_datetime = datetime.strptime(
+                clean_value,
                 date_format,
+            )
+
+            return parsed_datetime.replace(
+                tzinfo=timezone_value
             )
 
         except ValueError:
@@ -599,27 +1060,18 @@ def save_trending_snapshot(
     data: dict,
 ) -> str:
     """
-    Persists one complete trending-market response.
+    Saves a complete Alpha Vantage trending snapshot.
 
-    All gainers, losers, and active stocks receive the same snapshot ID,
-    allowing the application to retrieve the complete latest dataset.
-
-    Args:
-        db:
-            Current SQLAlchemy session.
-
-        data:
-            Raw provider response containing the trending categories.
-
-    Returns:
-        str:
-            The UUID identifying the saved snapshot.
+    Gainers, losers, and active stocks from the same provider response
+    share one snapshot UUID.
     """
 
     snapshot_id = str(uuid4())
 
-    provider_updated_at = parse_provider_timestamp(
-        data.get("last_updated")
+    provider_updated_at = (
+        parse_provider_timestamp(
+            data.get("last_updated")
+        )
     )
 
     category_mapping = {
@@ -629,22 +1081,44 @@ def save_trending_snapshot(
     }
 
     try:
-        for provider_key, category in category_mapping.items():
-            provider_items = data.get(provider_key, [])
+        for (
+            provider_key,
+            category,
+        ) in category_mapping.items():
+            provider_items = data.get(
+                provider_key,
+                [],
+            )
 
             for item in provider_items:
                 trending_row = TrendingStock(
-                    ticker=str(item["ticker"]).strip().upper(),
+                    ticker=str(
+                        item["ticker"]
+                    ).strip().upper(),
                     category=category,
-                    price=Decimal(str(item["price"])),
+                    price=Decimal(
+                        str(item["price"])
+                    ),
                     change_amount=Decimal(
-                        str(item["change_amount"])
+                        str(
+                            item[
+                                "change_amount"
+                            ]
+                        )
                     ),
-                    change_percentage=parse_percentage(
-                        item["change_percentage"]
+                    change_percentage=(
+                        parse_percentage(
+                            item[
+                                "change_percentage"
+                            ]
+                        )
                     ),
-                    volume=int(item["volume"]),
-                    provider_updated_at=provider_updated_at,
+                    volume=int(
+                        item["volume"]
+                    ),
+                    provider_updated_at=(
+                        provider_updated_at
+                    ),
                     snapshot_id=snapshot_id,
                     source="alpha_vantage",
                 )
@@ -659,18 +1133,19 @@ def save_trending_snapshot(
         db.rollback()
         raise
 
+
 def get_latest_trending_snapshot(
     db: Session,
 ) -> TrendingStocksResponse | None:
     """
     Loads the most recently saved trending snapshot from PostgreSQL.
-
-    Returns None when no saved snapshot exists.
     """
 
     latest_row = (
         db.query(TrendingStock)
-        .order_by(TrendingStock.created_at.desc())
+        .order_by(
+            TrendingStock.created_at.desc()
+        )
         .first()
     )
 
@@ -683,19 +1158,31 @@ def get_latest_trending_snapshot(
             TrendingStock.snapshot_id
             == latest_row.snapshot_id
         )
-        .order_by(TrendingStock.id.asc())
+        .order_by(
+            TrendingStock.id.asc()
+        )
         .all()
     )
 
-    top_gainers: list[TrendingStockSchema] = []
-    top_losers: list[TrendingStockSchema] = []
-    most_active: list[TrendingStockSchema] = []
+    top_gainers: list[
+        TrendingStockSchema
+    ] = []
+
+    top_losers: list[
+        TrendingStockSchema
+    ] = []
+
+    most_active: list[
+        TrendingStockSchema
+    ] = []
 
     for row in snapshot_rows:
         response_item = TrendingStockSchema(
             ticker=row.ticker,
             price=str(row.price),
-            change_amount=str(row.change_amount),
+            change_amount=str(
+                row.change_amount
+            ),
             change_percentage=(
                 f"{row.change_percentage}%"
             ),
@@ -703,13 +1190,19 @@ def get_latest_trending_snapshot(
         )
 
         if row.category == "GAINER":
-            top_gainers.append(response_item)
+            top_gainers.append(
+                response_item
+            )
 
         elif row.category == "LOSER":
-            top_losers.append(response_item)
+            top_losers.append(
+                response_item
+            )
 
         elif row.category == "ACTIVE":
-            most_active.append(response_item)
+            most_active.append(
+                response_item
+            )
 
     return TrendingStocksResponse(
         last_updated=(
@@ -717,55 +1210,56 @@ def get_latest_trending_snapshot(
             if latest_row.provider_updated_at
             else latest_row.created_at.isoformat()
         ),
-        metadata="Latest trending-market snapshot stored by FinSight.",
+        metadata=(
+            "Latest trending-market snapshot "
+            "stored by FinSight."
+        ),
         top_gainers=top_gainers,
         top_losers=top_losers,
         most_actively_traded=most_active,
     )
 
-def search_stock_symbols(
+
+def fetch_trending_stocks(
     db: Session,
-    keywords: str,
-) -> list[dict]:
+    force_refresh: bool = False,
+) -> TrendingStocksResponse:
     """
-    Searches for stocks and supported assets using a partial ticker
-    symbol or company name.
+    Returns persisted trending data when available.
 
-    This function:
-    1. Validates the search text.
-    2. Calls Alpha Vantage's SYMBOL_SEARCH endpoint.
-    3. Normalizes the provider response.
-    4. Saves each result as a partial Stock record.
-    5. Returns the normalized matches to the frontend.
-
-    Search results are saved without requesting price history or a full
-    company overview. A stock is fully populated later when the user
-    selects it.
+    Alpha Vantage is contacted only when:
+    - no saved snapshot exists; or
+    - force_refresh=True.
     """
 
-    clean_keywords = keywords.strip()
-
-    if len(clean_keywords) < 2:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Enter at least two characters",
+    if not force_refresh:
+        saved_snapshot = (
+            get_latest_trending_snapshot(db)
         )
+
+        if saved_snapshot is not None:
+            return saved_snapshot
 
     if not ALPHA_VANTAGE_API_KEY:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Alpha Vantage API key is not configured",
+            status_code=(
+                status.HTTP_500_INTERNAL_SERVER_ERROR
+            ),
+            detail=(
+                "Alpha Vantage API key is not configured"
+            ),
         )
 
     params = {
-        "function": "SYMBOL_SEARCH",
-        "keywords": clean_keywords,
+        "function": "TOP_GAINERS_LOSERS",
         "apikey": ALPHA_VANTAGE_API_KEY,
     }
 
+
+
     try:
         response = requests.get(
-            BASE_URL,
+            ALPHA_VANTAGE_BASE_URL,
             params=params,
             timeout=20,
         )
@@ -774,155 +1268,119 @@ def search_stock_symbols(
         data = response.json()
 
     except requests.Timeout as error:
+        saved_snapshot = (
+            get_latest_trending_snapshot(db)
+        )
+
+        if saved_snapshot is not None:
+            return saved_snapshot
+
         raise HTTPException(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="The stock search provider took too long to respond",
+            status_code=(
+                status.HTTP_504_GATEWAY_TIMEOUT
+            ),
+            detail=(
+                "The trending-market provider "
+                "took too long to respond."
+            ),
         ) from error
 
     except requests.RequestException as error:
+        saved_snapshot = (
+            get_latest_trending_snapshot(db)
+        )
+
+        if saved_snapshot is not None:
+            return saved_snapshot
+
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Unable to search for stocks",
+            status_code=(
+                status.HTTP_502_BAD_GATEWAY
+            ),
+            detail=(
+                "Unable to retrieve trending "
+                "market information."
+            ),
         ) from error
 
-    # Alpha Vantage may return HTTP 200 while including the rate-limit
-    # message inside one of these properties.
     if "Information" in data or "Note" in data:
+        saved_snapshot = (
+            get_latest_trending_snapshot(db)
+        )
+
+        if saved_snapshot is not None:
+            return saved_snapshot
+
         raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            status_code=(
+                status.HTTP_429_TOO_MANY_REQUESTS
+            ),
             detail=(
-                "Stock search is temporarily unavailable due to the "
-                "provider request limit."
+                "Trending market information is "
+                "temporarily unavailable."
             ),
         )
 
     if "Error Message" in data:
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="The stock search provider rejected the request",
+            status_code=(
+                status.HTTP_502_BAD_GATEWAY
+            ),
+            detail=(
+                "The trending-market provider "
+                "rejected the request."
+            ),
         )
 
-    # Alpha Vantage stores search matches inside the bestMatches list.
-    raw_matches = data.get("bestMatches", [])
-
-    normalized_matches = [
-        {
-            "symbol": item.get("1. symbol", "").strip().upper(),
-            "name": item.get("2. name", "").strip(),
-            "asset_type": item.get("3. type"),
-            "region": item.get("4. region"),
-            "market_open": item.get("5. marketOpen"),
-            "market_close": item.get("6. marketClose"),
-            "timezone": item.get("7. timezone"),
-            "currency": item.get("8. currency"),
-            "match_score": (
-                float(item["9. matchScore"])
-                if item.get("9. matchScore")
-                else None
-            ),
-        }
-        for item in raw_matches
-        if item.get("1. symbol")
-    ]
-
-    # Save all returned results as partial Stock rows.
-    #
-    # This does not fetch daily history or company overview data.
-    save_stock_search_results(
-        db=db,
-        matches=normalized_matches,
+    expected_keys = (
+        "top_gainers",
+        "top_losers",
+        "most_actively_traded",
     )
 
-    return normalized_matches
+    if not any(
+        key in data
+        for key in expected_keys
+    ):
+        raise HTTPException(
+            status_code=(
+                status.HTTP_502_BAD_GATEWAY
+            ),
+            detail=(
+                "The market data provider returned "
+                "an unexpected trending response."
+            ),
+        )
 
-def save_stock_search_results(
-    db: Session,
-    matches: list[dict],
-) -> list[Stock]:
-    """
-    Saves stock-search matches as partial Stock records.
+    save_trending_snapshot(
+        db=db,
+        data=data,
+    )
 
-    A SYMBOL_SEARCH request may return several matching securities.
-    Saving those matches allows future searches to use the local database
-    and gradually populates the stocks table without making one external
-    API request per result.
-
-    Important:
-    - Search results do not contain market prices, sectors, or industries.
-    - Existing complete Stock records are not overwritten with null values.
-    - New records remain partially populated until the user selects them
-      and get_or_update_stock() retrieves their price and overview.
-    """
-
-    saved_stocks: list[Stock] = []
-
-    try:
-        for match in matches:
-            symbol = str(match.get("symbol", "")).strip().upper()
-
-            # Ignore malformed results that have no symbol.
-            if not symbol:
-                continue
-
-            company_name = (
-                str(match.get("name", "")).strip()
-                or symbol
+    return TrendingStocksResponse(
+        last_updated=data.get(
+            "last_updated"
+        ),
+        metadata=data.get("metadata"),
+        top_gainers=[
+            TrendingStockSchema(**item)
+            for item in data.get(
+                "top_gainers",
+                [],
             )
-
-            currency = (
-                str(match.get("currency", "")).strip().upper()
-                or "USD"
+        ],
+        top_losers=[
+            TrendingStockSchema(**item)
+            for item in data.get(
+                "top_losers",
+                [],
             )
-
-            stock = (
-                db.query(Stock)
-                .filter(Stock.symbol == symbol)
-                .first()
+        ],
+        most_actively_traded=[
+            TrendingStockSchema(**item)
+            for item in data.get(
+                "most_actively_traded",
+                [],
             )
-
-            if stock is None:
-                # Create a partial Stock row.
-                #
-                # Price and detailed metadata remain empty because the
-                # SYMBOL_SEARCH endpoint does not provide those fields.
-                stock = Stock(
-                    symbol=symbol,
-                    company_name=company_name,
-                    currency=currency,
-                    latest_price=None,
-                    exchange=None,
-                    sector=None,
-                    industry=None,
-                    company_logo_url=None,
-                    last_refreshed_at=None,
-                )
-
-                db.add(stock)
-                saved_stocks.append(stock)
-
-            else:
-                # Improve incomplete metadata without replacing existing,
-                # more complete values with empty search-result values.
-                if (
-                    not stock.company_name
-                    or stock.company_name == stock.symbol
-                ):
-                    stock.company_name = company_name
-
-                if not stock.currency:
-                    stock.currency = currency
-
-                saved_stocks.append(stock)
-
-        # Commit once after processing all matches instead of committing
-        # once per search result.
-        db.commit()
-
-        for stock in saved_stocks:
-            db.refresh(stock)
-
-        return saved_stocks
-
-    except Exception:
-        db.rollback()
-        raise
+        ],
+    )

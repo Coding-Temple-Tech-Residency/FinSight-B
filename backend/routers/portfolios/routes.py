@@ -15,7 +15,6 @@ router = APIRouter(
 )
 
 
-
 @router.post("", response_model=PortfolioResponse, status_code=status.HTTP_201_CREATED)
 def create_portfolio(
     body: PortfolioCreate,
