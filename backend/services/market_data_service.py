@@ -548,46 +548,158 @@ def build_full_stock_search_result(
         "is_enriched": True,
     }
 
+def is_preferred_search_result(
+    match: dict,
+) -> bool:
+    """
+    Determines whether a Finnhub search result should be prioritized for
+    complete profile and quote enrichment.
+
+    The Finnhub search endpoint can return:
+
+    - US stocks;
+    - foreign listings;
+    - ETFs;
+    - indexes;
+    - warrants;
+    - funds;
+    - inactive securities;
+    - instruments unsupported by the current Finnhub plan.
+
+    Many international symbols contain an exchange suffix, such as:
+
+        SAP.DE
+        PAR.PA
+        2788.T
+        603020.SS
+
+    Finnhub search may return those instruments successfully while the
+    profile or quote endpoints reject them under the current account's
+    market-data access.
+
+    This helper prioritizes unsuffixed securities that are more likely
+    to provide both a complete profile and a current quote.
+
+    Returns:
+        bool:
+            True when the result should be considered for enrichment.
+    """
+
+    symbol = str(
+        match.get("symbol") or ""
+    ).strip().upper()
+
+    asset_type = str(
+        match.get("asset_type") or ""
+    ).strip().lower()
+
+    if not symbol:
+        return False
+
+    # Finnhub's US symbols commonly have no exchange suffix.
+    #
+    # Examples:
+    #     AAPL
+    #     MSFT
+    #     NVDA
+    #
+    # International listings commonly use:
+    #     SAP.DE
+    #     PAR.PA
+    #     APP.MX
+    is_unsuffixed_symbol = "." not in symbol
+
+    # Limit enrichment to instrument types that are useful in FinSight
+    # and are more likely to have a usable quote.
+    supported_asset_types = {
+        "common stock",
+        "adr",
+        "etf",
+    }
+
+    is_supported_asset_type = (
+        asset_type in supported_asset_types
+    )
+
+    return (
+        is_unsuffixed_symbol
+        and is_supported_asset_type
+    )
 
 def search_stock_symbols(
     db: Session,
     keywords: str,
+    limit: int = 6,
 ) -> list[dict]:
     """
-    Searches Finnhub and saves only fully enriched Stock records.
+    Searches Finnhub and returns complete supported stock results.
 
     Workflow:
-        1. Make one Finnhub symbol-search request.
-        2. Deduplicate results by complete provider symbol.
-        3. Limit processing to the first ten matches.
-        4. Retrieve the Finnhub company profile for each result.
-        5. Retrieve the Finnhub current quote for each result.
-        6. Save or update the complete Stock row.
-        7. Return only results that were successfully enriched.
+    1. Validate the search text.
+    2. Perform one Finnhub symbol-search request.
+    3. Deduplicate results by complete Finnhub symbol.
+    4. Keep only preferred securities supported by the current plan.
+    5. Process no more than the requested limit.
+    6. Reuse complete data already stored in PostgreSQL.
+    7. Fetch a Finnhub profile or quote only when required.
+    8. Save and return only fully enriched stocks.
 
-    No partial Stock rows are created by this function.
+    No Alpha Vantage request is made by the search feature.
 
-    A symbol is omitted from the response when Finnhub cannot provide:
-        - a complete company profile; or
-        - a usable current quote.
+    International listings with suffixes such as:
+        .PA
+        .DE
+        .MI
+        .SW
+        .T
+        .SZ
+
+    are excluded before enrichment because Finnhub may return them from
+    search while denying profile or quote access under the current plan.
+
+    Args:
+        db:
+            Active SQLAlchemy database session.
+
+        keywords:
+            Partial company name or symbol entered by the user.
+
+        limit:
+            Maximum number of complete results returned to the frontend.
+
+    Returns:
+        list[dict]:
+            Fully populated supported stock-search results.
+
+    Raises:
+        HTTPException:
+            400 when fewer than three characters are provided.
+            404 when no complete supported result can be produced.
     """
 
     clean_keywords = keywords.strip()
 
-    if len(clean_keywords) < 2:
+    # Very short searches return many unrelated results and can cause
+    # unnecessary provider requests.
+    if len(clean_keywords) < 3:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Enter at least two characters",
+            detail="Enter at least three characters",
         )
 
+    # Protect the service even if another backend function calls it
+    # directly without route-level validation.
+    safe_limit = max(
+        1,
+        min(limit, 10),
+    )
+
+    # Exactly one Finnhub search request is made here.
     raw_matches = search_finnhub_symbols(
         keywords=clean_keywords,
     )
 
-    # Deduplicate by Finnhub's complete provider symbol.
-    #
-    # The complete symbol may include an exchange suffix, allowing
-    # listings from different markets to coexist.
+    # Deduplicate by the complete Finnhub symbol.
     unique_matches: dict[str, dict] = {}
 
     for match in raw_matches:
@@ -601,15 +713,29 @@ def search_stock_symbols(
         if symbol not in unique_matches:
             unique_matches[symbol] = match
 
-    selected_matches = list(
+    all_unique_matches = list(
         unique_matches.values()
-    )[:FULL_SEARCH_RESULT_LIMIT]
+    )
+
+    # Keep only results that are likely to be supported by Finnhub's
+    # current profile and quote access.
+    #
+    # Do not append unsupported fallback results. Those were responsible
+    # for repeated 403 responses for international listings.
+    preferred_matches = [
+        match
+        for match in all_unique_matches
+        if is_preferred_search_result(match)
+    ]
+
+    # Process only the number requested by the frontend.
+    selected_matches = preferred_matches[
+        :safe_limit
+    ]
 
     completed_results: list[dict] = []
 
-    for index, match in enumerate(
-        selected_matches
-    ):
+    for match in selected_matches:
         symbol = str(
             match.get("symbol") or ""
         ).strip().upper()
@@ -618,23 +744,19 @@ def search_stock_symbols(
             continue
 
         try:
-            # Search results must be complete. Therefore, force a current
-            # Finnhub quote rather than returning a stale or empty value.
+            # Reuse the database first.
+            #
+            # Finnhub is contacted only when profile information is
+            # missing or the saved quote is stale.
             stock = get_or_update_stock(
                 db=db,
                 symbol=symbol,
-                force_quote_refresh=True,
+                force_quote_refresh=False,
             )
 
         except HTTPException as error:
-            # Do not create or return partial results.
-            #
-            # Certain symbols returned by search may be:
-            # - warrants;
-            # - funds;
-            # - indexes;
-            # - inactive instruments;
-            # - foreign instruments without free quote access.
+            # A preferred symbol may still lack a usable profile or
+            # quote. Skip that result without failing the whole search.
             print(
                 "Skipping incomplete Finnhub search result:",
                 symbol,
@@ -650,23 +772,16 @@ def search_stock_symbols(
             )
         )
 
-        # Spread calls during multi-result search enrichment.
-        if index < len(selected_matches) - 1:
-            time.sleep(
-                FINNHUB_SEARCH_REQUEST_DELAY_SECONDS
-            )
-
     if not completed_results:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=(
-                "No complete stock results were available "
+                "No complete supported stocks were found "
                 "for this search"
             ),
         )
 
     return completed_results
-
 
 # =========================================================================
 # ALPHA VANTAGE DAILY MARKET HISTORY
