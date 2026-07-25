@@ -9,7 +9,7 @@
   animation: search-row-open 200ms ease-out;
 }
 
-.search-row .search-form {
+.search-row .search-autocomplete-container {
   max-width: 900px;
   margin-inline: auto;
 }
@@ -222,4 +222,22 @@
   .search-submit-button:not(:disabled):hover {
     transform: none;
   }
+}
+
+.search-autocomplete-container {
+  position: relative;
+  width: 100%;
+}
+
+.search-row .search-autocomplete-container {
+  max-width: 900px;
+  margin-inline: auto;
+}
+
+.search-autocomplete-container .search-input-wrapper {
+  position: relative;
+}
+
+.search-autocomplete-container #stock-search-suggestions {
+  z-index: 220;
 }

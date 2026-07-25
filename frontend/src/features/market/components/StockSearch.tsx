@@ -55,7 +55,7 @@ const StockSearch = ({ initialSymbol }: StockSearchProps) => {
         spellCheck={false}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? "stock-symbol-search-error" : undefined}
-        placeholder="Search stock symbol..."
+        placeholder="Search company name or stock symbol..."
         onChange={(event) => {
           setValue(event.target.value);
 
