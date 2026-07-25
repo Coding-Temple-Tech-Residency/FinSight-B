@@ -19,32 +19,42 @@ def _finnhub_get(
     """
     Sends one authenticated GET request to Finnhub.
 
-    Centralizing the request logic avoids repeating:
+    All Finnhub requests pass through this helper so the application has
+    consistent behavior for:
+
     - authentication;
-    - timeout handling;
-    - HTTP status handling;
-    - invalid JSON handling;
-    - provider error handling.
+    - network timeouts;
+    - provider rate limits;
+    - invalid request responses;
+    - unexpected provider errors;
+    - invalid JSON responses.
 
     Args:
         endpoint:
-            Finnhub endpoint path, such as:
-            - "/search"
-            - "/stock/profile2"
-            - "/quote"
+            Finnhub endpoint path.
+
+            Examples:
+                "/search"
+                "/stock/profile2"
+                "/quote"
 
         params:
-            Optional query parameters for the selected endpoint.
+            Optional URL query parameters.
+
+            The API token is sent through the X-Finnhub-Token header and
+            therefore should not be added to this dictionary.
 
     Returns:
         dict:
-            Parsed JSON response from Finnhub.
+            Parsed Finnhub JSON response.
 
     Raises:
         HTTPException:
             500 when the API key is missing.
-            429 when the provider rate limit is reached.
-            502 when Finnhub cannot be contacted or returns invalid data.
+            404 when the requested provider resource does not exist.
+            429 when the Finnhub request limit has been reached.
+            502 when Finnhub returns an unexpected response.
+            504 when Finnhub takes too long to respond.
     """
 
     if not FINNHUB_API_KEY:
@@ -53,6 +63,8 @@ def _finnhub_get(
             detail="Finnhub API key is not configured",
         )
 
+    # Copy the input dictionary so this helper never mutates the original
+    # object supplied by the caller.
     request_params = dict(params or {})
 
     try:
@@ -77,15 +89,19 @@ def _finnhub_get(
             detail="Unable to contact Finnhub",
         ) from error
 
+    # Finnhub uses HTTP 429 when the current account has exceeded its
+    # permitted request rate.
     if response.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=(
                 "Finnhub data is temporarily unavailable because "
-                "the request limit was reached."
+                "the provider request limit was reached."
             ),
         )
 
+    # A search result may refer to an instrument for which the current
+    # Finnhub plan does not expose a profile or quote.
     if response.status_code in (
         status.HTTP_400_BAD_REQUEST,
         status.HTTP_404_NOT_FOUND,
@@ -99,9 +115,27 @@ def _finnhub_get(
         response.raise_for_status()
 
     except requests.HTTPError as error:
+        # This logging is useful while debugging unsupported international
+        # listings and entitlement errors.
+        #
+        # The API key is not printed because it is sent through the request
+        # header rather than through request_params.
+        print(
+            "FINNHUB HTTP ERROR:",
+            {
+                "status_code": response.status_code,
+                "endpoint": endpoint,
+                "params": request_params,
+                "response": response.text[:500],
+            },
+        )
+
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Finnhub returned an unexpected error",
+            detail=(
+                f"Finnhub returned HTTP "
+                f"{response.status_code} for {endpoint}"
+            ),
         ) from error
 
     try:
@@ -110,10 +144,10 @@ def _finnhub_get(
     except ValueError as error:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Finnhub returned an invalid response",
+            detail="Finnhub returned an invalid JSON response",
         ) from error
 
-    # Finnhub may return an error inside an otherwise valid JSON body.
+    # Finnhub may return an error inside a successful HTTP response.
     if isinstance(data, dict) and data.get("error"):
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -121,7 +155,6 @@ def _finnhub_get(
         )
 
     return data
-
 
 def search_finnhub_symbols(
     keywords: str,

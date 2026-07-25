@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -61,23 +61,50 @@ def refresh_trending_stocks(
         force_refresh=True,
     )
 
+    
 @router.get(
     "/search",
     response_model=list[StockSearchResult],
 )
 def search_stocks(
-    query: str,
+    query: str = Query(
+        ...,
+        min_length=3,
+        description=(
+            "Partial stock symbol or company name. "
+            "At least three characters are required."
+        ),
+    ),
+    limit: int = Query(
+        default=6,
+        ge=1,
+        le=10,
+        description=(
+            "Maximum number of complete stock results returned."
+        ),
+    ),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
-    Searches by partial ticker or company name.
+    Searches for stocks using Finnhub.
 
-    Example:
-        GET /api/stocks/search?query=app
+    The backend:
+    - prioritizes supported securities;
+    - reuses stocks already saved in PostgreSQL;
+    - fetches missing profile or quote information from Finnhub;
+    - returns only complete stock records.
+
+    The route must remain declared before /{symbol}, otherwise FastAPI
+    could interpret the word "search" as a stock symbol.
     """
 
-    return search_stock_symbols(db=db, keywords=query)
+    return search_stock_symbols(
+        db=db,
+        keywords=query,
+        limit=limit,
+    )
+
 
 @router.get("/{symbol}", response_model=StockResponse)
 def get_stock_by_symbol(
