@@ -22,7 +22,6 @@ router = APIRouter(
     tags=["Stocks"]
 )
 
-print("Loading stock routes")
 
 @router.get(
     "/trending",
