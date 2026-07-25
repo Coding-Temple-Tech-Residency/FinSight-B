@@ -2,7 +2,7 @@ import { useSearchParams } from "react-router-dom";
 
 import { useDashboard } from "../../dashboard/hooks/useDashboard";
 
-import QuoteCard from "../components/QuoteCard";
+import QuoteCard from "../components/StockQuoteCard";
 import StockLineChart from "../components/StockLineChart";
 import StockSearch from "../components/StockSearch";
 
@@ -19,7 +19,7 @@ const getErrorMessage = (error: unknown) => {
   return "Unable to load market data.";
 };
 
-const Market = () => {
+const MarketPage = () => {
   const [searchParams] = useSearchParams();
   const { symbol } = useDashboard();
 
@@ -121,4 +121,4 @@ const Market = () => {
   );
 };
 
-export default Market;
+export default MarketPage;

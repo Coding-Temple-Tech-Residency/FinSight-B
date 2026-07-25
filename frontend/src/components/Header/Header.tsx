@@ -10,12 +10,11 @@ import ProfileMenu from "../ProfileMenu";
 import "./Header.css";
 
 interface HeaderProps {
-  closeMenu: () => void;
   showSearch: boolean;
   setShowSearch: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const Header = ({ showSearch, setShowSearch, closeMenu }: HeaderProps) => {
+const Header = ({ showSearch, setShowSearch }: HeaderProps) => {
   const handleSearchToggle = () => {
     setShowSearch((previous) => !previous);
   };
@@ -24,12 +23,12 @@ const Header = ({ showSearch, setShowSearch, closeMenu }: HeaderProps) => {
     <header className="header">
       <div className="header-container">
         <div className="header-left">
-          <Link to="/dashboard" onClick={closeMenu}>
+          <Link to="/dashboard">
             <Logo />
           </Link>
 
           <div className="desktop-nav">
-            <DashboardNav closeMenu={closeMenu} />
+            <DashboardNav />
           </div>
         </div>
 
@@ -50,10 +49,7 @@ const Header = ({ showSearch, setShowSearch, closeMenu }: HeaderProps) => {
                 aria-hidden="true"
               />
             </button>
-
-            <ProfileMenu />
           </div>
-
           <div className="mobile-actions">
             <button
               type="button"
@@ -70,9 +66,8 @@ const Header = ({ showSearch, setShowSearch, closeMenu }: HeaderProps) => {
                 aria-hidden="true"
               />
             </button>
-
-            <ProfileMenu />
-          </div>
+          </div>{" "}
+          <ProfileMenu />
         </div>
       </div>
     </header>

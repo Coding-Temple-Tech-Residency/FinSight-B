@@ -11,13 +11,13 @@ type AppProvidersProps = {
 
 const AppProviders = ({ children }: AppProvidersProps) => {
   return (
-    <ThemeProvider>
-      <ModalProvider>
-        <QueryProvider>
+    <QueryProvider>
+      <ThemeProvider>
+        <ModalProvider>
           <DashboardProvider>{children}</DashboardProvider>
-        </QueryProvider>
-      </ModalProvider>
-    </ThemeProvider>
+        </ModalProvider>
+      </ThemeProvider>
+    </QueryProvider>
   );
 };
 

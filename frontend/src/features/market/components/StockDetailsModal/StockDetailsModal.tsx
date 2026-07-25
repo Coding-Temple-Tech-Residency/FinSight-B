@@ -11,8 +11,17 @@ type StockDetailsModalProps = {
   onViewMarket: (symbol: string) => void;
 };
 
-const formatCurrency = (value: number | null, currency: string | null) => {
-  if (value === null || !Number.isFinite(value)) {
+const formatCurrency = (
+  value: number | string | null | undefined,
+  currency: string | null | undefined,
+) => {
+  if (value === null || value === undefined) {
+    return "Price unavailable";
+  }
+
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue)) {
     return "Price unavailable";
   }
 
@@ -21,9 +30,9 @@ const formatCurrency = (value: number | null, currency: string | null) => {
       style: "currency",
       currency: currency || "USD",
       maximumFractionDigits: 2,
-    }).format(value);
+    }).format(numericValue);
   } catch {
-    return `${currency || "USD"} ${value.toFixed(2)}`;
+    return `${currency || "USD"} ${numericValue.toFixed(2)}`;
   }
 };
 
@@ -37,9 +46,13 @@ const StockDetailsModal = ({
     return null;
   }
 
-  const companyName = stock.company_name || stock.name || stock.symbol;
-  const logoUrl = stock.company_logo_url || stock.logo_url;
+  const companyName = stock.company_name || stock.symbol;
+  const logoUrl = stock.company_logo_url;
   const title = `${companyName} (${stock.symbol})`;
+
+  const handleViewMarket = () => {
+    onViewMarket(stock.symbol);
+  };
 
   return (
     <Modal isOpen={isOpen} title={title} onClose={onClose}>
@@ -53,14 +66,18 @@ const StockDetailsModal = ({
                 className="stock-details-modal__logo"
               />
             ) : (
-              <div className="stock-details-modal__logo-placeholder" aria-hidden="true">
-                {stock.symbol.slice(0, 2)}
+              <div
+                className="stock-details-modal__logo-placeholder"
+                aria-hidden="true"
+              >
+                {stock.symbol.slice(0, 2).toUpperCase()}
               </div>
             )}
 
             <div>
               <p className="stock-details-modal__symbol">{stock.symbol}</p>
               <h3>{companyName}</h3>
+
               <p className="stock-details-modal__exchange">
                 {[stock.exchange, stock.currency].filter(Boolean).join(" · ") ||
                   "Market details unavailable"}
@@ -70,6 +87,7 @@ const StockDetailsModal = ({
 
           <div className="stock-details-modal__price">
             <span>Latest price</span>
+
             <strong>
               {formatCurrency(stock.latest_price, stock.currency)}
             </strong>
@@ -77,11 +95,6 @@ const StockDetailsModal = ({
         </header>
 
         <dl className="stock-details-modal__details">
-          <div>
-            <dt>Sector</dt>
-            <dd>{stock.sector || "Not available"}</dd>
-          </div>
-
           <div>
             <dt>Industry</dt>
             <dd>{stock.industry || "Not available"}</dd>
@@ -95,6 +108,11 @@ const StockDetailsModal = ({
           <div>
             <dt>Currency</dt>
             <dd>{stock.currency || "USD"}</dd>
+          </div>
+
+          <div>
+            <dt>Data status</dt>
+            <dd>{stock.is_enriched ? "Enriched" : "Basic"}</dd>
           </div>
         </dl>
 
@@ -110,7 +128,7 @@ const StockDetailsModal = ({
           <button
             type="button"
             className="stock-details-modal__primary-action"
-            onClick={() => onViewMarket(stock.symbol)}
+            onClick={handleViewMarket}
           >
             View full market data
           </button>

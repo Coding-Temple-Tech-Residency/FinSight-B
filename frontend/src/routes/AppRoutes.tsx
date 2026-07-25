@@ -12,6 +12,7 @@ import Insights from "../features/insights/pages/Insights";
 import Chat from "../features/chat/pages/Chat";
 import Settings from "../features/settings/pages/Settings";
 import SearchResults from "../features/search/pages/PlatformSearchResults";
+import Market from "../features/market/pages/MarketPage";
 
 const AppRoutes = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -32,18 +33,19 @@ const AppRoutes = () => {
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <DashboardLayout closeMenu={closeMenu} />
+            <DashboardLayout />
           </ProtectedRoute>
         }
       >
         <Route index element={<Dashboard />} />
         <Route path="portfolio" element={<Portfolio />} />
+        <Route path="market" element={<Market />} />
         <Route path="watchlist" element={<WatchlistPage />} />
         <Route path="insights" element={<Insights />} />
         <Route path="chat" element={<Chat />} />
         <Route path="settings" element={<Settings />} />
         <Route path="search" element={<SearchResults />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>
   );
