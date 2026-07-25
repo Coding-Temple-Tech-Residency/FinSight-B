@@ -145,27 +145,30 @@ const TopMoversCard = ({
 
             {gainers.length > 0 ? (
               <div className="top-movers-list">
-                {gainers.map((item) => (
-                  <div key={item.holding.id} className="top-mover-row">
-                    <div className="top-mover-asset">
-                      <strong>{item.holding.symbol}</strong>
+                {gainers.map((item) => {
+                  const companyName =
+                    item.holding.company_name?.trim() || item.holding.symbol;
 
-                      <span>
-                        {item.holding.company_name || item.holding.symbol}
-                      </span>
+                  return (
+                    <div key={item.holding.id} className="top-mover-row">
+                      <div className="top-mover-asset">
+                        <strong>{companyName}</strong>
+
+                        <span>{item.holding.symbol}</span>
+                      </div>
+
+                      <div className="top-mover-result">
+                        <strong className="portfolio-positive">
+                          {formatPercent(item.gainLossPercent)}
+                        </strong>
+
+                        <span className="metric-label">
+                          {item.shares.toLocaleString("en-US")} shares
+                        </span>
+                      </div>
                     </div>
-
-                    <div className="top-mover-result">
-                      <strong className="portfolio-positive">
-                        {formatPercent(item.gainLossPercent)}
-                      </strong>
-
-                      <span className="metric-label">
-                        {item.shares.toLocaleString("en-US")} shares
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <p className="top-movers-empty">
@@ -183,27 +186,30 @@ const TopMoversCard = ({
 
             {losers.length > 0 ? (
               <div className="top-movers-list">
-                {losers.map((item) => (
-                  <div key={item.holding.id} className="top-mover-row">
-                    <div className="top-mover-asset">
-                      <strong>{item.holding.symbol}</strong>
+                {losers.map((item) => {
+                  const companyName =
+                    item.holding.company_name?.trim() || item.holding.symbol;
 
-                      <span>
-                        {item.holding.company_name || item.holding.symbol}
-                      </span>
+                  return (
+                    <div key={item.holding.id} className="top-mover-row">
+                      <div className="top-mover-asset">
+                        <strong>{companyName}</strong>
+
+                        <span>{item.holding.symbol}</span>
+                      </div>
+
+                      <div className="top-mover-result">
+                        <strong className="portfolio-negative">
+                          {formatPercent(item.gainLossPercent)}
+                        </strong>
+
+                        <span className="metric-label">
+                          {item.shares.toLocaleString("en-US")} shares
+                        </span>
+                      </div>
                     </div>
-
-                    <div className="top-mover-result">
-                      <strong className="portfolio-negative">
-                        {formatPercent(item.gainLossPercent)}
-                      </strong>
-
-                      <span className="metric-label">
-                        {item.shares.toLocaleString("en-US")} shares
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <p className="top-movers-empty">

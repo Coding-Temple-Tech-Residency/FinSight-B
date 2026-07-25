@@ -40,6 +40,8 @@ const TrendingCompanyCard = ({
   stock,
   featured = false,
 }: TrendingCompanyCardProps) => {
+  const companyName = stock.company_name?.trim() || stock.symbol;
+
   const percentageClass =
     stock.percentage_change === null
       ? ""
@@ -62,9 +64,9 @@ const TrendingCompanyCard = ({
               #{stock.rank} {getCategoryLabel(stock)}
             </div>
 
-            <h3>{stock.symbol}</h3>
+            <h3>{companyName}</h3>
 
-            <p>Company name unavailable</p>
+            <p>{stock.symbol}</p>
           </div>
         </div>
 
@@ -101,7 +103,9 @@ const TrendingCompanyCard = ({
         <span className={percentageClass}>
           {stock.change_amount === null
             ? "Change unavailable"
-            : `${stock.change_amount > 0 ? "+" : ""}${stock.change_amount.toFixed(2)}`}
+            : `${stock.change_amount > 0 ? "+" : ""}${stock.change_amount.toFixed(
+                2,
+              )}`}
         </span>
       </footer>
     </article>
