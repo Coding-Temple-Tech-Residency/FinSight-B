@@ -9,6 +9,11 @@ const RegistrationForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [firstNameError, setFirstNameError] = useState("");
+  const [lastNameError, setLastNameError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
 
   const registerMutation = useMutation({
     mutationFn: registerUser,
@@ -30,10 +35,35 @@ const RegistrationForm = () => {
   const handleRegister = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (password !== confirmPassword) {
-      alert("Passwords do not match");
-      return;
+    let isValid = true;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!firstName.trim()) {
+      setFirstNameError("First name is required.");
+      isValid = false;
     }
+
+    if (!lastName.trim()) {
+      setLastNameError("Last name is required.");
+      isValid = false;
+    }
+
+    if (!emailRegex.test(email)) {
+      setEmailError("Please enter a valid email address.");
+      isValid = false;
+    }
+
+    if (password.length < 8) {
+      setPasswordError("Password must be at least 8 characters.");
+      isValid = false;
+    }
+
+    if (password !== confirmPassword) {
+      setConfirmPasswordError("Passwords do not match.");
+      isValid = false;
+    }
+    if (!isValid) return;
 
     registerMutation.mutate({
       first_name: firstName,
@@ -46,7 +76,7 @@ const RegistrationForm = () => {
 
   return (
     <div className="login-form-container">
-      <form onSubmit={handleRegister} className="w-full space-y-4 ">
+      <form onSubmit={handleRegister} noValidate className="w-full space-y-4 ">
         <h2 className="text-xl font-bold text-center mb-3 -mt-4">
           Create Account
         </h2>
@@ -56,45 +86,76 @@ const RegistrationForm = () => {
           placeholder="First Name"
           className="w-full border border-gray-400 rounded-xl p-4 mt-1 mb-4"
           value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
+          onChange={(e) => {
+            setFirstName(e.target.value);
+            setFirstNameError("");
+          }}
           required
         />
+        {firstNameError && (
+          <p className="text-red-500 text-sm">{firstNameError}</p>
+        )}
 
         <input
           type="text"
           placeholder="Last Name"
           className="w-full border border-gray-400 rounded-xl p-4 mt-1 mb-4"
           value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
+          onChange={(e) => {
+            setLastName(e.target.value);
+            setLastNameError("");
+          }}
           required
         />
+        {lastNameError && (
+          <p className="text-red-500 text-sm">{lastNameError}</p>
+        )}
 
         <input
           type="email"
           placeholder="Email"
           className="w-full border border-gray-400 rounded-xl p-4 mt-1 mb-4"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setEmailError("");
+          }}
           required
         />
+        {emailError && <p className="text-red-500 text-sm">{emailError}</p>}
 
         <input
           type="password"
           placeholder="Password"
           className="w-full border border-gray-400 rounded-xl p-4 mt-1 mb-4"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value;
+            setPassword(value);
+            if (value.length >= 8) {
+              setPasswordError("");
+            }
+          }}
           required
         />
+        {passwordError && (
+          <p className="text-red-500 text-sm">{passwordError}</p>
+        )}
 
         <input
           type="password"
           placeholder="Confirm Password"
           className="w-full border border-gray-400 rounded-xl p-4 mt-1 mb-4"
           value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
+          onChange={(e) => {
+            setConfirmPassword(e.target.value);
+            setConfirmPasswordError("");
+          }}
           required
         />
+        {confirmPasswordError && (
+          <p className="text-red-500 text-sm">{confirmPasswordError}</p>
+        )}
 
         <button
           type="submit"

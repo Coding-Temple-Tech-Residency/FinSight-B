@@ -10,8 +10,9 @@ const LoginForm = () => {
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const navigate = useNavigate();
-
   const loginMutation = useMutation({
     mutationFn: loginUser,
     onSuccess: async (data) => {
@@ -34,6 +35,24 @@ const LoginForm = () => {
   const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    setEmailError("");
+    setPasswordError("");
+    let isValid = true;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(email)) {
+      setEmailError("Please enter a valid email address.");
+      isValid = false;
+    }
+
+    if (password.length < 8) {
+      setPasswordError("Password must be at least 8 characters.");
+      isValid = false;
+    }
+    if (!isValid) {
+      return;
+    }
+
     loginMutation.mutate({
       email,
       password,
@@ -42,7 +61,7 @@ const LoginForm = () => {
 
   return (
     <div className="login-form-container">
-      <form onSubmit={handleLogin} className="w-full space-y-4">
+      <form onSubmit={handleLogin} noValidate className="w-full space-y-4">
         <h2 className="text-xl font-bold text-center mb-3 -mt-4">Login</h2>
 
         <input
@@ -50,16 +69,29 @@ const LoginForm = () => {
           placeholder="Email"
           className="w-full max-w-xl p-3 border border-gray-300 rounded-xl px-4 py-4 mb-5"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setEmailError("");
+          }}
         />
+        {emailError && <p className="text-red-500 text-sm">{emailError}</p>}
 
         <input
           type="password"
           placeholder="Password"
           className="w-full p-3 border border-gray-300 rounded-xl px-4 py-4 mb-5"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value;
+            setPassword(value);
+            if (value.length >= 8) {
+              setPasswordError("");
+            }
+          }}
         />
+        {passwordError && (
+          <p className="text-red-500 text-sm">{passwordError}</p>
+        )}
         <p className="text-right font-semibold text-emerald-500 cursor-pointer">
           Forget Password?
         </p>
