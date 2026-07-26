@@ -9,11 +9,7 @@ import { useBreakpoint } from "../hooks/useBreakingPoint";
 import "./DashboardLayout.css";
 import SearchForm from "../features/search/components/SearchForm";
 
-interface DashboardLayoutProps {
-  closeMenu: () => void;
-}
-
-const DashboardLayout = ({ closeMenu }: DashboardLayoutProps) => {
+const DashboardLayout = () => {
   const { isDesktop } = useBreakpoint();
   const [showSearch, setShowSearch] = useState(false);
 
@@ -23,11 +19,7 @@ const DashboardLayout = ({ closeMenu }: DashboardLayoutProps) => {
 
   return (
     <div className="dashboard-layout">
-      <Header
-        closeMenu={closeMenu}
-        showSearch={showSearch}
-        setShowSearch={setShowSearch}
-      />
+      <Header showSearch={showSearch} setShowSearch={setShowSearch} />
 
       {showSearch && (
         <div id="platform-search-row" className="search-row">
@@ -45,7 +37,7 @@ const DashboardLayout = ({ closeMenu }: DashboardLayoutProps) => {
         </div>
       </main>
 
-      {!isDesktop && <MobileDashboardNav closeMenu={closeMenu} />}
+      {!isDesktop && <MobileDashboardNav />}
     </div>
   );
 };

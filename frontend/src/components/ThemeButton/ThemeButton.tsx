@@ -3,19 +3,22 @@ import { faMoon, faSun } from "@fortawesome/free-solid-svg-icons";
 import useTheme from "../../hooks/useTheme";
 import "./ThemeButton.css";
 
-const ThemeButton = () => {
+type ThemeButtonProps = {
+  className?: string;
+};
+
+const ThemeButton = ({ className = "" }: ThemeButtonProps) => {
   const { toggleTheme, darkTheme } = useTheme();
-  const theme = darkTheme ? faSun : faMoon;
 
   return (
     <button
-      className={`theme-btn fixed bottom-2 right-2 z-50`}
+      type="button"
+      className={`theme-btn ${className}`}
       onClick={toggleTheme}
+      aria-label={darkTheme ? "Switch to light theme" : "Switch to dark theme"}
+      title={darkTheme ? "Switch to light theme" : "Switch to dark theme"}
     >
-      <FontAwesomeIcon
-        className={`${darkTheme ? "text-stone-50" : "text-stone-800"}`}
-        icon={theme}
-      />
+      <FontAwesomeIcon icon={darkTheme ? faSun : faMoon} aria-hidden="true" />
     </button>
   );
 };

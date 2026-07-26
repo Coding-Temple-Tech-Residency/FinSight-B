@@ -22,7 +22,6 @@ export type StockSearchResult = {
   company_name: string;
   asset_type?: string | null;
   exchange?: string | null;
-  sector?: string | null;
   industry?: string | null;
   currency?: string | null;
   latest_price?: number | string | null;

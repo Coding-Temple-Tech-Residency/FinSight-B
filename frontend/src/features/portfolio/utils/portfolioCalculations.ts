@@ -1,3 +1,7 @@
+import type { CurrencyTotals } from "../../currency/types/currency";
+
+import { groupCurrencyTotals } from "../../currency/utils/groupCurrencyTotals";
+
 import type { Holding } from "../types/holdings";
 import type { Portfolio } from "../types/portfolio";
 
@@ -27,6 +31,8 @@ export type PortfolioPerformanceSummary = {
   currency: string | null;
   currencies: string[];
   hasMixedCurrencies: boolean;
+
+  currencyTotals: CurrencyTotals[];
 
   largestHolding: HoldingPerformance | null;
   bestPerformer: HoldingPerformance | null;
@@ -167,6 +173,20 @@ const getWorstPerformer = (
   );
 };
 
+const calculateCurrencyTotals = (
+  holdingPerformance: HoldingPerformance[],
+): CurrencyTotals[] => {
+  return groupCurrencyTotals(
+    holdingPerformance.map((performance) => ({
+      currency: performance.currency,
+      marketValue: performance.marketValue,
+      costBasis: performance.costBasis,
+      gainLoss: performance.gainLoss,
+      holdingsCount: 1,
+    })),
+  );
+};
+
 export const calculatePortfolioPerformance = (
   portfolios: Portfolio[],
   holdings: Holding[],
@@ -193,11 +213,12 @@ export const calculatePortfolioPerformance = (
       : Array.from(fallbackPortfolioCurrencies);
 
   const hasMixedCurrencies = currencies.length > 1;
-
   const currency = currencies.length === 1 ? currencies[0] : null;
 
   const pricedHoldings = holdingPerformance.length;
   const unpricedHoldings = holdings.length - pricedHoldings;
+
+  const currencyTotals = calculateCurrencyTotals(holdingPerformance);
 
   const largestHolding = getLargestHolding(holdingPerformance);
   const bestPerformer = getBestPerformer(holdingPerformance);
@@ -218,6 +239,8 @@ export const calculatePortfolioPerformance = (
       currency,
       currencies,
       hasMixedCurrencies,
+
+      currencyTotals,
 
       largestHolding,
       bestPerformer,
@@ -256,6 +279,8 @@ export const calculatePortfolioPerformance = (
     currency,
     currencies,
     hasMixedCurrencies,
+
+    currencyTotals,
 
     largestHolding,
     bestPerformer,

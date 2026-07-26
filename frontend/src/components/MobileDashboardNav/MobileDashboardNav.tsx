@@ -3,11 +3,7 @@ import { NavLink } from "react-router-dom";
 import { navigation } from "../../constants/navigation";
 import "./MobileDashboardNav.css";
 
-interface MobileDashboardNavProps {
-  closeMenu: () => void;
-}
-
-const MobileDashboardNav = ({ closeMenu }: MobileDashboardNavProps) => {
+const MobileDashboardNav = () => {
   return (
     <nav
       className="mobile-dashboard-nav"
@@ -18,7 +14,6 @@ const MobileDashboardNav = ({ closeMenu }: MobileDashboardNavProps) => {
           key={item.id}
           to={item.path}
           end={item.path === "/dashboard"}
-          onClick={closeMenu}
           className={({ isActive }) =>
             `mobile-dashboard-link ${isActive ? "active" : ""}`
           }

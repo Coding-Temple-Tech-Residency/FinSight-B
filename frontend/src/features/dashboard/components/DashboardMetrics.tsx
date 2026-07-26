@@ -49,13 +49,21 @@ const DashboardMetrics = ({
       ? "Unavailable"
       : String(portfolios.length);
 
+  const quoteCurrency = quote?.currency?.trim().toUpperCase() || "USD";
+
   const quoteValue = quoteLoading
     ? "Loading..."
     : quoteError
       ? "Unavailable"
       : quote?.latest_price !== undefined && quote.latest_price !== null
-        ? formatCurrency(quote.latest_price, "USD")
+        ? formatCurrency(quote.latest_price, quoteCurrency)
         : "Unavailable";
+
+  const quoteCompanyName = quote?.company_name?.trim();
+
+  const quoteLabel = quoteCompanyName
+    ? `${quoteCompanyName} (${symbol}) Price`
+    : `${symbol} Price`;
 
   const getPerformanceCurrencyValue = (value: number): string => {
     const currency = performance.currency;
@@ -70,10 +78,6 @@ const DashboardMetrics = ({
 
     if (performanceError) {
       return "Unavailable";
-    }
-
-    if (performance.hasMixedCurrencies) {
-      return "Multiple currencies";
     }
 
     if (currency === null) {
@@ -91,7 +95,6 @@ const DashboardMetrics = ({
     !performanceLoading &&
     !performanceError &&
     hasPortfolios &&
-    !performance.hasMixedCurrencies &&
     performance.currency !== null &&
     performance.pricedHoldings > 0
       ? formatPercent(performance.totalGainLossPercent)
@@ -103,26 +106,68 @@ const DashboardMetrics = ({
       ? "Unavailable"
       : String(performance.totalHoldings);
 
+  const showCurrencyBreakdown =
+    !performanceLoading &&
+    !performanceError &&
+    hasPortfolios &&
+    performance.currencyTotals.length > 1;
+
+  const marketValueBreakdown = showCurrencyBreakdown
+    ? performance.currencyTotals.map((total) => ({
+        id: `market-value-${total.currency}`,
+        label: total.currency,
+        value: formatCurrency(total.marketValue, total.currency),
+      }))
+    : [];
+
+  const gainLossBreakdown = showCurrencyBreakdown
+    ? performance.currencyTotals.map((total) => ({
+        id: `gain-loss-${total.currency}`,
+        label: total.currency,
+        value: formatCurrency(total.gainLoss, total.currency),
+        positive: total.gainLoss >= 0,
+      }))
+    : [];
+
+  const preferredCurrencyCaption =
+    !performanceLoading &&
+    !performanceError &&
+    hasPortfolios &&
+    performance.currency
+      ? `Combined in preferred currency · ${performance.currency}`
+      : undefined;
+
   return (
     <>
       <MetricCard label="Portfolios" value={portfolioCountValue} />
 
-      <MetricCard label="Total Portfolio Value" value={totalValue} />
+      <MetricCard
+        label="Total Portfolio Value"
+        value={totalValue}
+        valueCaption={preferredCurrencyCaption}
+        breakdownLabel={
+          showCurrencyBreakdown ? "Original currency totals" : undefined
+        }
+        breakdown={marketValueBreakdown}
+      />
 
       <MetricCard
         label="Total Profit / Loss"
         value={totalGainLoss}
+        valueCaption={preferredCurrencyCaption}
         change={gainLossChange}
         positive={
-          !performance.hasMixedCurrencies &&
-          performance.currency !== null &&
-          performance.totalGainLoss >= 0
+          performance.currency !== null && performance.totalGainLoss >= 0
         }
+        breakdownLabel={
+          showCurrencyBreakdown ? "Original currency totals" : undefined
+        }
+        breakdown={gainLossBreakdown}
       />
 
       <MetricCard label="Total Holdings" value={holdingsValue} />
 
-      <MetricCard label={`${symbol} Price`} value={quoteValue} />
+      <MetricCard label={quoteLabel} value={quoteValue} />
     </>
   );
 };

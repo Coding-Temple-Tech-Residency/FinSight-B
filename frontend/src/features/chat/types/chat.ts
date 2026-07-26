@@ -1,3 +1,5 @@
+import type { SupportedCurrency } from "../../currency/types/currency";
+
 export type ChatRole = "user" | "assistant";
 
 export type AIChatMessage = {
@@ -9,4 +11,6 @@ export type AIChatMessage = {
 
 export type AIChatPayload = {
   message: string;
+  symbol?: string;
+  preferredCurrency?: SupportedCurrency;
 };

@@ -1,6 +1,6 @@
 import type { StockQuote } from "../types/stock";
 
-type QuoteCardProps = {
+type StockQuoteCardProps = {
   quote?: StockQuote;
   loading: boolean;
   isError?: boolean;
@@ -35,7 +35,11 @@ const formatDate = (value: string | null | undefined) => {
   return date.toLocaleString();
 };
 
-const QuoteCard = ({ quote, loading, isError = false }: QuoteCardProps) => {
+const StockQuoteCard = ({
+  quote,
+  loading,
+  isError = false,
+}: StockQuoteCardProps) => {
   if (loading) {
     return (
       <article className="metric-card">
@@ -69,4 +73,4 @@ const QuoteCard = ({ quote, loading, isError = false }: QuoteCardProps) => {
   );
 };
 
-export default QuoteCard;
+export default StockQuoteCard;

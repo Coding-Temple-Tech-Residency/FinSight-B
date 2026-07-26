@@ -2,9 +2,11 @@ import { useSearchParams } from "react-router-dom";
 
 import { useDashboard } from "../../dashboard/hooks/useDashboard";
 
-import QuoteCard from "../components/QuoteCard";
+import CompanyOverviewCard from "../components/CompanyOverviewCard";
 import StockLineChart from "../components/StockLineChart";
+import QuoteCard from "../components/StockQuoteCard";
 import StockSearch from "../components/StockSearch";
+import TrendingStocks from "../components/TrendingStocks";
 
 import { useMarketHistory } from "../hooks/useMarketHistory";
 import { useStockQuote } from "../hooks/useStockQuote";
@@ -19,7 +21,7 @@ const getErrorMessage = (error: unknown) => {
   return "Unable to load market data.";
 };
 
-const Market = () => {
+const MarketPage = () => {
   const [searchParams] = useSearchParams();
   const { symbol } = useDashboard();
 
@@ -42,8 +44,8 @@ const Market = () => {
           <h1 className="market-title">Stock Market</h1>
 
           <p className="market-description">
-            Search for a stock symbol to view its latest price and historical
-            daily performance.
+            Search for a stock symbol to view its latest price, company
+            information, historical performance, and broader market activity.
           </p>
         </div>
 
@@ -66,33 +68,51 @@ const Market = () => {
         </section>
       ) : (
         <div className="market-content">
-          <section className="market-quote-section">
-            <div className="market-section-heading">
-              <div>
-                <p className="market-section-eyebrow">Current quote</p>
+          <div className="market-summary-grid">
+            <section className="market-panel market-quote-section">
+              <div className="market-section-heading">
+                <div>
+                  <p className="market-section-eyebrow">Current quote</p>
 
-                <h2>{normalizedSymbol}</h2>
+                  <h2>{normalizedSymbol}</h2>
+                </div>
+
+                {(quoteQuery.isFetching || historyQuery.isFetching) && (
+                  <span className="market-refresh-status">Refreshing…</span>
+                )}
               </div>
 
-              {(quoteQuery.isFetching || historyQuery.isFetching) && (
-                <span className="market-refresh-status">Refreshing…</span>
+              <QuoteCard
+                quote={quoteQuery.data}
+                loading={quoteQuery.isLoading}
+                isError={hasQuoteError}
+              />
+
+              {hasQuoteError && (
+                <p className="market-error-message" role="alert">
+                  {getErrorMessage(quoteQuery.error)}
+                </p>
               )}
-            </div>
+            </section>
 
-            <QuoteCard
-              quote={quoteQuery.data}
-              loading={quoteQuery.isLoading}
-              isError={hasQuoteError}
-            />
+            <section className="market-panel market-overview-section">
+              <div className="market-section-heading">
+                <div>
+                  <p className="market-section-eyebrow">Company information</p>
 
-            {hasQuoteError && (
-              <p className="market-error-message" role="alert">
-                {getErrorMessage(quoteQuery.error)}
-              </p>
-            )}
-          </section>
+                  <h2>Overview</h2>
+                </div>
+              </div>
 
-          <section className="market-chart-section">
+              <CompanyOverviewCard
+                quote={quoteQuery.data}
+                loading={quoteQuery.isLoading}
+                isError={hasQuoteError}
+              />
+            </section>
+          </div>
+
+          <section className="market-panel market-chart-section">
             <div className="market-section-heading">
               <div>
                 <p className="market-section-eyebrow">Historical data</p>
@@ -102,7 +122,7 @@ const Market = () => {
             </div>
 
             {historyQuery.isLoading ? (
-              <div className="market-loading-state">
+              <div className="market-loading-state" role="status">
                 <p>Loading price history...</p>
               </div>
             ) : hasHistoryError ? (
@@ -115,10 +135,22 @@ const Market = () => {
               <StockLineChart data={historyQuery.data ?? []} />
             )}
           </section>
+
+          <section className="market-panel market-trending-section">
+            <div className="market-section-heading">
+              <div>
+                <p className="market-section-eyebrow">Market activity</p>
+
+                <h2>Trending Stocks</h2>
+              </div>
+            </div>
+
+            <TrendingStocks />
+          </section>
         </div>
       )}
     </section>
   );
 };
 
-export default Market;
+export default MarketPage;
