@@ -51,7 +51,7 @@ const Dashboard = () => {
   } = usePortfolios();
 
   const {
-    summary,
+    displaySummary,
     isLoading: performanceLoading,
     isFetching: performanceFetching,
     isError: performanceError,
@@ -103,7 +103,7 @@ const Dashboard = () => {
               portfolios={portfolios}
               portfolioLoading={portfolioLoading}
               portfolioError={portfolioError}
-              performance={summary}
+              performance={displaySummary}
               performanceLoading={dashboardPerformanceLoading}
               performanceError={dashboardPerformanceError}
             />

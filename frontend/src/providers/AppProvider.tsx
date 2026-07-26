@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 
+import CurrencyProvider from "../features/currency/providers/CurrencyProvider";
 import DashboardProvider from "../features/dashboard/providers/DashboardProvider";
+
 import ModalProvider from "./ModalProvider";
 import QueryProvider from "./QueryProvider";
 import ThemeProvider from "./ThemeProvider";
@@ -11,13 +13,15 @@ type AppProvidersProps = {
 
 const AppProviders = ({ children }: AppProvidersProps) => {
   return (
-    <QueryProvider>
-      <ThemeProvider>
-        <ModalProvider>
-          <DashboardProvider>{children}</DashboardProvider>
-        </ModalProvider>
-      </ThemeProvider>
-    </QueryProvider>
+    <ThemeProvider>
+      <ModalProvider>
+        <QueryProvider>
+          <CurrencyProvider>
+            <DashboardProvider>{children}</DashboardProvider>
+          </CurrencyProvider>
+        </QueryProvider>
+      </ModalProvider>
+    </ThemeProvider>
   );
 };
 

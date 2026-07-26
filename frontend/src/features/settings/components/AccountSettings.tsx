@@ -42,6 +42,7 @@ const AccountSettings = () => {
         type="button"
         onClick={handleDeleteAccount}
         disabled={deleteMutation.isPending}
+        className="px-2 py-0.5 rounded"
       >
         {deleteMutation.isPending ? "Deleting Account..." : "Delete Account"}
       </button>

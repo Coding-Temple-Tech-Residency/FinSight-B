@@ -1,4 +1,5 @@
 import AccountSettings from "../components/AccountSettings";
+import CurrencySettings from "../components/CurrencySettings";
 import ProfileCard from "../components/ProfileCard";
 import ThemeSettings from "../components/ThemeSettings";
 
@@ -10,11 +11,14 @@ const Settings = () => {
       <header className="settings-header">
         <h1>Settings</h1>
 
-        <p>Manage your profile, appearance, and account preferences.</p>
+        <p>
+          Manage your profile, appearance, currency, and account preferences.
+        </p>
       </header>
 
       <ProfileCard />
       <ThemeSettings />
+      <CurrencySettings />
       <AccountSettings />
     </section>
   );

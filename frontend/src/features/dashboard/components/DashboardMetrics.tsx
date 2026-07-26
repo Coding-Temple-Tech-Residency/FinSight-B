@@ -72,10 +72,6 @@ const DashboardMetrics = ({
       return "Unavailable";
     }
 
-    if (performance.hasMixedCurrencies) {
-      return "Multiple currencies";
-    }
-
     if (currency === null) {
       return "Unavailable";
     }
@@ -91,7 +87,6 @@ const DashboardMetrics = ({
     !performanceLoading &&
     !performanceError &&
     hasPortfolios &&
-    !performance.hasMixedCurrencies &&
     performance.currency !== null &&
     performance.pricedHoldings > 0
       ? formatPercent(performance.totalGainLossPercent)
@@ -114,9 +109,7 @@ const DashboardMetrics = ({
         value={totalGainLoss}
         change={gainLossChange}
         positive={
-          !performance.hasMixedCurrencies &&
-          performance.currency !== null &&
-          performance.totalGainLoss >= 0
+          performance.currency !== null && performance.totalGainLoss >= 0
         }
       />
 
