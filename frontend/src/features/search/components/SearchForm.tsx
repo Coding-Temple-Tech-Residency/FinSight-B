@@ -14,10 +14,13 @@ import { faMagnifyingGlass, faXmark } from "@fortawesome/free-solid-svg-icons";
 
 import { useLocation, useNavigate } from "react-router-dom";
 
+import StockDetailsModal from "../../market/components/StockDetailsModal";
+
+import type { StockSearchResult } from "../../market/types/stock";
+import type { SearchResultType, UniversalSearchResult } from "../types/search";
+
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { useUniversalSearch } from "../hooks/useUniversalSearch";
-
-import type { SearchResultType, UniversalSearchResult } from "../types/search";
 
 import SearchResultGroup, {
   type IndexedSearchResult,
@@ -78,6 +81,19 @@ const getErrorMessage = (error: unknown): string => {
   return "Unable to search the FinSight platform.";
 };
 
+const isStockSearchResult = (value: unknown): value is StockSearchResult => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const possibleStock = value as Partial<StockSearchResult>;
+
+  return (
+    typeof possibleStock.symbol === "string" &&
+    typeof possibleStock.company_name === "string"
+  );
+};
+
 const SearchForm = ({
   closeSearch,
   placeholder = "Search portfolios, watchlists, stocks, and dashboard pages...",
@@ -102,6 +118,9 @@ const SearchForm = ({
   const [query, setQuery] = useState(currentQuery);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [selectedStock, setSelectedStock] = useState<StockSearchResult | null>(
+    null,
+  );
 
   const debouncedQuery = useDebouncedValue(query, 300);
 
@@ -165,6 +184,17 @@ const SearchForm = ({
     closeSearch?.();
   };
 
+  const openStockModal = (result: UniversalSearchResult): boolean => {
+    if (result.type !== "stock" || !isStockSearchResult(result.data)) {
+      return false;
+    }
+
+    closeDropdown();
+    setSelectedStock(result.data);
+
+    return true;
+  };
+
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const nextQuery = event.target.value;
 
@@ -180,6 +210,10 @@ const SearchForm = ({
   };
 
   const handleResultSelect = (result: UniversalSearchResult) => {
+    if (openStockModal(result)) {
+      return;
+    }
+
     closeDropdown();
     closeSearch?.();
 
@@ -268,12 +302,32 @@ const SearchForm = ({
     if (event.key === "Enter" && activeIndex >= 0) {
       event.preventDefault();
 
-      const activeResult = results[activeIndex];
+      const selectedResult = results[activeIndex];
 
-      if (activeResult) {
-        handleResultSelect(activeResult);
+      if (selectedResult) {
+        handleResultSelect(selectedResult);
       }
     }
+  };
+
+  const handleCloseStockModal = () => {
+    setSelectedStock(null);
+  };
+
+  const handleViewStockMarket = (symbol: string) => {
+    const normalizedSymbol = symbol.trim().toUpperCase();
+
+    if (!normalizedSymbol) {
+      return;
+    }
+
+    setSelectedStock(null);
+    closeDropdown();
+    closeSearch?.();
+
+    navigate(
+      `/dashboard/market?symbol=${encodeURIComponent(normalizedSymbol)}`,
+    );
   };
 
   const activeResult = results[activeIndex];
@@ -290,128 +344,137 @@ const SearchForm = ({
   const hasResults = results.length > 0;
 
   return (
-    <div ref={containerRef} className="search-autocomplete-container">
-      <form className="search-form" role="search" onSubmit={handleSubmit}>
-        <div className="search-input-wrapper">
-          <FontAwesomeIcon
-            icon={faMagnifyingGlass}
-            className="search-form-icon"
-            aria-hidden="true"
-          />
+    <>
+      <div ref={containerRef} className="search-autocomplete-container">
+        <form className="search-form" role="search" onSubmit={handleSubmit}>
+          <div className="search-input-wrapper">
+            <FontAwesomeIcon
+              icon={faMagnifyingGlass}
+              className="search-form-icon"
+              aria-hidden="true"
+            />
 
-          <label htmlFor={inputId} className="sr-only">
-            Search the FinSight platform
-          </label>
+            <label htmlFor={inputId} className="sr-only">
+              Search the FinSight platform
+            </label>
 
-          <input
-            ref={inputRef}
-            id={inputId}
-            name="platform-search"
-            type="search"
-            value={query}
-            placeholder={placeholder}
-            autoComplete="off"
-            autoFocus={autoFocus}
-            spellCheck={false}
-            aria-autocomplete="list"
-            aria-expanded={shouldShowDropdown}
-            aria-controls={shouldShowDropdown ? listboxId : undefined}
-            aria-activedescendant={activeDescendant}
-            onChange={handleChange}
-            onFocus={handleFocus}
-            onKeyDown={handleKeyDown}
-          />
+            <input
+              ref={inputRef}
+              id={inputId}
+              name="platform-search"
+              type="search"
+              value={query}
+              placeholder={placeholder}
+              autoComplete="off"
+              autoFocus={autoFocus}
+              spellCheck={false}
+              aria-autocomplete="list"
+              aria-expanded={shouldShowDropdown}
+              aria-controls={shouldShowDropdown ? listboxId : undefined}
+              aria-activedescendant={activeDescendant}
+              onChange={handleChange}
+              onFocus={handleFocus}
+              onKeyDown={handleKeyDown}
+            />
 
-          {query && (
-            <button
-              type="button"
-              className="search-clear-button"
-              aria-label="Clear search"
-              onClick={handleClear}
-            >
-              <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
-            </button>
-          )}
+            {query && (
+              <button
+                type="button"
+                className="search-clear-button"
+                aria-label="Clear search"
+                onClick={handleClear}
+              >
+                <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
+              </button>
+            )}
 
-          {shouldShowDropdown && (
-            <div
-              id={listboxId}
-              role="listbox"
-              aria-label="FinSight search results"
-              className="
-                search-suggestions-dropdown
-                absolute
-                top-[calc(100%+0.5rem)]
-                left-0
-                z-200
-                max-h-[min(420px,calc(100vh-180px))]
-                w-full
-                overflow-y-auto
-                rounded-2xl
-                border
-                border-white/10
-                bg-(--bg-primary)
-                shadow-2xl
-              "
-            >
-              {isLoading && (
-                <SearchLoadingState
-                  message={`Searching FinSight for “${normalizedDebouncedQuery}”...`}
-                />
-              )}
-
-              {!isLoading && isError && (
-                <SearchErrorState
-                  title="Search is unavailable"
-                  message={getErrorMessage(universalSearchQuery.error)}
-                  fallbackMessage="Please try your search again."
-                />
-              )}
-
-              {!isLoading &&
-                !isError &&
-                normalizedDebouncedQuery.length >= MINIMUM_QUERY_LENGTH &&
-                !hasResults && (
-                  <SearchEmptyState
-                    title="No results found"
-                    description={`No FinSight results matched “${normalizedDebouncedQuery}”.`}
+            {shouldShowDropdown && (
+              <div
+                id={listboxId}
+                role="listbox"
+                aria-label="FinSight search results"
+                className="
+                  search-suggestions-dropdown
+                  absolute
+                  top-[calc(100%+0.5rem)]
+                  left-0
+                  z-200
+                  max-h-[min(420px,calc(100vh-180px))]
+                  w-full
+                  overflow-y-auto
+                  rounded-2xl
+                  border
+                  border-white/10
+                  bg-(--bg-primary)
+                  shadow-2xl
+                "
+              >
+                {isLoading && (
+                  <SearchLoadingState
+                    message={`Searching FinSight for “${normalizedDebouncedQuery}”...`}
                   />
                 )}
 
-              {!isLoading &&
-                !isError &&
-                hasResults &&
-                groupedResults.map((group) => (
-                  <SearchResultGroup
-                    key={group.type}
-                    label={group.label}
-                    query={normalizedDebouncedQuery}
-                    results={group.results}
-                    activeIndex={activeIndex}
-                    onResultSelect={handleResultSelect}
-                    onActiveIndexChange={setActiveIndex}
+                {!isLoading && isError && (
+                  <SearchErrorState
+                    title="Search is unavailable"
+                    message={getErrorMessage(universalSearchQuery.error)}
+                    fallbackMessage="Please try your search again."
                   />
-                ))}
-            </div>
-          )}
-        </div>
+                )}
 
-        <button
-          type="submit"
-          className="search-submit-button"
-          aria-label="Submit search"
-          disabled={!normalizedQuery}
-        >
-          <FontAwesomeIcon
-            icon={faMagnifyingGlass}
-            className="search-submit-icon"
-            aria-hidden="true"
-          />
+                {!isLoading &&
+                  !isError &&
+                  normalizedDebouncedQuery.length >= MINIMUM_QUERY_LENGTH &&
+                  !hasResults && (
+                    <SearchEmptyState
+                      title="No results found"
+                      description={`No FinSight results matched “${normalizedDebouncedQuery}”.`}
+                    />
+                  )}
 
-          <span className="search-submit-text">Search</span>
-        </button>
-      </form>
-    </div>
+                {!isLoading &&
+                  !isError &&
+                  hasResults &&
+                  groupedResults.map((group) => (
+                    <SearchResultGroup
+                      key={group.type}
+                      label={group.label}
+                      query={normalizedDebouncedQuery}
+                      results={group.results}
+                      activeIndex={activeIndex}
+                      onResultSelect={handleResultSelect}
+                      onActiveIndexChange={setActiveIndex}
+                    />
+                  ))}
+              </div>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            className="search-submit-button"
+            aria-label="Submit search"
+            disabled={!normalizedQuery}
+          >
+            <FontAwesomeIcon
+              icon={faMagnifyingGlass}
+              className="search-submit-icon"
+              aria-hidden="true"
+            />
+
+            <span className="search-submit-text">Search</span>
+          </button>
+        </form>
+      </div>
+
+      <StockDetailsModal
+        stock={selectedStock}
+        isOpen={selectedStock !== null}
+        onClose={handleCloseStockModal}
+        onViewMarket={handleViewStockMarket}
+      />
+    </>
   );
 };
 

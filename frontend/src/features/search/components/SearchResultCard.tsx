@@ -10,6 +10,7 @@ import { getSearchResultIcon } from "../utils/getSearchResultIcon";
 
 interface SearchResultCardProps {
   result: UniversalSearchResult;
+  onClick?: () => void;
 }
 
 const formatResultType = (type: UniversalSearchResult["type"]): string => {
@@ -24,7 +25,7 @@ const formatResultType = (type: UniversalSearchResult["type"]): string => {
   return labels[type];
 };
 
-const SearchResultCard = ({ result }: SearchResultCardProps) => {
+const SearchResultCard = ({ result, onClick }: SearchResultCardProps) => {
   const icon = getSearchResultIcon(result.type);
   const iconColor = getSearchResultColor(result.type);
 
@@ -85,6 +86,26 @@ const SearchResultCard = ({ result }: SearchResultCardProps) => {
       />
     </>
   );
+
+  if (onClick) {
+    return (
+      <article className="search-result-card">
+        <button
+          type="button"
+          className="
+            search-result-link
+            w-full
+            border-0
+            bg-transparent
+            text-left
+          "
+          onClick={onClick}
+        >
+          {content}
+        </button>
+      </article>
+    );
+  }
 
   if (!result.href) {
     return (

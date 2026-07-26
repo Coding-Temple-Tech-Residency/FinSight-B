@@ -1,6 +1,12 @@
-import { Link, useSearchParams } from "react-router-dom";
+import { useState } from "react";
+
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import EmptyCard from "../../../components/ui/EmptyCard";
+
+import StockDetailsModal from "../../market/components/StockDetailsModal";
+
+import type { StockSearchResult } from "../../market/types/stock";
 
 import SearchForm from "../components/SearchForm";
 import SearchResultCard from "../components/SearchResultCard";
@@ -63,8 +69,26 @@ const groupSearchResults = (
   })).filter((group) => group.results.length > 0);
 };
 
+const isStockSearchResult = (value: unknown): value is StockSearchResult => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const possibleStock = value as Partial<StockSearchResult>;
+
+  return (
+    typeof possibleStock.symbol === "string" &&
+    typeof possibleStock.company_name === "string"
+  );
+};
+
 const PlatformSearchResults = () => {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  const [selectedStock, setSelectedStock] = useState<StockSearchResult | null>(
+    null,
+  );
 
   const query = searchParams.get("q")?.trim() ?? "";
 
@@ -83,118 +107,163 @@ const PlatformSearchResults = () => {
 
   const isError = query.length > 0 && universalSearchQuery.isError;
 
+  const handleStockResultClick = (result: UniversalSearchResult) => {
+    if (result.type !== "stock" || !isStockSearchResult(result.data)) {
+      return;
+    }
+
+    setSelectedStock(result.data);
+  };
+
+  const handleCloseStockModal = () => {
+    setSelectedStock(null);
+  };
+
+  const handleViewStockMarket = (symbol: string) => {
+    const normalizedSymbol = symbol.trim().toUpperCase();
+
+    if (!normalizedSymbol) {
+      return;
+    }
+
+    setSelectedStock(null);
+
+    navigate(
+      `/dashboard/market?symbol=${encodeURIComponent(normalizedSymbol)}`,
+    );
+  };
+
   return (
-    <section className="search-results-page">
-      <header className="search-results-header">
-        <div>
-          <p className="page-eyebrow">Universal Search</p>
+    <>
+      <section className="search-results-page">
+        <header className="search-results-header">
+          <div>
+            <p className="page-eyebrow">Universal Search</p>
 
-          <h1>Search FinSight</h1>
+            <h1>Search FinSight</h1>
 
-          <p>
-            Search across your dashboard, portfolios, watchlists, stocks, and AI
-            tools.
-          </p>
-        </div>
-      </header>
-
-      <div className="search-results-form">
-        <SearchForm
-          key={query}
-          placeholder="Search stocks, pages, portfolios, watchlists, AI tools..."
-        />
-      </div>
-
-      {!query && (
-        <EmptyCard
-          title="Search FinSight"
-          message="Enter a stock symbol, company, page, feature, portfolio, watchlist, or AI tool."
-        />
-      )}
-
-      {isLoading && (
-        <SearchLoadingState message={`Searching FinSight for “${query}”...`} />
-      )}
-
-      {!isLoading && isError && (
-        <SearchErrorState
-          title="Search is unavailable"
-          message={getErrorMessage(universalSearchQuery.error)}
-          fallbackMessage="Please try your search again."
-        />
-      )}
-
-      {!isLoading && !isError && query && !hasResults && (
-        <div className="search-no-results">
-          <EmptyCard
-            title="No results found"
-            message={`No FinSight results matched “${query}”. Try another keyword or stock symbol.`}
-          />
-
-          <Link to="/dashboard" className="secondary-button">
-            Return to Dashboard
-          </Link>
-        </div>
-      )}
-
-      {!isLoading && !isError && query && hasResults && (
-        <>
-          <div className="search-results-summary">
-            <h2>Results for “{query}”</h2>
-
-            <span>
-              {resultCount} {resultCount === 1 ? "result" : "results"}
-            </span>
+            <p>
+              Search across your dashboard, portfolios, watchlists, stocks, and
+              AI tools.
+            </p>
           </div>
+        </header>
 
-          <div className="flex flex-col gap-8">
-            {groupedResults.map((group) => (
-              <section
-                key={group.type}
-                aria-labelledby={`search-results-${group.type}`}
-                className="flex flex-col gap-4"
-              >
-                <header
-                  className="
+        <div className="search-results-form">
+          <SearchForm
+            key={query}
+            placeholder="Search stocks, pages, portfolios, watchlists, AI tools..."
+          />
+        </div>
+
+        {!query && (
+          <EmptyCard
+            title="Search FinSight"
+            message="Enter a stock symbol, company, page, feature, portfolio, watchlist, or AI tool."
+          />
+        )}
+
+        {isLoading && (
+          <SearchLoadingState
+            message={`Searching FinSight for “${query}”...`}
+          />
+        )}
+
+        {!isLoading && isError && (
+          <SearchErrorState
+            title="Search is unavailable"
+            message={getErrorMessage(universalSearchQuery.error)}
+            fallbackMessage="Please try your search again."
+          />
+        )}
+
+        {!isLoading && !isError && query && !hasResults && (
+          <div className="search-no-results">
+            <EmptyCard
+              title="No results found"
+              message={`No FinSight results matched “${query}”. Try another keyword or stock symbol.`}
+            />
+
+            <Link to="/dashboard" className="secondary-button">
+              Return to Dashboard
+            </Link>
+          </div>
+        )}
+
+        {!isLoading && !isError && query && hasResults && (
+          <>
+            <div className="search-results-summary">
+              <h2>Results for “{query}”</h2>
+
+              <span>
+                {resultCount} {resultCount === 1 ? "result" : "results"}
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-8">
+              {groupedResults.map((group) => (
+                <section
+                  key={group.type}
+                  aria-labelledby={`search-results-${group.type}`}
+                  className="flex flex-col gap-4"
+                >
+                  <header
+                    className="
                       flex
                       items-center
                       justify-between
                       gap-4
                     "
-                >
-                  <h2
-                    id={`search-results-${group.type}`}
-                    className="
+                  >
+                    <h2
+                      id={`search-results-${group.type}`}
+                      className="
                         text-lg
                         font-bold
                         text-(--text-primary)
                       "
-                  >
-                    {group.label}
-                  </h2>
+                    >
+                      {group.label}
+                    </h2>
 
-                  <span
-                    className="
+                    <span
+                      className="
                         text-sm
                         text-(--text-secondary)
                       "
-                  >
-                    {group.results.length}{" "}
-                    {group.results.length === 1 ? "result" : "results"}
-                  </span>
-                </header>
+                    >
+                      {group.results.length}{" "}
+                      {group.results.length === 1 ? "result" : "results"}
+                    </span>
+                  </header>
 
-                <div className="search-results-list">
-                  {group.results.map((result) => (
-                    <SearchResultCard key={result.id} result={result} />
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-        </>
-      )}
-    </section>
+                  <div className="search-results-list">
+                    {group.results.map((result) => (
+                      <SearchResultCard
+                        key={result.id}
+                        result={result}
+                        onClick={
+                          result.type === "stock"
+                            ? () => handleStockResultClick(result)
+                            : undefined
+                        }
+                      />
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
+
+      <StockDetailsModal
+        stock={selectedStock}
+        isOpen={selectedStock !== null}
+        onClose={handleCloseStockModal}
+        onViewMarket={handleViewStockMarket}
+      />
+    </>
   );
 };
 
