@@ -11,6 +11,7 @@ import DashboardMetrics from "../components/DashboardMetrics";
 import DashboardModeToggle, {
   type DashboardMode,
 } from "../components/DashboardModeToggle";
+import FinancialAssistantCard from "../components/FinancialAssistantCard";
 import HoldingsAllocation from "../components/HoldingsAllocation";
 import PortfolioChart from "../components/PortfolioChart";
 import TopMoversCard from "../components/TopMoversCard";
@@ -114,6 +115,12 @@ const Dashboard = () => {
               Updating portfolio data...
             </p>
           )}
+
+          <FinancialAssistantCard
+            symbol={symbol}
+            portfolioCount={portfolios.length}
+            portfolioLoading={portfolioLoading}
+          />
 
           <section className="dashboard-portfolio-toolbar">
             <div>
