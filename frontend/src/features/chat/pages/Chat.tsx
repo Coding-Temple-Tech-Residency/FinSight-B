@@ -22,6 +22,7 @@ import ChatMessageContent from "../components/ChatMessageContent";
 
 import { useDashboard } from "../../dashboard/hooks/useDashboard";
 import { useAIChat } from "../hooks/useAIChat";
+import { useCurrency } from "../../currency/hooks/useCurrency";
 
 import type { AIChatMessage } from "../types/chat";
 
@@ -112,6 +113,7 @@ const copyToClipboard = async (content: string): Promise<void> => {
 
 const Chat = () => {
   const { symbol } = useDashboard();
+  const { preferredCurrency } = useCurrency();
 
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<AIChatMessage[]>(loadStoredMessages);
@@ -208,6 +210,8 @@ const Chat = () => {
     sendMessage(
       {
         message: trimmedMessage,
+        symbol,
+        preferredCurrency,
       },
       {
         onSuccess: (response) => {
