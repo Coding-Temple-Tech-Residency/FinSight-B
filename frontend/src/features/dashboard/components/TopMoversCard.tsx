@@ -33,6 +33,9 @@ const TopMoversCard = ({
   const isError = portfolioError || holdingsError;
 
   const performance = calculatePortfolioPerformance([], holdings);
+  console.log("holdings", holdings);
+  console.log("performance", performance);
+  console.log("holdingPerformance", performance.holdingPerformance);
 
   const sortedPerformance = [...performance.holdingPerformance].sort(
     (firstHolding, secondHolding) =>
