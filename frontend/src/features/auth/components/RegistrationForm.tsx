@@ -87,8 +87,18 @@ const RegistrationForm = () => {
           className="w-full border border-gray-400 rounded-xl p-4 mt-1 mb-4"
           value={firstName}
           onChange={(e) => {
-            setFirstName(e.target.value);
-            setFirstNameError("");
+            const value = e.target.value;
+            setFirstName(value);
+            if (value.trim() === "") {
+              setFirstNameError("First name is required.");
+            } else {
+              setFirstNameError("");
+            }
+          }}
+          onBlur={() => {
+            if (firstName.trim() === "") {
+              setFirstNameError("First name is required.");
+            }
           }}
           required
         />
@@ -102,8 +112,18 @@ const RegistrationForm = () => {
           className="w-full border border-gray-400 rounded-xl p-4 mt-1 mb-4"
           value={lastName}
           onChange={(e) => {
-            setLastName(e.target.value);
-            setLastNameError("");
+            const value = e.target.value;
+            setLastName(value);
+            if (value.trim() === "") {
+              setLastNameError("Last name is required.");
+            } else {
+              setLastNameError("");
+            }
+          }}
+          onBlur={() => {
+            if (lastName.trim() === "") {
+              setLastNameError("Last name is required.");
+            }
           }}
           required
         />
@@ -117,8 +137,20 @@ const RegistrationForm = () => {
           className="w-full border border-gray-400 rounded-xl p-4 mt-1 mb-4"
           value={email}
           onChange={(e) => {
-            setEmail(e.target.value);
-            setEmailError("");
+            const value = e.target.value;
+            setEmail(value);
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (value === "" || emailRegex.test(value)) {
+              setEmailError("");
+            } else {
+              setEmailError("Please enter a valid email address.");
+            }
+          }}
+          onBlur={() => {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+              setEmailError("Please enter a valid email address.");
+            }
           }}
           required
         />
@@ -132,8 +164,17 @@ const RegistrationForm = () => {
           onChange={(e) => {
             const value = e.target.value;
             setPassword(value);
-            if (value.length >= 8) {
+            if (value.length === 0) {
               setPasswordError("");
+            } else if (value.length < 8) {
+              setPasswordError("Password must be at least 8 characters.");
+            } else {
+              setPasswordError("");
+            }
+          }}
+          onBlur={() => {
+            if (password.length < 8) {
+              setPasswordError("Password must be at least 8 characters.");
             }
           }}
           required
@@ -148,8 +189,18 @@ const RegistrationForm = () => {
           className="w-full border border-gray-400 rounded-xl p-4 mt-1 mb-4"
           value={confirmPassword}
           onChange={(e) => {
-            setConfirmPassword(e.target.value);
-            setConfirmPasswordError("");
+            const value = e.target.value;
+            setConfirmPassword(value);
+            if (value !== password) {
+              setConfirmPasswordError("Passwords do not match.");
+            } else {
+              setConfirmPasswordError("");
+            }
+          }}
+          onBlur={() => {
+            if (confirmPassword !== password) {
+              setConfirmPasswordError("Passwords do not match.");
+            }
           }}
           required
         />

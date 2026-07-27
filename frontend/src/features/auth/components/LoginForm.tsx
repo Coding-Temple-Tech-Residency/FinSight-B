@@ -70,8 +70,20 @@ const LoginForm = () => {
           className="w-full max-w-xl p-3 border border-gray-300 rounded-xl px-4 py-4 mb-5"
           value={email}
           onChange={(e) => {
-            setEmail(e.target.value);
-            setEmailError("");
+            const value = e.target.value;
+            setEmail(value);
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (value === "" || emailRegex.test(value)) {
+              setEmailError("");
+            } else {
+              setEmailError("Please enter a valid email address.");
+            }
+          }}
+          onBlur={() => {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+              setEmailError("Please enter a valid email address.");
+            }
           }}
         />
         {emailError && <p className="text-red-500 text-sm">{emailError}</p>}
@@ -84,8 +96,17 @@ const LoginForm = () => {
           onChange={(e) => {
             const value = e.target.value;
             setPassword(value);
-            if (value.length >= 8) {
+            if (value.length === 0) {
               setPasswordError("");
+            } else if (value.length < 8) {
+              setPasswordError("Password must be at least 8 characters.");
+            } else {
+              setPasswordError("");
+            }
+          }}
+          onBlur={() => {
+            if (password.length < 8) {
+              setPasswordError("Password must be at least 8 characters.");
             }
           }}
         />
