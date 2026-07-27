@@ -26,6 +26,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",   # Vite default port
         "http://127.0.0.1:5173",  # Alternative localhost format
+        "https://finsight-b.vercel.app",
     ],
     # Allow cookies and authorization headers to be sent
     allow_credentials=True,
