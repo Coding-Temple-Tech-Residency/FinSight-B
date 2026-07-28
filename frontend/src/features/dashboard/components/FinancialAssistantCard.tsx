@@ -133,7 +133,7 @@ const FinancialAssistantCard = ({
         </p>
       )}
 
-      <div className="insight-actions">
+      <div className="insight-actions max-w-5xl">
         <button
           type="button"
           onClick={handleGenerateBriefing}

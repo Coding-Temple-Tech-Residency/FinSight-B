@@ -1,9 +1,20 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 
-import { registerUser } from "../../../api/authApi";
+import {
+  getCurrentUser,
+  loginUser,
+  registerUser,
+  type RegisterPayload,
+} from "../../../api/authApi";
+import { useModal } from "../../../hooks/useModal";
+import { CURRENT_USER_QUERY_KEY } from "../hooks/useCurrentUser";
 
 const RegistrationForm = () => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { closeModal } = useModal();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -16,19 +27,33 @@ const RegistrationForm = () => {
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
 
   const registerMutation = useMutation({
-    mutationFn: registerUser,
-    onSuccess: () => {
-      alert("Account created. You can now log in.");
+    mutationFn: async (payload: RegisterPayload) => {
+      await registerUser(payload);
+
+      return loginUser({
+        email: payload.email,
+        password: payload.password,
+      });
+    },
+    onSuccess: async (data) => {
+      localStorage.setItem("token", data.access_token);
+
+      await queryClient.fetchQuery({
+        queryKey: CURRENT_USER_QUERY_KEY,
+        queryFn: getCurrentUser,
+      });
 
       setFirstName("");
       setLastName("");
       setEmail("");
       setPassword("");
       setConfirmPassword("");
+
+      closeModal();
+      navigate("/dashboard", { replace: true });
     },
     onError: (error) => {
       console.error(error);
-      alert("Registration failed");
     },
   });
 
@@ -206,6 +231,14 @@ const RegistrationForm = () => {
         />
         {confirmPasswordError && (
           <p className="text-red-500 text-sm">{confirmPasswordError}</p>
+        )}
+
+        {registerMutation.isError && (
+          <p className="text-red-500 text-sm" role="alert">
+            {registerMutation.error instanceof Error
+              ? registerMutation.error.message
+              : "Registration failed. Please try again."}
+          </p>
         )}
 
         <button

@@ -236,7 +236,7 @@ const StockSearchInput = ({
   })();
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div ref={containerRef} className="relative w-full lg:max-w-150">
       <form className="stock-search" role="search" onSubmit={handleSubmit}>
         <FontAwesomeIcon
           icon={faMagnifyingGlass}

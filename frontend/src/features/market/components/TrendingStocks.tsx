@@ -110,10 +110,10 @@ const TrendingGroup = ({
 
                         <span className="trending-stock-identity">
                           <strong>
-                            {stock.company_name?.trim() || stock.symbol}
+                            {stock.company_name?.trim()
+                              ? `${stock.company_name.trim()} (${stock.symbol})`
+                              : stock.symbol}
                           </strong>
-
-                          <small>{stock.symbol}</small>
                         </span>
                       </button>
                     </td>

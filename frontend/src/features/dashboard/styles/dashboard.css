@@ -784,6 +784,9 @@
   .insight-actions {
     flex-direction: row;
     align-items: center;
+    justify-content: center;
+    margin-inline: auto;
+    width: 100%;
   }
 
   .insight-actions button,

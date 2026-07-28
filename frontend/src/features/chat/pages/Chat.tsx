@@ -124,7 +124,8 @@ const Chat = () => {
 
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const newestAssistantMessageRef = useRef<HTMLElement>(null);
+  const previousAssistantMessageIdRef = useRef<string | undefined>(undefined);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const copyTimeoutRef = useRef<number | null>(null);
 
@@ -156,11 +157,20 @@ const Chat = () => {
   }, [messages]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
+    if (
+      !lastAssistantMessageId ||
+      previousAssistantMessageIdRef.current === lastAssistantMessageId
+    ) {
+      return;
+    }
+
+    previousAssistantMessageIdRef.current = lastAssistantMessageId;
+
+    newestAssistantMessageRef.current?.scrollIntoView({
       behavior: "smooth",
-      block: "end",
+      block: "start",
     });
-  }, [messages, isPending, isError]);
+  }, [lastAssistantMessageId]);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -423,6 +433,12 @@ const Chat = () => {
             return (
               <article
                 key={chatMessage.id}
+                ref={
+                  chatMessage.role === "assistant" &&
+                  chatMessage.id === lastAssistantMessageId
+                    ? newestAssistantMessageRef
+                    : undefined
+                }
                 className={`chat-message ${chatMessage.role}`}
               >
                 <div className="chat-message-header">
@@ -545,7 +561,6 @@ const Chat = () => {
               />
             )}
 
-          <div ref={messagesEndRef} aria-hidden="true" />
         </div>
 
         <form className="chat-form" onSubmit={handleSubmit}>
