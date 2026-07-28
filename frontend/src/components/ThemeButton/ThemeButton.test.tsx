@@ -9,6 +9,19 @@ vi.mock("../../hooks/useTheme", () => ({
   default: vi.fn(),
 }));
 
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: vi.fn().mockImplementation(() => ({
+    matches: false,
+    media: "",
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
 describe("ThemeButton", () => {
   it("renders the theme button", () => {
     vi.mocked(useTheme).mockReturnValue({
