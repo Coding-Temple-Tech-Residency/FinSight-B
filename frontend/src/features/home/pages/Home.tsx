@@ -115,18 +115,18 @@ const Home = ({ isOpen, openMenu, closeMenu }: HomeProps) => {
 
   return (
     <div className="home">
-      <header className="home-header sticky top-0 left-0 z-50 inline-flex min-h-17.5 w-full items-center justify-between overflow-y-auto bg-(--bg-primary) px-3">
+      <header className="home-header sticky top-0 left-0 z-50 inline-flex min-h-17.5 w-full items-center justify-between bg-(--bg-primary) px-3">
         <Link to="/" className="logo-link" onClick={closeMenu}>
           <Logo />
         </Link>
 
         <nav
           className={`home-nav m-auto items-center justify-center bg-(--bg-primary) px-5 py-3 transition-all duration-300 ${
-            isOpen ? "flex translate-y-0 flex-col" : "-translate-y-300"
+            isOpen ? "flex translate-y-0 flex-col" : "-translate-y-[100svh]"
           } ${
             isDesktop
               ? "static translate-y-0"
-              : "fixed top-0 left-0 h-screen w-screen -translate-y-300"
+              : "fixed top-0 left-0 h-screen w-screen -translate-y-[100svh]"
           }`}
         >
           <ul
@@ -161,20 +161,23 @@ const Home = ({ isOpen, openMenu, closeMenu }: HomeProps) => {
         </nav>
 
         {!isDesktop && (
-          <button
-            type="button"
-            className="menu-btn z-60"
-            aria-label={
-              isOpen ? "Close navigation menu" : "Open navigation menu"
-            }
-            aria-expanded={isOpen}
-            onClick={isOpen ? closeMenu : openMenu}
-          >
-            <FontAwesomeIcon
-              icon={menuIcon}
-              className="cursor-pointer text-2xl"
-            />
-          </button>
+          <div className="w-25 flex justify-evenly items-center">
+            <ThemeButton />
+            <button
+              type="button"
+              className="menu-btn z-60"
+              aria-label={
+                isOpen ? "Close navigation menu" : "Open navigation menu"
+              }
+              aria-expanded={isOpen}
+              onClick={isOpen ? closeMenu : openMenu}
+            >
+              <FontAwesomeIcon
+                icon={menuIcon}
+                className="cursor-pointer text-2xl"
+              />
+            </button>
+          </div>
         )}
 
         {isDesktop && (
@@ -581,8 +584,6 @@ const Home = ({ isOpen, openMenu, closeMenu }: HomeProps) => {
           </div>
         </section>
       </footer>
-
-      <ThemeButton />
 
       {!loading && !isAuthenticated && isModalOpen("login") && (
         <AuthForm mode={authMode} />

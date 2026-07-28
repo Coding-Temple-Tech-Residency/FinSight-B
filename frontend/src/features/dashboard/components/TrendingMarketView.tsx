@@ -47,7 +47,7 @@ const TrendingMarketView = () => {
         <div>
           <p className="dashboard-section-eyebrow">Market activity</p>
 
-          <h2 id="trending-market-title">Trending companies</h2>
+          <h2 id="trending-market-title">Trending Companies</h2>
 
           <p>
             Explore the stocks currently receiving the most market attention.
@@ -100,7 +100,7 @@ const TrendingMarketView = () => {
                 <div>
                   <p className="dashboard-section-eyebrow">Market leader</p>
 
-                  <h3 id="top-trending-company">Number-one trending company</h3>
+                  <h3 id="top-trending-company">#1 Trending Company</h3>
                 </div>
               </div>
 
@@ -116,7 +116,7 @@ const TrendingMarketView = () => {
               <div>
                 <p className="dashboard-section-eyebrow">Trending list</p>
 
-                <h3 id="trending-list-title">Top trending stocks</h3>
+                <h3 id="trending-list-title">Top Trending Stocks</h3>
               </div>
 
               <span>

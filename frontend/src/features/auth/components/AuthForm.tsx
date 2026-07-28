@@ -25,7 +25,7 @@ const AuthForm = ({ mode }: AuthFormProps) => {
     <aside className="login-form fixed top-0 left-0 z-90 min-h-svh w-svw">
       <button
         type="button"
-        className="close-btn absolute top-3 right-3 cursor-pointer text-2xl"
+        className="close-btn absolute top-6 right-8 cursor-pointer text-2xl"
         onClick={closeModal}
         aria-label="Close authentication form"
       >
