@@ -1,22 +1,59 @@
-# TR Project Template
-
 ## Project Information
 
-Please complete the following before submitting your repository.
+FinSight is an AI-powered investment intelligence platform that enables investors to monitor portfolios, track stocks, and receive AI-generated financial insights through an intuitive web application. By combining real-time market data, portfolio analytics, and conversational AI, FinSight transforms complex financial information into clear, actionable insights that help users make more informed investment decisions.
 
-**Project Name:**  
-**Team Name:**  
-**Cohort / Sprint:**  
+**Project Name:** FINSIGHT  
+**Team Name:** FINSIGHT B
+**Cohort / Sprint:**  TR43
 **Team Members:**  
-**Tech Stack:** 
+  1. FARAH ALANSARI (FRONTEND)
+  2. MOHAMED JALLOH (FRONTEND)
+  3. MASOOMA ZAHEDI (BACKEND)
+  4. JAHVANTÈ TOTA (BACKEND)
+  5. TUTU OKUNDAYE (CYBER-SECURITY) 
+**Tech Stack:**
+| **Area** | **Technologies** |
+| --- | --- |
+| **Frontend** | React 18, TypeScript, Tailwind CSS, Recharts, React Query |
+| **Backend** | Python, FastAPI, PostgreSQL (Supabase free tier), SQLAlchemy, JWT |
+| **Data** | See notes below |
+| **Cybersecurity** | OAuth 2.0, AES-256, OWASP Top 10 review, secure financial data handling checklist |
+| **QA** | Manual testing, Postman (API testing), Playwright (automated end-to-end) |
 
 ## Project Overview
 
-Provide a short description of your project:
+- What problem does it solve?
+FinSight helps retail and individual investors make more informed investment decisions by bringing together portfolio tracking, stock monitoring, and AI-powered financial analysis in one platform.
 
-- What problem does it solve?  
-- Who is the target user?  
-- What core features were completed?  
+Many investors struggle to interpret earnings reports, financial news, and market trends because the information is spread across multiple websites and often written using complex financial terminology. FinSight simplifies this process by organizing investment data into an intuitive dashboard and using AI to generate clear, easy-to-understand insights that help users evaluate their investments more efficiently. This aligns with the project's goal of making institutional-style investment intelligence more accessible to everyday investors.
+
+- Who is the target user?
+FinSight is designed for:
+
+- Retail investors managing personal portfolios
+- Beginner investors learning the stock market
+- Long-term investors who want an organized dashboard
+- Active traders who monitor multiple stocks
+- Anyone looking for AI-assisted investment research without expensive financial software
+
+The platform aims to provide users with a simple, modern interface for tracking investments while leveraging AI to summarize complex financial information into actionable insights.
+
+- What core features were completed?
+
+- Secure user authentication using JWT
+- Portfolio management with performance tracking
+- Watchlist management for monitoring favorite stocks
+- Interactive dashboard displaying portfolio metrics and visualizations
+- Stock search and market data integration
+- AI-powered portfolio insights
+- AI-generated stock analysis and earnings summaries
+- Conversational AI chat for asking questions about stocks and portfolio holdings
+- Portfolio allocation and performance charts using Recharts
+- Responsive user interface built with React and Tailwind CSS
+- Secure backend APIs built with FastAPI and PostgreSQL
+- End-to-end deployment using Vercel, Render, and Supabase
+
+These features support the project's objective of combining portfolio tracking, market intelligence, and AI-powered financial analysis into a single application.
 
 ## Setup & Documentation
 
