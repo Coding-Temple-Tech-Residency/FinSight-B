@@ -22,7 +22,7 @@ const AuthForm = ({ mode }: AuthFormProps) => {
   const { closeModal } = useModal();
 
   return (
-    <aside className="login-form fixed top-0 left-0 z-90 min-h-svh w-svw">
+    <aside className="login-form fixed inset-0 z-90 min-h-svh w-full">
       <button
         type="button"
         className="close-btn absolute top-6 right-8 cursor-pointer text-2xl"
