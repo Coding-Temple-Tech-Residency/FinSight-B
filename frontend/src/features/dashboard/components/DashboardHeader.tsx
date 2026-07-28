@@ -27,7 +27,7 @@ const DashboardHeader = () => {
 
   return (
     <header className="dashboard-header flex flex-col lg:flex-row justify-between gap-6 items-start lg:items-center mb-8">
-      <div>
+      <div className="">
         <h1 className="text-3xl font-bold">
           {isLoading ? `${greeting} 👋` : `${greeting}, ${firstName} 👋`}
         </h1>
