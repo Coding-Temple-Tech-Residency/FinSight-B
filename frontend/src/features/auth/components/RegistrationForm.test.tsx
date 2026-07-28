@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 
 import RegistrationForm from "./RegistrationForm";
 
@@ -12,15 +13,28 @@ vi.mock("@tanstack/react-query", () => ({
     isPending: false,
     isError: false,
   }),
+  useQueryClient: () => ({
+    invalidateQueries: vi.fn(),
+  }),
 }));
+const mockCloseModal = vi.fn();
 
+vi.mock("../../../hooks/useModal", () => ({
+  useModal: () => ({
+    closeModal: mockCloseModal,
+  }),
+}));
 describe("RegistrationForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("renders registration form", () => {
-    render(<RegistrationForm />);
+    render(
+      <MemoryRouter>
+        <RegistrationForm />
+      </MemoryRouter>,
+    );
 
     expect(
       screen.getByRole("heading", {
@@ -38,7 +52,11 @@ describe("RegistrationForm", () => {
   it("shows required field errors", async () => {
     const user = userEvent.setup();
 
-    render(<RegistrationForm />);
+    render(
+      <MemoryRouter>
+        <RegistrationForm />
+      </MemoryRouter>,
+    );
 
     await user.click(
       screen.getByRole("button", {
@@ -54,7 +72,11 @@ describe("RegistrationForm", () => {
   it("shows invalid email error", async () => {
     const user = userEvent.setup();
 
-    render(<RegistrationForm />);
+    render(
+      <MemoryRouter>
+        <RegistrationForm />
+      </MemoryRouter>,
+    );
 
     await user.type(screen.getByPlaceholderText("First Name"), "John");
 
@@ -76,7 +98,11 @@ describe("RegistrationForm", () => {
   it("shows password mismatch error", async () => {
     const user = userEvent.setup();
 
-    render(<RegistrationForm />);
+    render(
+      <MemoryRouter>
+        <RegistrationForm />
+      </MemoryRouter>,
+    );
 
     await user.type(screen.getByPlaceholderText("Password"), "password123");
 
@@ -91,7 +117,11 @@ describe("RegistrationForm", () => {
   it("calls register mutation with valid data", async () => {
     const user = userEvent.setup();
 
-    render(<RegistrationForm />);
+    render(
+      <MemoryRouter>
+        <RegistrationForm />
+      </MemoryRouter>,
+    );
 
     await user.type(screen.getByPlaceholderText("First Name"), "John");
 

@@ -121,7 +121,7 @@ describe("TrendingStocks", () => {
       screen.getByRole("heading", { name: "Most Active" }),
     ).toBeInTheDocument();
 
-    expect(screen.getByText("Apple Inc.")).toBeInTheDocument();
+    expect(screen.getByText("Apple Inc. (AAPL)")).toBeInTheDocument();
   });
 
   it("shows refreshing indicator", () => {

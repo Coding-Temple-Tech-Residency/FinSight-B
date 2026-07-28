@@ -21,7 +21,25 @@ vi.mock("../../../../components/ui/Modal", () => ({
       </div>
     ) : null,
 }));
+vi.mock("../../hooks/useStockQuote", () => ({
+  useStockQuote: () => ({
+    data: null,
+    isLoading: false,
+    isError: false,
+    error: null,
+  }),
+}));
 
+vi.mock("../CompanyOverviewCard", () => ({
+  default: () => (
+    <div>
+      <p>Technology</p>
+      <p>NASDAQ</p>
+      <p>Enriched</p>
+      <p>$200.00</p>
+    </div>
+  ),
+}));
 describe("StockDetailsModal", () => {
   const onClose = vi.fn();
   const onViewMarket = vi.fn();
