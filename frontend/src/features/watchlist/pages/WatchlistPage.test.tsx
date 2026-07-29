@@ -16,6 +16,7 @@ vi.mock("../hooks/useWatchlist", () => ({
   }),
   useAddToWatchlist: () => ({
     mutateAsync: vi.fn(),
+    reset: vi.fn(),
     isPending: false,
     isError: false,
     error: null,
@@ -46,7 +47,30 @@ vi.mock("../../insights/hooks/useAIInsights", () => ({
 vi.mock("../../../components/ui/Modal", () => ({
   default: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
-
+vi.mock("../../market/components/StockSearchSelect", () => ({
+  default: ({
+    selectedStock,
+    onSelect,
+  }: {
+    selectedStock: { symbol: string } | null;
+    onSelect: (stock: { symbol: string; company_name: string }) => void;
+  }) => (
+    <div>
+      <label htmlFor="stock-search">Company or stock symbol</label>
+      <input
+        id="stock-search"
+        aria-label="Company or stock symbol"
+        value={selectedStock?.symbol ?? ""}
+        onChange={(event) =>
+          onSelect({
+            symbol: event.target.value,
+            company_name: event.target.value,
+          })
+        }
+      />
+    </div>
+  ),
+}));
 describe("WatchlistPage", () => {
   it("renders the page heading and description", () => {
     render(<WatchlistPage />);
@@ -57,12 +81,12 @@ describe("WatchlistPage", () => {
 
     expect(
       screen.getByText(
-        "Track stocks you want to monitor and generate AI analysis.",
+        "Track companies you want to monitor and generate AI analysis.",
       ),
     ).toBeInTheDocument();
 
     expect(
-      screen.getByRole("button", { name: "+ Add Stock" }),
+      screen.getByRole("button", { name: "+ Add Company" }),
     ).toBeInTheDocument();
   });
 
@@ -75,12 +99,12 @@ describe("WatchlistPage", () => {
 
     expect(
       screen.getByText(
-        "Add a stock symbol to begin monitoring its latest price.",
+        "Search for a company or stock symbol to begin monitoring its latest price.",
       ),
     ).toBeInTheDocument();
 
     expect(
-      screen.getByRole("button", { name: "Add Your First Stock" }),
+      screen.getByRole("button", { name: "Add Your First Company" }),
     ).toBeInTheDocument();
   });
 
@@ -89,10 +113,10 @@ describe("WatchlistPage", () => {
 
     render(<WatchlistPage />);
 
-    await user.click(screen.getByRole("button", { name: "+ Add Stock" }));
+    await user.click(screen.getByRole("button", { name: "+ Add Company" }));
 
     expect(
-      screen.getByRole("textbox", { name: "Stock symbol" }),
+      screen.getByRole("textbox", { name: "Company or stock symbol" }),
     ).toBeInTheDocument();
 
     expect(
@@ -109,16 +133,16 @@ describe("WatchlistPage", () => {
 
     render(<WatchlistPage />);
 
-    await user.click(screen.getByRole("button", { name: "+ Add Stock" }));
+    await user.click(screen.getByRole("button", { name: "+ Add Company" }));
 
     expect(
-      screen.getByRole("textbox", { name: "Stock symbol" }),
+      screen.getByRole("textbox", { name: "Company or stock symbol" }),
     ).toBeInTheDocument();
 
     await user.click(screen.getAllByRole("button", { name: "Cancel" })[1]);
 
     expect(
-      screen.queryByRole("textbox", { name: "Stock symbol" }),
+      screen.queryByRole("textbox", { name: "Company or stock symbol" }),
     ).not.toBeInTheDocument();
   });
 
@@ -127,7 +151,7 @@ describe("WatchlistPage", () => {
 
     render(<WatchlistPage />);
 
-    await user.click(screen.getByRole("button", { name: "+ Add Stock" }));
+    await user.click(screen.getByRole("button", { name: "+ Add Company" }));
 
     expect(
       screen.getByRole("button", { name: "Add to Watchlist" }),
@@ -139,10 +163,10 @@ describe("WatchlistPage", () => {
 
     render(<WatchlistPage />);
 
-    await user.click(screen.getByRole("button", { name: "+ Add Stock" }));
+    await user.click(screen.getByRole("button", { name: "+ Add Company" }));
 
     await user.type(
-      screen.getByRole("textbox", { name: "Stock symbol" }),
+      screen.getByRole("textbox", { name: "Company or stock symbol" }),
       "AAPL",
     );
 
@@ -156,7 +180,7 @@ describe("WatchlistPage", () => {
 
     render(<WatchlistPage />);
 
-    await user.click(screen.getByRole("button", { name: "+ Add Stock" }));
+    await user.click(screen.getByRole("button", { name: "+ Add Company" }));
 
     expect(
       screen.getByRole("spinbutton", { name: /Alert price/i }),
