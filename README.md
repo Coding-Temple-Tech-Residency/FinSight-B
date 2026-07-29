@@ -118,3 +118,100 @@ The platform provides a simple, modern interface for tracking investments while 
 - Deployment using Vercel, Render, and Supabase
 
 ---
+---
+
+## Setup Instructions
+
+### Backend Setup
+1. Clone the repository:
+```bash
+git clone https://github.com/Coding-Temple-Tech-Residency/FinSight-B.git
+cd FinSight-B/backend
+```
+
+2. Create and activate virtual environment:
+```bash
+# Windows
+python -m venv venv
+venv\Scripts\activate
+
+# Mac/Linux
+python3 -m venv venv
+source venv/bin/activate
+```
+
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+4. Create `.env` file in the backend folder (see Required Environment Variables below)
+
+5. Run the backend:
+```bash
+uvicorn main:app --reload
+```
+
+### Frontend Setup
+1. Navigate to frontend folder:
+```bash
+cd Frontend
+npm install
+```
+
+2. Create `.env` file in the Frontend folder:
+
+3. Run the frontend:
+```bash
+npm run dev
+```
+
+---
+
+## Required Environment Variables
+
+### Backend (`backend/.env`)
+| Variable | Description |
+|----------|-------------|
+| DATABASE_URL | Supabase PostgreSQL connection string |
+| JWT_SECRET | Secret key for JWT token signing |
+| JWT_ALGORITHM | HS256 |
+| JWT_EXPIRE_MINUTES | Token expiry in minutes (60) |
+| ALPHA_VANTAGE_API_KEY | Alpha Vantage API key for stock data |
+| OPENAI_API_KEY | OpenAI API key for AI insights and chat |
+| OPENAI_MODEL | OpenAI model name (gpt-5-mini) |
+| FINNHUB_API_KEY | Finnhub API key for stock search and trending |
+
+### Frontend (`Frontend/.env`)
+| Variable | Description |
+|----------|-------------|
+| VITE_API_BASE_URL | Backend API base URL |
+
+---
+
+## API Documentation
+
+Full API documentation available via Swagger UI:
+- Local: `http://localhost:8000/docs`
+- Production: `https://finsight-b.onrender.com/docs`
+
+---
+
+## Deployment
+
+| Service | URL |
+|---------|-----|
+| Frontend | https://finsight-b.vercel.app |
+| Backend | https://finsight-b.onrender.com |
+| API Docs | https://finsight-b.onrender.com/docs |
+| Database | Supabase (PostgreSQL) |
+
+---
+
+## Notes & Known Limitations
+
+- **Render Free Tier**: Backend spins down after 15 minutes of inactivity. First request may take 30-60 seconds. Open the app a few minutes before demos to warm up the server.
+- **Alpha Vantage Rate Limits**: Free tier allows 25 API calls per day.
+- **JWT Token Expiry**: Tokens expire after 60 minutes — users need to log in again after expiry.
+- **AI Insights**: Requires valid OpenAI API key with sufficient credits.
+- **Secrets**: Never commit `.env` files to GitHub. Use `.env.example` as a template.
