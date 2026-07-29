@@ -51,7 +51,7 @@ def delete_current_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Soft delete — set is_active to False instead of removing from database
-    current_user.is_active = False
+    # Hard delete — permanently removes user and all their data from database
+    db.delete(current_user)
     db.commit()
     return {"message": "Account deleted successfully"}
