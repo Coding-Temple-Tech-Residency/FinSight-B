@@ -215,3 +215,8 @@ Full API documentation available via Swagger UI:
 - **JWT Token Expiry**: Tokens expire after 60 minutes — users need to log in again after expiry.
 - **AI Insights**: Requires valid OpenAI API key with sufficient credits.
 - **Secrets**: Never commit `.env` files to GitHub. Use `.env.example` as a template.
+
+
+## Intellectual Property Notice
+
+This project was created as part of a Coding Temple Tech Residency. All work produced during the residency is considered the intellectual property of Coding Temple or the sponsoring employer, unless otherwise stated in a signed agreement. By contributing to this project, you acknowledge and agree to these terms.
