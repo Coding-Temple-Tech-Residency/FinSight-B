@@ -22,7 +22,12 @@ const AuthForm = ({ mode }: AuthFormProps) => {
   const { closeModal } = useModal();
 
   return (
-    <aside className="login-form fixed inset-0 z-90 min-h-svh w-full">
+    <aside
+      className="login-form fixed inset-0 z-90 h-svh w-full overflow-y-auto overscroll-contain"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Authentication"
+    >
       <button
         type="button"
         className="close-btn absolute top-6 right-8 cursor-pointer text-2xl"
@@ -32,7 +37,7 @@ const AuthForm = ({ mode }: AuthFormProps) => {
         <FontAwesomeIcon icon={faX} />
       </button>
 
-      <section className="flex min-h-screen items-center justify-center px-4">
+      <section className="flex min-h-full items-center justify-center px-4 py-8">
         <div className="login-form-container w-full max-w-lg space-y-1 pt-2">
           <h1 className="logo-text mb-5 text-center">FinSight</h1>
 

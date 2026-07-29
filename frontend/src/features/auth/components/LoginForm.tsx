@@ -2,11 +2,10 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { getCurrentUser, loginUser } from "../../../api/authApi";
-import { useModal } from "../../../hooks/useModal";
+
 import { useNavigate } from "react-router-dom";
 
 const LoginForm = () => {
-  const { closeModal } = useModal();
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,8 +22,7 @@ const LoginForm = () => {
         queryFn: getCurrentUser,
       });
 
-      closeModal();
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     },
     onError: (error) => {
       console.error(error);
