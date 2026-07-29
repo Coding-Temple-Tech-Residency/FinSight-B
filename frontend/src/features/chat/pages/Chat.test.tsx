@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Chat from "./Chat";
 
 const mockSendMessage = vi.fn();
@@ -49,7 +49,22 @@ vi.mock("../../../components/ui/Modal", () => ({
 vi.mock("@fortawesome/react-fontawesome", () => ({
   FontAwesomeIcon: () => <span>Icon</span>,
 }));
+const queryClient = new QueryClient();
 
+const renderChat = () =>
+  render(
+    <QueryClientProvider client={queryClient}>
+      <Chat />
+    </QueryClientProvider>,
+  );
+
+vi.mock("../../auth/hooks/useCurrentUser", () => ({
+  useCurrentUser: () => ({
+    data: {
+      id: "1",
+    },
+  }),
+}));
 describe("Chat", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -59,7 +74,7 @@ describe("Chat", () => {
   });
 
   it("renders empty chat state", () => {
-    render(<Chat />);
+    renderChat();
 
     expect(screen.getByText("Start a conversation")).toBeInTheDocument();
 
@@ -71,7 +86,7 @@ describe("Chat", () => {
   it("enables send button when message is entered", async () => {
     const user = userEvent.setup();
 
-    render(<Chat />);
+    renderChat();
 
     const input = screen.getByPlaceholderText(
       "Ask about AAPL or your portfolio...",
@@ -89,7 +104,7 @@ describe("Chat", () => {
   it("sends message", async () => {
     const user = userEvent.setup();
 
-    render(<Chat />);
+    renderChat();
 
     const input = screen.getByPlaceholderText(
       "Ask about AAPL or your portfolio...",
@@ -110,7 +125,7 @@ describe("Chat", () => {
     const user = userEvent.setup();
 
     localStorage.setItem(
-      "finsight-ai-chat",
+      "finsight-ai-chat-1",
       JSON.stringify([
         {
           id: "1",
@@ -120,7 +135,7 @@ describe("Chat", () => {
       ]),
     );
 
-    render(<Chat />);
+    renderChat();
 
     await user.click(
       screen.getByRole("button", {
