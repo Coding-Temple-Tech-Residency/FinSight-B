@@ -1,12 +1,16 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
 
-import type { CreateHoldingPayload, Holding } from "../types/holdings";
-
-import "../styles/holding-form.css";
 import {
   SUPPORTED_PORTFOLIO_CURRENCIES,
   type PortfolioCurrency,
 } from "../../../constants/currencies";
+
+import StockSearchSelect from "../../market/components/StockSearchSelect";
+
+import type { StockSearchResult } from "../../market/types/stock";
+import type { CreateHoldingPayload, Holding } from "../types/holdings";
+
+import "../styles/holding-form.css";
 
 type HoldingFormProps = {
   holding?: Holding;
@@ -34,6 +38,19 @@ const getInitialCurrency = (
   return isSupportedCurrency(currency) ? currency : "USD";
 };
 
+const getInitialSelectedStock = (
+  holding: Holding | undefined,
+): StockSearchResult | null => {
+  if (!holding) {
+    return null;
+  }
+
+  return {
+    symbol: holding.symbol,
+    company_name: holding.company_name?.trim() || holding.symbol,
+  };
+};
+
 const HoldingForm = ({
   holding,
   defaultCurrency = "USD",
@@ -42,7 +59,9 @@ const HoldingForm = ({
   onSubmit,
   onCancel,
 }: HoldingFormProps) => {
-  const [symbol, setSymbol] = useState(holding?.symbol ?? "");
+  const [selectedStock, setSelectedStock] = useState<StockSearchResult | null>(
+    () => getInitialSelectedStock(holding),
+  );
 
   const [shares, setShares] = useState(holding ? String(holding.shares) : "");
 
@@ -66,25 +85,43 @@ const HoldingForm = ({
     }
   };
 
+  const handleStockSelect = (stock: StockSearchResult) => {
+    setSelectedStock(stock);
+    clearValidationError();
+  };
+
+  const handleStockClear = () => {
+    if (holding) {
+      return;
+    }
+
+    setSelectedStock(null);
+    clearValidationError();
+  };
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const normalizedSymbol = symbol.trim().toUpperCase();
+    const normalizedSymbol = selectedStock?.symbol.trim().toUpperCase() ?? "";
+
     const parsedShares = Number(shares);
     const parsedAverageBuyPrice = Number(averageBuyPrice);
 
     if (!normalizedSymbol) {
-      setValidationError("Stock symbol is required.");
+      setValidationError("Please select a company or stock symbol.");
+
       return;
     }
 
     if (!Number.isFinite(parsedShares) || parsedShares <= 0) {
       setValidationError("Shares must be greater than zero.");
+
       return;
     }
 
     if (!Number.isFinite(parsedAverageBuyPrice) || parsedAverageBuyPrice <= 0) {
       setValidationError("Average buy price must be greater than zero.");
+
       return;
     }
 
@@ -97,11 +134,6 @@ const HoldingForm = ({
       purchase_currency: purchaseCurrency,
       purchased_at: purchasedAt || null,
     });
-  };
-
-  const handleSymbolChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setSymbol(event.target.value.toUpperCase());
-    clearValidationError();
   };
 
   const handleSharesChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -132,22 +164,26 @@ const HoldingForm = ({
     setPurchasedAt(event.target.value);
   };
 
+  const submitDisabled = isSubmitting || (!holding && !selectedStock);
+
   return (
     <form className="holding-form" onSubmit={handleSubmit}>
       <div>
-        <label htmlFor="holding-symbol">Symbol</label>
-
-        <input
-          id="holding-symbol"
-          name="holding-symbol"
-          type="text"
-          value={symbol}
+        <StockSearchSelect
+          label="Company or stock symbol"
+          placeholder="Search Apple, Microsoft, AAPL..."
+          selectedStock={selectedStock}
+          onSelect={handleStockSelect}
+          onClear={handleStockClear}
           disabled={Boolean(holding) || isSubmitting}
-          maxLength={20}
-          autoComplete="off"
-          placeholder="AAPL"
-          onChange={handleSymbolChange}
         />
+
+        {!holding && (
+          <p className="metric-label">
+            Search using a company name such as Apple or a stock symbol such as
+            AAPL.
+          </p>
+        )}
       </div>
 
       <div>
@@ -252,7 +288,7 @@ const HoldingForm = ({
           </button>
         )}
 
-        <button type="submit" disabled={isSubmitting}>
+        <button type="submit" disabled={submitDisabled}>
           {isSubmitting
             ? "Saving..."
             : holding

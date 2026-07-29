@@ -1,6 +1,10 @@
-import { type FormEvent, useState } from "react";
+import { useState, type FormEvent } from "react";
 
 import Modal from "../../../components/ui/Modal";
+
+import StockSearchSelect from "../../market/components/StockSearchSelect";
+
+import type { StockSearchResult } from "../../market/types/stock";
 
 import {
   useAIInsights,
@@ -53,7 +57,10 @@ const getErrorMessage = (error: unknown): string => {
 const WatchlistPage = () => {
   const [showAddForm, setShowAddForm] = useState(false);
 
-  const [symbol, setSymbol] = useState("");
+  const [selectedStock, setSelectedStock] = useState<StockSearchResult | null>(
+    null,
+  );
+
   const [alertPrice, setAlertPrice] = useState("");
 
   const [selectedWatchlistItem, setSelectedWatchlistItem] =
@@ -82,15 +89,20 @@ const WatchlistPage = () => {
   const stockInsightMutation = useGenerateStockAIInsight();
 
   const resetForm = () => {
-    setSymbol("");
+    setSelectedStock(null);
     setAlertPrice("");
     setShowAddForm(false);
+    addMutation.reset();
   };
 
   const handleAddStock = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const normalizedSymbol = symbol.trim().toUpperCase();
+    if (!selectedStock) {
+      return;
+    }
+
+    const normalizedSymbol = selectedStock.symbol.trim().toUpperCase();
 
     if (!normalizedSymbol) {
       return;
@@ -114,13 +126,15 @@ const WatchlistPage = () => {
 
       resetForm();
     } catch {
-      // The mutation error is displayed below.
+      // Mutation errors are displayed below.
     }
   };
 
-  const handleRemoveStock = async (stockSymbol: string) => {
+  const handleRemoveStock = async (item: WatchlistItem) => {
+    const companyLabel = item.company_name?.trim() || item.symbol;
+
     const confirmed = window.confirm(
-      `Remove ${stockSymbol} from your watchlist?`,
+      `Remove ${companyLabel} (${item.symbol}) from your watchlist?`,
     );
 
     if (!confirmed) {
@@ -128,9 +142,9 @@ const WatchlistPage = () => {
     }
 
     try {
-      await removeMutation.mutateAsync(stockSymbol);
+      await removeMutation.mutateAsync(item.symbol);
     } catch {
-      // The mutation error is displayed below.
+      // Mutation errors are displayed below.
     }
   };
 
@@ -191,12 +205,12 @@ const WatchlistPage = () => {
     setSelectedWatchlistItem(null);
   };
 
-  const normalizedInputSymbol = symbol.trim().toUpperCase();
+  const selectedSymbol = selectedStock?.symbol.trim().toUpperCase() ?? "";
 
   const symbolAlreadyExists =
-    normalizedInputSymbol.length > 0 &&
+    selectedSymbol.length > 0 &&
     watchlist.some(
-      (item) => item.symbol.toUpperCase() === normalizedInputSymbol,
+      (item) => item.symbol.trim().toUpperCase() === selectedSymbol,
     );
 
   const invalidAlertPrice =
@@ -205,7 +219,7 @@ const WatchlistPage = () => {
 
   const addButtonDisabled =
     addMutation.isPending ||
-    normalizedInputSymbol.length === 0 ||
+    !selectedStock ||
     symbolAlreadyExists ||
     invalidAlertPrice;
 
@@ -217,16 +231,23 @@ const WatchlistPage = () => {
             <h1>Watchlist</h1>
 
             <p className="mt-1 opacity-70">
-              Track stocks you want to monitor and generate AI analysis.
+              Track companies you want to monitor and generate AI analysis.
             </p>
           </div>
 
           <button
             type="button"
             className="rounded-lg bg-(--accent-primary) px-4 py-2 text-sm font-bold text-(--bg-primary)"
-            onClick={() => setShowAddForm((currentValue) => !currentValue)}
+            onClick={() => {
+              if (showAddForm) {
+                resetForm();
+                return;
+              }
+
+              setShowAddForm(true);
+            }}
           >
-            {showAddForm ? "Cancel" : "+ Add Stock"}
+            {showAddForm ? "Cancel" : "+ Add Company"}
           </button>
         </header>
 
@@ -235,27 +256,30 @@ const WatchlistPage = () => {
             onSubmit={handleAddStock}
             className="rounded-2xl border border-white/10 bg-(--bg-secondary) p-5"
           >
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <label className="flex flex-col gap-2">
-                <span className="text-sm font-semibold">Stock symbol</span>
-
-                <input
-                  type="text"
-                  value={symbol}
-                  onChange={(event) =>
-                    setSymbol(event.target.value.toUpperCase())
-                  }
-                  placeholder="AAPL"
-                  autoComplete="off"
-                  className="rounded-lg border border-white/10 bg-(--bg-primary) px-4 py-3 uppercase outline-none focus:border-(--accent-primary)"
+            <div className="grid grid-cols-1 gap-4 items-center md:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <StockSearchSelect
+                  selectedStock={selectedStock}
+                  onSelect={(stock) => {
+                    setSelectedStock(stock);
+                    addMutation.reset();
+                  }}
+                  onClear={() => {
+                    setSelectedStock(null);
+                    addMutation.reset();
+                  }}
+                  disabled={addMutation.isPending}
+                  label="Company or stock symbol"
+                  placeholder="Search Apple, Microsoft, AAPL..."
                 />
 
                 {symbolAlreadyExists && (
                   <span className="text-sm text-red-500">
-                    This stock is already in your watchlist.
+                    {selectedStock?.company_name || selectedSymbol} is already
+                    in your watchlist.
                   </span>
                 )}
-              </label>
+              </div>
 
               <label className="flex flex-col gap-2">
                 <span className="text-sm font-semibold">
@@ -270,7 +294,8 @@ const WatchlistPage = () => {
                   value={alertPrice}
                   onChange={(event) => setAlertPrice(event.target.value)}
                   placeholder="200.00"
-                  className="rounded-lg border border-white/10 bg-(--bg-primary) px-4 py-3 outline-none focus:border-(--accent-primary)"
+                  disabled={addMutation.isPending}
+                  className="rounded-lg border border-white/10 bg-(--bg-primary) px-4 py-3 outline-none focus:border-(--accent-primary) disabled:cursor-not-allowed disabled:opacity-50"
                 />
 
                 {invalidAlertPrice && (
@@ -291,7 +316,8 @@ const WatchlistPage = () => {
               <button
                 type="button"
                 onClick={resetForm}
-                className="rounded-lg border border-white/10 px-4 py-2 font-semibold"
+                disabled={addMutation.isPending}
+                className="rounded-lg border border-white/10 px-4 py-2 font-semibold disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -322,7 +348,10 @@ const WatchlistPage = () => {
             role="alert"
           >
             {selectedWatchlistItem
-              ? `Unable to analyze ${selectedWatchlistItem.symbol}. `
+              ? `Unable to analyze ${
+                  selectedWatchlistItem.company_name ||
+                  selectedWatchlistItem.symbol
+                }. `
               : ""}
 
             {getErrorMessage(stockInsightMutation.error)}
@@ -356,7 +385,8 @@ const WatchlistPage = () => {
             <h2>Your watchlist is empty</h2>
 
             <p className="mt-2 opacity-70">
-              Add a stock symbol to begin monitoring its latest price.
+              Search for a company or stock symbol to begin monitoring its
+              latest price.
             </p>
 
             <button
@@ -364,7 +394,7 @@ const WatchlistPage = () => {
               onClick={() => setShowAddForm(true)}
               className="mt-5 rounded-lg bg-(--accent-primary) px-5 py-3 font-bold text-(--bg-primary)"
             >
-              Add Your First Stock
+              Add Your First Company
             </button>
           </div>
         )}
@@ -373,11 +403,11 @@ const WatchlistPage = () => {
           <article className="overflow-hidden rounded-2xl border border-white/10 bg-(--bg-secondary)">
             <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
               <div>
-                <h2>Tracked Stocks</h2>
+                <h2>Tracked Companies</h2>
 
                 <p className="text-sm opacity-70">
                   {watchlist.length}{" "}
-                  {watchlist.length === 1 ? "stock" : "stocks"}
+                  {watchlist.length === 1 ? "company" : "companies"}
                 </p>
               </div>
 
@@ -389,11 +419,9 @@ const WatchlistPage = () => {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full min-w-200 table-auto">
+              <table className="w-full min-w-180 table-auto">
                 <thead>
                   <tr className="border-b border-white/10 text-left">
-                    <th className="px-5 py-4">Symbol</th>
-
                     <th className="px-5 py-4">Company</th>
 
                     <th className="px-5 py-4">Latest Price</th>
@@ -429,10 +457,16 @@ const WatchlistPage = () => {
                         className="border-b border-white/5 last:border-b-0"
                       >
                         <td className="px-5 py-4">
-                          <strong>{item.symbol}</strong>
-                        </td>
+                          <div className="flex min-w-0 flex-col gap-1">
+                            <strong className="truncate">
+                              {item.company_name || item.symbol}
+                            </strong>
 
-                        <td className="px-5 py-4">{item.company_name}</td>
+                            <span className="w-fit rounded-md bg-(--bg-primary) px-2 py-1 text-xs font-bold text-(--accent-primary)">
+                              {normalizedItemSymbol}
+                            </span>
+                          </div>
+                        </td>
 
                         <td className="px-5 py-4">
                           {formatCurrency(item.latest_price)}
@@ -479,7 +513,7 @@ const WatchlistPage = () => {
                                 removeMutation.isPending ||
                                 stockInsightMutation.isPending
                               }
-                              onClick={() => handleRemoveStock(item.symbol)}
+                              onClick={() => handleRemoveStock(item)}
                               className="rounded-lg border border-red-500/40 px-3 py-2 text-sm font-semibold text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               {isRemoving ? "Removing..." : "Remove"}
@@ -500,7 +534,10 @@ const WatchlistPage = () => {
         isOpen={isInsightModalOpen}
         title={
           selectedWatchlistItem
-            ? `${selectedWatchlistItem.symbol} AI Insight`
+            ? `${
+                selectedWatchlistItem.company_name ||
+                selectedWatchlistItem.symbol
+              } (${selectedWatchlistItem.symbol}) AI Insight`
             : "Stock AI Insight"
         }
         onClose={closeInsightModal}
