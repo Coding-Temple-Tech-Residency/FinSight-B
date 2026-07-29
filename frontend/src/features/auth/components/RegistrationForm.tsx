@@ -8,13 +8,11 @@ import {
   registerUser,
   type RegisterPayload,
 } from "../../../api/authApi";
-import { useModal } from "../../../hooks/useModal";
 import { CURRENT_USER_QUERY_KEY } from "../hooks/useCurrentUser";
 
 const RegistrationForm = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { closeModal } = useModal();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -49,7 +47,6 @@ const RegistrationForm = () => {
       setPassword("");
       setConfirmPassword("");
 
-      closeModal();
       navigate("/dashboard", { replace: true });
     },
     onError: (error) => {

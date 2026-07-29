@@ -116,9 +116,9 @@ const Home = ({ isOpen, openMenu, closeMenu }: HomeProps) => {
   return (
     <div className="home">
       <header className="home-header sticky top-0 left-0 z-50 inline-flex min-h-17.5 w-full items-center justify-between bg-(--bg-primary) px-3">
-        <Link to="/" className="logo-link" onClick={closeMenu}>
+        <a href={`#hero`} className="logo-link" onClick={closeMenu}>
           <Logo />
-        </Link>
+        </a>
 
         <nav
           className={`home-nav m-auto items-center justify-center bg-(--bg-primary) px-5 py-3 transition-all duration-300 ${
@@ -159,10 +159,9 @@ const Home = ({ isOpen, openMenu, closeMenu }: HomeProps) => {
             </div>
           )}
         </nav>
-
-        {!isDesktop && (
-          <div className="w-25 flex justify-evenly items-center">
-            <ThemeButton />
+        <div className="max-lg:max-w-25 lg:max-w-75 w-full flex justify-evenly items-center">
+          <ThemeButton />
+          {!isDesktop && (
             <button
               type="button"
               className="menu-btn z-60"
@@ -177,14 +176,13 @@ const Home = ({ isOpen, openMenu, closeMenu }: HomeProps) => {
                 className="cursor-pointer text-2xl"
               />
             </button>
-          </div>
-        )}
-
-        {isDesktop && (
-          <div className="home-header-cta flex gap-3">
-            {renderAuthActions()}
-          </div>
-        )}
+          )}
+          {isDesktop && (
+            <div className="home-header-cta flex gap-3">
+              {renderAuthActions()}
+            </div>
+          )}{" "}
+        </div>
       </header>
 
       <main className="home-main flex min-h-svh flex-col pt-5">
