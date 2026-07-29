@@ -8,6 +8,8 @@
   --danger-color: #ef4444;
 
   color-scheme: light dark;
+
+  --header-height: 4.5rem;
 }
 
 body.light-theme {
