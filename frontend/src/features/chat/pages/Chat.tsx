@@ -23,13 +23,24 @@ import ChatMessageContent from "../components/ChatMessageContent";
 import { useDashboard } from "../../dashboard/hooks/useDashboard";
 import { useAIChat } from "../hooks/useAIChat";
 import { useCurrency } from "../../currency/hooks/useCurrency";
+import { useCurrentUser } from "../../auth/hooks/useCurrentUser";
 
 import type { AIChatMessage } from "../types/chat";
 
 import "../styles/chat.css";
 import "../styles/chat-enhancements.css";
 
-const CHAT_STORAGE_KEY = "finsight-ai-chat";
+const CHAT_STORAGE_PREFIX = "finsight-ai-chat";
+
+const getChatStorageKey = (
+  userId: string | number | undefined,
+): string | null => {
+  if (userId === undefined || userId === null) {
+    return null;
+  }
+
+  return `${CHAT_STORAGE_PREFIX}-${userId}`;
+};
 
 const getErrorMessage = (error: unknown): string => {
   if (error instanceof Error) {
@@ -39,13 +50,13 @@ const getErrorMessage = (error: unknown): string => {
   return "Unable to send your message.";
 };
 
-const loadStoredMessages = (): AIChatMessage[] => {
-  if (typeof window === "undefined") {
+const loadStoredMessages = (storageKey: string | null): AIChatMessage[] => {
+  if (typeof window === "undefined" || !storageKey) {
     return [];
   }
 
   try {
-    const storedMessages = window.localStorage.getItem(CHAT_STORAGE_KEY);
+    const storedMessages = window.localStorage.getItem(storageKey);
 
     if (!storedMessages) {
       return [];
@@ -111,17 +122,20 @@ const copyToClipboard = async (content: string): Promise<void> => {
   document.body.removeChild(textarea);
 };
 
-const Chat = () => {
+interface ChatContentProps {
+  chatStorageKey: string | null;
+}
+
+const ChatContent = ({ chatStorageKey }: ChatContentProps) => {
   const { symbol } = useDashboard();
   const { preferredCurrency } = useCurrency();
 
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<AIChatMessage[]>(loadStoredMessages);
-
+  const [messages, setMessages] = useState<AIChatMessage[]>(() =>
+    loadStoredMessages(chatStorageKey),
+  );
   const [failedMessage, setFailedMessage] = useState<string | null>(null);
-
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
-
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
 
   const newestAssistantMessageRef = useRef<HTMLElement>(null);
@@ -149,12 +163,16 @@ const Chat = () => {
   ];
 
   useEffect(() => {
+    if (!chatStorageKey) {
+      return;
+    }
+
     try {
-      window.localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
+      window.localStorage.setItem(chatStorageKey, JSON.stringify(messages));
     } catch {
       // Local storage may be unavailable.
     }
-  }, [messages]);
+  }, [chatStorageKey, messages]);
 
   useEffect(() => {
     if (
@@ -354,12 +372,16 @@ const Chat = () => {
     setCopiedMessageId(null);
     reset();
 
+    previousAssistantMessageIdRef.current = undefined;
+
     setIsClearModalOpen(false);
 
-    try {
-      window.localStorage.removeItem(CHAT_STORAGE_KEY);
-    } catch {
-      // Local storage may be unavailable.
+    if (chatStorageKey) {
+      try {
+        window.localStorage.removeItem(chatStorageKey);
+      } catch {
+        // Local storage may be unavailable.
+      }
     }
 
     textareaRef.current?.focus();
@@ -423,7 +445,6 @@ const Chat = () => {
 
           {messages.map((chatMessage) => {
             const messageTime = formatMessageTime(chatMessage.created_at);
-
             const isCopied = copiedMessageId === chatMessage.id;
 
             const canRegenerate =
@@ -560,7 +581,6 @@ const Chat = () => {
                 onSelect={handleSuggestedPrompt}
               />
             )}
-
         </div>
 
         <form className="chat-form" onSubmit={handleSubmit}>
@@ -645,6 +665,19 @@ const Chat = () => {
       </Modal>
     </>
   );
+};
+
+const Chat = () => {
+  const { data: currentUser } = useCurrentUser();
+
+  const chatStorageKey = useMemo(
+    () => getChatStorageKey(currentUser?.id),
+    [currentUser?.id],
+  );
+
+  const chatInstanceKey = chatStorageKey ?? "finsight-ai-chat-loading";
+
+  return <ChatContent key={chatInstanceKey} chatStorageKey={chatStorageKey} />;
 };
 
 export default Chat;
