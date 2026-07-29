@@ -39,6 +39,10 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
     # Reject if user not found or password is wrong
     if not user or not verify_password(body.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    # Check if account is active — deleted accounts cannot login
+    if not user.is_active:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
     
     # Set is_active to True — user is now logged in
     user.is_active = True
