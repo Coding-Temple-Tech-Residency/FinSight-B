@@ -1,9 +1,11 @@
 .header {
   grid-area: header;
-  position: relative;
+  position: sticky;
+  top: 0;
+  left: 0;
   z-index: 100;
   width: 100%;
-  height: 64px;
+  min-height: var(--header-height);
   background-color: var(--bg-primary);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -93,10 +95,6 @@
 }
 
 @media screen and (min-width: 1024px) {
-  .header {
-    height: 72px;
-  }
-
   .header-container {
     padding-inline: 1.25rem;
   }
