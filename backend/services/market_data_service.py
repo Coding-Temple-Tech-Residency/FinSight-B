@@ -1497,3 +1497,25 @@ def fetch_trending_stocks(
             )
         ],
     )
+
+def get_market_snapshot(
+    db: Session,
+) -> dict:
+    """
+    Returns a snapshot of today's market.
+
+    The snapshot includes:
+    - Top gainers
+    - Top losers
+    - Most actively traded stocks
+
+    The data comes directly from Alpha Vantage.
+    """
+
+    data = fetch_trending_stocks(db=db)  # your existing API call
+
+    return {
+        "top_gainers": data.top_gainers,
+        "top_losers": data.top_losers,
+        "most_active": data.most_actively_traded,
+    }
