@@ -84,9 +84,6 @@ If portfolio analysis is requested, organize the response in the way you think i
 
 Never invent financial data.
 
-End with:
-
-*Educational information only. This is not personalized financial advice.*
 """.strip()
 
 
