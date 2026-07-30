@@ -115,52 +115,31 @@ const Home = ({ isOpen, openMenu, closeMenu }: HomeProps) => {
 
   return (
     <div className="home">
-      <header className="home-header sticky top-0 left-0 z-50 inline-flex min-h-17.5 w-full items-center justify-between bg-(--bg-primary) px-3">
-        <a href={`#hero`} className="logo-link" onClick={closeMenu}>
+      <header className="home-header sticky top-0 left-0 z-50 flex min-h-17.5 w-full items-center justify-between bg-(--bg-primary) px-3">
+        <a href="#hero" className="logo-link" onClick={closeMenu}>
           <Logo />
         </a>
 
-        <nav
-          className={`home-nav m-auto items-center justify-center bg-(--bg-primary) px-5 py-3 transition-all duration-300 ${
-            isOpen ? "flex translate-y-0 flex-col" : "-translate-y-[100svh]"
-          } ${
-            isDesktop
-              ? "static translate-y-0"
-              : "fixed top-0 left-0 h-screen w-screen -translate-y-[100svh]"
-          }`}
-        >
-          <ul
-            className={`home-nav-ul flex flex-col items-center justify-center gap-3 lg:flex-row lg:gap-5 ${
-              isOpen && !isDesktop ? "m-auto h-full w-full" : ""
-            }`}
-          >
-            {homeNavigation.map((item) => (
-              <li className="home-nav-li" key={item.id}>
-                <a
-                  href={`#${item.section}`}
-                  onClick={() => {
-                    if (!isDesktop) {
-                      closeMenu();
-                    }
-                  }}
-                  className={`home-nav-li-a rounded-lg px-3 py-2 transition-all duration-300 hover:text-emerald-500 ${
-                    isDesktop ? "block px-5" : "inline-block"
-                  }`}
-                >
-                  {item.name}
-                </a>
-              </li>
-            ))}
-          </ul>
+        {isDesktop && (
+          <nav className="home-nav m-auto flex items-center justify-center bg-(--bg-primary) px-5 py-3">
+            <ul className="home-nav-ul flex items-center justify-center gap-5">
+              {homeNavigation.map((item) => (
+                <li className="home-nav-li" key={item.id}>
+                  <a
+                    href={`#${item.section}`}
+                    className="home-nav-li-a block rounded-lg px-5 py-2 transition-all duration-300 hover:text-emerald-500"
+                  >
+                    {item.name}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
 
-          {!isDesktop && (
-            <div className="home-header-cta flex gap-3 pb-10">
-              {renderAuthActions()}
-            </div>
-          )}
-        </nav>
-        <div className="max-lg:max-w-25 lg:max-w-75 w-full flex justify-evenly items-center">
+        <div className="flex w-full max-w-25 items-center justify-evenly lg:max-w-75">
           <ThemeButton />
+
           {!isDesktop && (
             <button
               type="button"
@@ -169,6 +148,7 @@ const Home = ({ isOpen, openMenu, closeMenu }: HomeProps) => {
                 isOpen ? "Close navigation menu" : "Open navigation menu"
               }
               aria-expanded={isOpen}
+              aria-controls="home-mobile-navigation"
               onClick={isOpen ? closeMenu : openMenu}
             >
               <FontAwesomeIcon
@@ -177,13 +157,40 @@ const Home = ({ isOpen, openMenu, closeMenu }: HomeProps) => {
               />
             </button>
           )}
+
           {isDesktop && (
             <div className="home-header-cta flex gap-3">
               {renderAuthActions()}
             </div>
-          )}{" "}
+          )}
         </div>
       </header>
+
+      {!isDesktop && (
+        <nav
+          id="home-mobile-navigation"
+          className={`home-nav-mobile ${isOpen ? "opened" : ""}`}
+          aria-hidden={!isOpen}
+        >
+          <ul className="home-nav-ul-mobile">
+            {homeNavigation.map((item) => (
+              <li className="home-nav-li-mobile" key={item.id}>
+                <a
+                  href={`#${item.section}`}
+                  onClick={closeMenu}
+                  className="home-nav-li-a-mobile"
+                >
+                  {item.name}
+                </a>
+              </li>
+            ))}
+          </ul>
+
+          <div className="home-header-cta flex gap-3">
+            {renderAuthActions()}
+          </div>
+        </nav>
+      )}
 
       <main className="home-main flex min-h-svh flex-col pt-5">
         <section
