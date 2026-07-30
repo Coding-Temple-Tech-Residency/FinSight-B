@@ -15,15 +15,24 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 # Issue #7 — User Registration
 @router.post("/register", status_code=201)
 def register(body: RegisterRequest, db: Session = Depends(get_db)):
-    # Check if email already exists — reject duplicates
-    if db.query(User).filter(User.email == body.email).first():
-        raise HTTPException(status_code=400, detail="Email already registered")
-    
+    # Normalize the email before storing or checking it.
+    normalized_email = body.email.strip().lower()
+
+    # Check if the email is already registered.
+    if (
+        db.query(User)
+        .filter(User.email == normalized_email)
+        .first()
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Email already registered",
+        )
     # Create new user with hashed password — never store plain text
     user = User(
         first_name=body.first_name,
         last_name=body.last_name,
-        email=body.email,
+        email=normalized_email,
         password=hash_password(body.password)
     )
     db.add(user)
@@ -32,26 +41,57 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
 
 # Issue #8 — User Login
 @router.post("/login", response_model=TokenResponse)
-def login(body: LoginRequest, db: Session = Depends(get_db)):
-    # Find user by email
-    user = db.query(User).filter(User.email == body.email).first()
-    
-    # Reject if user not found or password is wrong
-    if not user or not verify_password(body.password, user.password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+def login(
+    body: LoginRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Authenticates a user and returns a JWT access token.
+    """
 
-    # Check if account is active — deleted accounts cannot login
-    if not user.is_active:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    
-    # Set is_active to True — user is now logged in
+    # Normalize the email so capitalization and accidental spaces do not
+    # prevent an otherwise valid user from logging in.
+    normalized_email = body.email.strip().lower()
+
+    # Find the user by normalized email.
+    user = (
+        db.query(User)
+        .filter(User.email == normalized_email)
+        .first()
+    )
+
+    # Reject the request when the user does not exist or the password
+    # does not match the stored password hash.
+    if not user or not verify_password(
+        body.password,
+        user.password,
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid credentials",
+        )
+
+    # Mark the user as currently active/logged in.
+    #
+    # Do not reject the user merely because is_active is False because
+    # your logout route sets this field to False.
     user.is_active = True
+
     db.commit()
     db.refresh(user)
 
-    # Generate JWT token with user info
-    token = create_token({"sub": str(user.id), "email": user.email})
-    return {"access_token": token, "token_type": "bearer"}
+    # Generate a JWT containing the authenticated user's identity.
+    token = create_token(
+        {
+            "sub": str(user.id),
+            "email": user.email,
+        }
+    )
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+    }
 
 # Issue #17 — Logout — adds token to blacklist for immediate invalidation
 @router.post("/logout")
@@ -63,12 +103,9 @@ def logout(
     # Add token to blacklist — immediately invalidates it
     token = credentials.credentials
     blacklisted_token = TokenBlacklist(token=token)
+    
     db.add(blacklisted_token)
-
-    # Set is_active to False in database
-    current_user.is_active = False
     db.commit()
-    db.refresh(current_user)
 
     return {
         "message": "Logged out successfully",
