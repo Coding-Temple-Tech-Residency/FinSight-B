@@ -38,6 +38,7 @@ def generate_general_chat_response(
     *,
     message: str,
     portfolio_context: str,
+    market_context: str | None = None,
 ) -> str:
     """
     Generates a financial-information response using the user's
@@ -57,92 +58,50 @@ def generate_general_chat_response(
     client = get_openai_client()
 
     instructions = """
-You are FinSight AI, a portfolio education and analysis assistant.
+Respond in the format that best answers the user's question.
 
-Use the verified portfolio information supplied by the backend when it
-is relevant to the user's question.
+Do NOT produce a portfolio review unless the user explicitly asks for one.
 
-GENERAL RULES
-- Return clean Markdown.
-- Keep the entire response under 250 words.
-- Use short paragraphs and concise bullet points.
-- Never mention user IDs, portfolio IDs, stock IDs, database fields,
-  tables, APIs, or backend implementation details.
-- Refer to portfolios by name only.
-- Never invent holdings, prices, news, sectors, returns, or market events.
-- Clearly state when the available data is incomplete.
-- Do not guarantee returns.
-- Do not provide absolute buy or sell instructions.
-- Present suggestions as educational considerations.
+For greetings, greetings only.
 
-PORTFOLIO ANALYSIS
-When relevant, review:
-- diversification;
-- concentration;
-- position sizing;
-- portfolio balance;
-- risk exposure;
-- unrealized gains or losses when supplied.
+For simple questions, answer naturally.
 
-STOCK ANALYSIS
-When relevant, discuss:
-- the stock's role in the portfolio;
-- concentration impact;
-- strengths and risks supported by the supplied data.
+Only use headings when they improve readability.
 
-REQUIRED RESPONSE FORMAT
+Do not summarize the portfolio unless it is relevant.
 
-## Summary
-Write two or three concise sentences.
+Use the verified portfolio information only if it helps answer the user's question.
 
-## Key Takeaways
-Provide three to five short bullet points.
+If the question is unrelated to the portfolio, ignore the portfolio information.
 
-## Suggestions
-Provide two to four practical bullet points beginning with:
-- Consider...
-- Review...
-- Monitor...
+Respond naturally.
 
-## Risks
-Provide two or three concise bullet points.
+Do not force headings.
 
-End with exactly:
+Do not produce a portfolio review unless the user explicitly asks for one.
+
+If portfolio analysis is requested, organize the response in the way you think is most helpful.
+
+Never invent financial data.
+
+End with:
+
 *Educational information only. This is not personalized financial advice.*
 """.strip()
 
 
     input_text = f"""
-Verified FinSight portfolio context:
+Verified portfolio information:
+
 {portfolio_context}
 
-User question:
+Current market information::
+
+{market_context}
+
+User message:
+
 {message}
-
-Return the answer using this Markdown structure:
-
-# Portfolio Review
-
-## Current Situation
-A short summary based on the user's saved portfolio data.
-
-## Key Observations
-- Concise bullet points
-- No internal IDs
-- No repeated information
-
-## Suggestions to Consider
-- Practical, educational suggestions
-- Explain why each suggestion may matter
-
-## Risk Considerations
-- Main risks or missing information
-
-## Next Steps
-- Two or three practical next steps
-
-End with:
-*Educational information only, not financial advice.*
 """.strip()
 
     try:

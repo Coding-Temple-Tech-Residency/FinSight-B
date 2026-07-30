@@ -22,7 +22,7 @@ from services.openai_service import (
     generate_financial_insight,
     generate_general_chat_response,
 )
-from services.market_data_service import refresh_market_data
+from services.market_data_service import get_market_snapshot, refresh_market_data
 from services.openai_service import generate_financial_insight
 
 def generate_general_ai_chat(
@@ -57,10 +57,33 @@ def generate_general_ai_chat(
         current_user=current_user,
     )
 
+    market_context = ""
+
+    market_keywords = {
+        "market",
+        "today",
+        "gainers",
+        "losers",
+        "stocks",
+        "stock",
+        "performing",
+        "performance",
+        "best",
+        "worst",
+        "trending",
+    }
+
+    if any(
+        keyword in clean_message.lower()
+        for keyword in market_keywords
+    ):
+        market_context = build_market_context(db=db)
+
     # Generate a response that can use the user's real portfolio data.
     generated_response = generate_general_chat_response(
         message=clean_message,
         portfolio_context=portfolio_context,
+        market_context=market_context,
     )
 
     # Store the response as a general insight.
@@ -312,27 +335,90 @@ def build_stock_market_context(
 
     # Start the context with basic stock information.
     context_lines = [
-        f"Symbol: {stock.symbol}",
         f"Company: {stock.company_name}",
-        f"Latest stored price: {stock.latest_price}",
-        "Recent daily market data:",
+        f"Ticker: {stock.symbol}",
+        f"Latest recorded price: ${stock.latest_price}",
+        "",
+        "Recent market activity:",
     ]
 
     # Add one readable line per daily market-data record.
     for record in recent_records:
+
         context_lines.append(
-            (
-                f"- Date: {record.price_timestamp.date()}, "
-                f"Open: {record.open_price}, "
-                f"High: {record.high_price}, "
-                f"Low: {record.low_price}, "
-                f"Close: {record.close_price}, "
-                f"Volume: {record.volume}"
-            )
+
+            f"{record.price_timestamp.date()}: "
+
+            f"opened at ${record.open_price}, "
+
+            f"closed at ${record.close_price}, "
+
+            f"high ${record.high_price}, "
+
+            f"low ${record.low_price}, "
+
+            f"volume {record.volume:,}"
+
         )
 
     return "\n".join(context_lines)
 
+
+def build_market_context(
+        db: Session
+) -> str:
+    """
+    Converts today's market snapshot into a compact context that can
+    be supplied to the AI model.
+    """
+
+    market = get_market_snapshot(db)
+
+    context_lines = [
+        "Current Market Snapshot",
+        "",
+        "Top Gainers:",
+    ]
+
+    for stock in market["top_gainers"][:5]:
+        context_lines.append(
+            (
+                f"- {stock.ticker}: "
+                f"{stock.change_percentage}"
+            )
+        )
+
+    context_lines.extend(
+        [
+            "",
+            "Top Losers:",
+        ]
+    )
+
+    for stock in market["top_losers"][:5]:
+        context_lines.append(
+            (
+                f"- {stock.ticker}: "
+                f"{stock.change_percentage}"
+            )
+        )
+
+    context_lines.extend(
+        [
+            "",
+            "Most Active:",
+        ]
+    )
+
+    for stock in market["most_active"][:5]:
+        context_lines.append(
+            (
+                f"- {stock.ticker}: "
+                f"{stock.volume}"
+            )
+        )
+
+    return "\n".join(context_lines)
 
 def generate_stock_ai_insight(
     db: Session,
@@ -518,24 +604,23 @@ def build_user_portfolios_context(
         )
 
     context_lines = [
-        f"Number of user portfolios: {len(portfolios)}",
-        "User portfolio data:",
+        "You are assisting a FinSight user.",
+        "",
+        "The following information comes directly from the user's portfolio.",
+        "Use it naturally during the conversation.",
+        "Only mention portfolio information when it is relevant.",
+        "Do not repeat every holding unless the user asks.",
+        "",
+        f"The user has {len(portfolios)} portfolio(s).",
     ]
 
     for portfolio in portfolios:
-        context_lines.extend(
-            [
-                "",
-                f"Portfolio name: {portfolio.name}",
-                f"Currency: {portfolio.currency}",
-                (
-                    "Description: "
-                    f"{portfolio.description or 'No description provided'}"
-                ),
-                f"Number of holdings: {len(portfolio.holdings)}",
-            ]
-        )
-
+        context_lines.extend([
+            "",
+            f'Portfolio: "{portfolio.name}"',
+            f"Currency: {portfolio.currency}",
+            f"Description: {portfolio.description or 'No description'}",
+        ])
         if not portfolio.holdings:
             context_lines.append(
                 "- This portfolio currently contains no holdings."
@@ -587,22 +672,13 @@ def build_user_portfolios_context(
             portfolio_current_value - portfolio_cost_basis
         )
 
-        context_lines.extend(
-            [
-                (
-                    "Portfolio total cost basis: "
-                    f"{portfolio_cost_basis:.2f}"
-                ),
-                (
-                    "Portfolio estimated current value: "
-                    f"{portfolio_current_value:.2f}"
-                ),
-                (
-                    "Portfolio estimated unrealized gain/loss: "
-                    f"{total_gain_loss:.2f}"
-                ),
-            ]
-        )
+        context_lines.extend([
+            "",
+            "Portfolio Summary",
+            f"- Current estimated value: ${portfolio_current_value:,.2f}",
+            f"- Cost basis: ${portfolio_cost_basis:,.2f}",
+            f"- Unrealized gain/loss: ${total_gain_loss:,.2f}",
+        ])
 
     return "\n".join(context_lines)
 
@@ -612,19 +688,19 @@ def generate_portfolio_ai_insight(
     portfolio_id: int,
 ) -> AIInsight:
     """
-    Generates and stores an AI summary for a user-owned portfolio.
+    Generates and stores an AI analysis for a portfolio owned by the
+    authenticated user.
 
-    Workflow:
-    1. Verify that the portfolio exists and belongs to the user.
-    2. Load the portfolio's holdings.
-    3. Refresh market data for each holding.
-    4. Build a portfolio context using holdings and current prices.
-    5. Send the context to OpenAI.
-    6. Save the generated summary in ai_insights.
+    The function:
+    1. Verifies portfolio ownership.
+    2. Loads and validates the portfolio holdings.
+    3. Uses cached stock prices when available.
+    4. Refreshes missing market data.
+    5. Calculates holding-level and portfolio-level performance.
+    6. Sends verified context to the AI provider.
+    7. Stores the generated insight.
     """
 
-    # Verify ownership so users cannot generate summaries for
-    # another user's portfolio.
     portfolio = (
         db.query(Portfolio)
         .filter(
@@ -646,28 +722,39 @@ def generate_portfolio_ai_insight(
             detail="The portfolio does not contain any holdings",
         )
 
+    currency = portfolio.currency or "USD"
+
     context_lines = [
+        "PORTFOLIO ANALYSIS CONTEXT",
         f"Portfolio name: {portfolio.name}",
-        f"Currency: {portfolio.currency}",
+        f"Currency: {currency}",
+        f"Description: {portfolio.description or 'No description provided'}",
         f"Number of holdings: {len(portfolio.holdings)}",
-        "Portfolio holdings:",
+        "",
+        "Holdings:",
     ]
 
+    portfolio_cost_basis = 0.0
+    portfolio_current_value = 0.0
+    valid_holdings = 0
+
     for holding in portfolio.holdings:
-        # Access the Stock through the SQLAlchemy relationship.
         stock = holding.stock
 
+        # Skip holdings whose linked stock record is missing.
         if stock is None:
-            # Skip invalid holdings whose linked stock does not exist.
             continue
 
-        # Avoid unnecessary Alpha Vantage calls.
-        # Refresh only when no cached price exists in the database.
+        # Only call the market-data provider when no cached price exists.
         if stock.latest_price is None:
             stock = refresh_market_data(
                 db=db,
                 symbol=stock.symbol,
             )
+
+        # Skip the holding if a price is still unavailable after refresh.
+        if stock.latest_price is None:
+            continue
 
         shares = float(holding.shares)
         average_buy_price = float(holding.average_buy_price)
@@ -677,17 +764,75 @@ def generate_portfolio_ai_insight(
         current_value = shares * latest_price
         unrealized_gain_loss = current_value - cost_basis
 
+        unrealized_gain_loss_percent = (
+            (unrealized_gain_loss / cost_basis) * 100
+            if cost_basis > 0
+            else 0.0
+        )
+
+        portfolio_cost_basis += cost_basis
+        portfolio_current_value += current_value
+        valid_holdings += 1
+
+        company_name = stock.company_name or stock.symbol
+
         context_lines.append(
             (
-                f"- {stock.symbol}: "
-                f"{shares} shares, "
-                f"average buy price {average_buy_price:.2f}, "
-                f"latest stored price {latest_price:.2f}, "
-                f"cost basis {cost_basis:.2f}, "
-                f"current value {current_value:.2f}, "
-                f"unrealized gain/loss {unrealized_gain_loss:.2f}"
+                f"- {company_name} ({stock.symbol}): "
+                f"{shares:,.4f} shares; "
+                f"average purchase price {average_buy_price:,.2f} {currency}; "
+                f"latest stored price {latest_price:,.2f} {currency}; "
+                f"cost basis {cost_basis:,.2f} {currency}; "
+                f"current value {current_value:,.2f} {currency}; "
+                f"unrealized gain/loss "
+                f"{unrealized_gain_loss:+,.2f} {currency} "
+                f"({unrealized_gain_loss_percent:+.2f}%)"
             )
         )
+
+    if valid_holdings == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No valid market data is available for this portfolio",
+        )
+
+    total_gain_loss = portfolio_current_value - portfolio_cost_basis
+
+    total_gain_loss_percent = (
+        (total_gain_loss / portfolio_cost_basis) * 100
+        if portfolio_cost_basis > 0
+        else 0.0
+    )
+
+    context_lines.extend(
+        [
+            "",
+            "Portfolio totals:",
+            (
+                f"- Total cost basis: "
+                f"{portfolio_cost_basis:,.2f} {currency}"
+            ),
+            (
+                f"- Estimated current value: "
+                f"{portfolio_current_value:,.2f} {currency}"
+            ),
+            (
+                f"- Estimated unrealized gain/loss: "
+                f"{total_gain_loss:+,.2f} {currency} "
+                f"({total_gain_loss_percent:+.2f}%)"
+            ),
+            "",
+            "Analysis instructions:",
+            "- Respond in a natural and conversational tone.",
+            "- Focus on the most important observations.",
+            "- Discuss diversification, concentration, position sizing, "
+            "portfolio balance, and risk when supported by the data.",
+            "- Explain why each observation matters.",
+            "- Do not repeat every supplied number unnecessarily.",
+            "- Clearly state when the available information is limited.",
+            "- Do not guarantee returns or give absolute buy or sell advice.",
+        ]
+    )
 
     portfolio_context = "\n".join(context_lines)
 
@@ -711,7 +856,6 @@ def generate_portfolio_ai_insight(
         db.add(insight)
         db.commit()
         db.refresh(insight)
-
         return insight
 
     except Exception:
